@@ -1,0 +1,67 @@
+# node_modules
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native builds
+ios/build/
+ios/Pods/
+ios/DerivedData/
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-to-trash
+*.xcuserstate
+*.xcscmblueprint
+project.xcworkspace
+.xcode.env.local
+
+# Android Studio
+*.iml
+.idea
+.gradle
+local.properties
+*.hprof
+.cxx/
+
+# Metro
+.metro-health-check*
+
+# Bundled assets
+*.jsbundle
+
+# React Native
+__pycache__/
+*.py[cod]
+
+# Misc
+.DS_Store
+.env
+.env.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+
+# Ruby
+vendor/
+.bundle/
