@@ -52,6 +52,7 @@ interface AuthContextValue {
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  restore: (skipBiometrics?: boolean) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -62,9 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Restaurar sesión al iniciar
   useEffect(() => {
     authService.restoreSession().then((session) => {
-      dispatch({ type: 'RESTORE_TOKEN', payload: session
-        ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
-        : null });
+      setTimeout(() => {
+        dispatch({ type: 'RESTORE_TOKEN', payload: session
+          ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
+          : null });
+      }, 1000); // Pequeño delay para que se aprecie el SplashScreen
     });
   }, []);
 
@@ -91,7 +94,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'LOGOUT' });
   };
 
-  const value = useMemo(() => ({ state, login, register, logout }), [state]);
+  const restore = async (skipBiometrics = false) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const session = await authService.restoreSession(skipBiometrics);
+      if (session) {
+        dispatch({ type: 'RESTORE_TOKEN', payload: { user: session.user, token: session.accessToken, refreshToken: session.refreshToken } });
+        return true;
+      } else {
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return false;
+      }
+    } catch (error: any) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+      throw error;
+    }
+  };
+
+  const value = useMemo(() => ({ state, login, register, logout, restore }), [state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

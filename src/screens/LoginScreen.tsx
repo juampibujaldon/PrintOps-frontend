@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator, Switch,
+  StyleSheet, Alert, ActivityIndicator, Switch, Image
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -14,6 +14,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { STORAGE_KEYS } from '../constants/api';
 import { LoginFormData } from '../types/auth';
+import { Colors } from '../constants/theme';
 
 const schema = yup.object({
   email: yup
@@ -32,9 +33,11 @@ type Props = {
 };
 
 export default function LoginScreen({ navigation }: Props) {
-  const { login } = useAuth();
+  const { login, restore } = useAuth();
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  // Solo true si el hardware está disponible Y el usuario habilitó Face ID explícitamente
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   const {
     control,
@@ -52,22 +55,62 @@ export default function LoginScreen({ navigation }: Props) {
 
   const checkBiometrics = async () => {
     try {
-      const savedToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      if (!savedToken) return;
-
       const rnBiometrics = new ReactNativeBiometrics();
       const { available } = await rnBiometrics.isSensorAvailable();
       setBiometricAvailable(available);
+      if (available) {
+        const enabled = await AsyncStorage.getItem('BIOMETRICS_ENABLED');
+        setBiometricEnabled(enabled === 'true');
+      }
     } catch {
       setBiometricAvailable(false);
+      setBiometricEnabled(false);
     }
   };
+
+  const promptFaceIdAsync = () => new Promise<boolean>((resolve) => {
+    Alert.alert(
+      'Activar Face ID',
+      '¿Querés usar Face ID para futuros inicios de sesión?',
+      [
+        {
+          text: 'Ahora no',
+          style: 'cancel',
+          onPress: async () => {
+            await AsyncStorage.setItem('BIOMETRICS_DECLINED', 'true');
+            resolve(false);
+          },
+        },
+        {
+          text: 'Activar',
+          onPress: async () => {
+            const { authService } = await import('../services/authService');
+            const ok = await authService.enableBiometrics();
+            if (ok) {
+              setBiometricEnabled(true);
+            } else {
+              // Si falla la biometría por alguna razón, no lo marcamos como activado
+              // ni lo declinamos permanentemente.
+            }
+            resolve(ok);
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  });
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     try {
+      // Preguntar si quiere activar Face ID ANTES de hacer login y cambiar de pantalla.
+      const declined = await AsyncStorage.getItem('BIOMETRICS_DECLINED');
+      if (biometricAvailable && !biometricEnabled && declined !== 'true') {
+        await promptFaceIdAsync();
+      }
+
+      // Ahora sí hacemos login
       await login(data.email, data.password, data.rememberMe);
-      navigation.replace('Role');
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||
@@ -87,13 +130,18 @@ export default function LoginScreen({ navigation }: Props) {
       });
 
       if (success) {
-        // La sesión ya está guardada; navegar directo
-        navigation.replace('Role');
+        // Intentar restaurar la sesión usando el token guardado en el Keychain.
+        // skipBiometrics=true porque ya verificamos la identidad arriba.
+        const restored = await restore(true);
+        if (!restored) {
+           Alert.alert('Sesión expirada', 'Debes iniciar sesión con contraseña al menos una vez.');
+        }
       } else {
         Alert.alert('Autenticación fallida', 'No se pudo verificar la identidad');
       }
-    } catch {
-      Alert.alert('Error', 'No se pudo completar la autenticación biométrica');
+    } catch (error: any) {
+      const errMsg = error.message || 'Error desconocido';
+      Alert.alert('Error de Biometría', errMsg);
     }
   };
 
@@ -154,15 +202,19 @@ export default function LoginScreen({ navigation }: Props) {
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#FFF" />
+          <ActivityIndicator color={Colors.background} />
         ) : (
           <Text style={styles.buttonText}>Ingresar</Text>
         )}
       </TouchableOpacity>
 
-      {biometricAvailable && (
+      {biometricEnabled && (
         <TouchableOpacity style={styles.biometricButton} onPress={onBiometricLogin}>
-          <Text style={styles.biometricText}>Ingresar con Face ID / Touch ID</Text>
+          <Image 
+            source={{ uri: 'https://img.icons8.com/ios/100/000000/face-id.png' }} 
+            style={[styles.faceIdIcon, { tintColor: Colors.textPrimary }]} 
+          />
+          <Text style={styles.biometricText}>Iniciar con Face ID</Text>
         </TouchableOpacity>
       )}
 
@@ -181,12 +233,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a2e',
+    color: Colors.textPrimary,
     marginBottom: 32,
     textAlign: 'center',
   },
@@ -195,18 +247,19 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: 'transparent',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: Colors.inputBackground,
+    color: Colors.textPrimary,
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: Colors.error,
   },
   errorText: {
-    color: '#FF3B30',
+    color: Colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
@@ -220,10 +273,10 @@ const styles = StyleSheet.create({
   },
   rememberText: {
     fontSize: 15,
-    color: '#333',
+    color: Colors.textSecondary,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.primaryButton,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -233,16 +286,22 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#FFF',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '600',
   },
   biometricButton: {
     alignItems: 'center',
     paddingVertical: 12,
+    marginTop: 8,
+  },
+  faceIdIcon: {
+    width: 45,
+    height: 45,
+    marginBottom: 8,
   },
   biometricText: {
-    color: '#007AFF',
+    color: Colors.accent,
     fontSize: 15,
     fontWeight: '500',
   },
@@ -252,11 +311,11 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   registerText: {
-    color: '#666',
+    color: Colors.textSecondary,
     fontSize: 15,
   },
   registerLink: {
-    color: '#007AFF',
+    color: Colors.accent,
     fontSize: 15,
     fontWeight: '600',
   },

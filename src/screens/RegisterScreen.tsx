@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { RegisterFormData } from '../types/auth';
+import { Colors } from '../constants/theme';
 
 const schema = yup.object({
   email: yup
@@ -123,7 +124,7 @@ export default function RegisterScreen({ navigation }: Props) {
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#FFF" />
+          <ActivityIndicator color={Colors.background} />
         ) : (
           <Text style={styles.buttonText}>Registrarse</Text>
         )}
@@ -144,12 +145,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a2e',
+    color: Colors.textPrimary,
     marginBottom: 32,
     textAlign: 'center',
   },
@@ -158,24 +159,25 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: 'transparent',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: Colors.inputBackground,
+    color: Colors.textPrimary,
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: Colors.error,
   },
   errorText: {
-    color: '#FF3B30',
+    color: Colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.primaryButton,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -186,7 +188,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#FFF',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -196,11 +198,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   loginText: {
-    color: '#666',
+    color: Colors.textSecondary,
     fontSize: 15,
   },
   loginLink: {
-    color: '#007AFF',
+    color: Colors.accent,
     fontSize: 15,
     fontWeight: '600',
   },

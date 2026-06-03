@@ -10,10 +10,11 @@ interface UseAuthReturn {
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  restore: (skipBiometrics?: boolean) => Promise<boolean>;
 }
 
 export function useAuth(): UseAuthReturn {
-  const { state, login, register, logout } = useAuthContext();
+  const { state, login, register, logout, restore } = useAuthContext();
   return {
     user: state.user,
     token: state.token,
@@ -22,5 +23,6 @@ export function useAuth(): UseAuthReturn {
     login,
     register,
     logout,
+    restore,
   };
 }

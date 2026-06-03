@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
+import { Colors } from '../constants/theme';
 
 export default function HomeScreen() {
   const { user, logout } = useAuth();
@@ -18,9 +19,9 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' },
-  welcome: { fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
-  role: { fontSize: 16, color: '#666', marginBottom: 32 },
-  logoutButton: { backgroundColor: '#FF3B30', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-  logoutText: { color: '#FFF', fontWeight: '600' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
+  welcome: { fontSize: 22, fontWeight: 'bold', marginBottom: 8, color: Colors.textPrimary },
+  role: { fontSize: 16, color: Colors.textSecondary, marginBottom: 32 },
+  logoutButton: { backgroundColor: Colors.error, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  logoutText: { color: Colors.background, fontWeight: '600' },
 });

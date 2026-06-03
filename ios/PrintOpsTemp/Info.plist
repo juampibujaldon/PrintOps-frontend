@@ -48,5 +48,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>PrintOps necesita usar Face ID para que puedas iniciar sesión de forma rápida y segura.</string>
 </dict>
 </plist>

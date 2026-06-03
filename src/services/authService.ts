@@ -1,6 +1,8 @@
 // src/services/authService.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as Keychain from 'react-native-keychain';
+import ReactNativeBiometrics from 'react-native-biometrics';
 import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
 import { AuthResponse } from '../types/auth';
 
@@ -34,37 +36,119 @@ async function login(email: string, password: string, rememberMe: boolean): Prom
 
   await AsyncStorage.multiSet([
     [STORAGE_KEYS.ACCESS_TOKEN, data.accessToken],
-    [STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken],
     [STORAGE_KEYS.USER, JSON.stringify(data.user)],
   ]);
+
+  // Guardar Refresh Token en Keychain de forma segura
+  await Keychain.setGenericPassword('refreshToken', data.refreshToken, { service: 'refreshTokenService' });
 
   return data;
 }
 
 async function logout(deviceId: string, token: string): Promise<void> {
+  const biometricsEnabled = await AsyncStorage.getItem('BIOMETRICS_ENABLED');
+  const keepSession = biometricsEnabled === 'true';
+
   try {
+    // keepSession=true → backend solo invalida el access token, no el refresh token.
+    // Esto permite que Face ID renueve la sesión la próxima vez.
     await axios.post(
-      `${API_BASE_URL}/api/auth/logout?deviceId=${deviceId}`,
+      `${API_BASE_URL}/api/auth/logout?deviceId=${deviceId}&keepSession=${keepSession}`,
       {},
       { headers: { Authorization: `Bearer ${token}` } },
     );
   } finally {
-    await AsyncStorage.multiRemove([
-      STORAGE_KEYS.ACCESS_TOKEN,
-      STORAGE_KEYS.REFRESH_TOKEN,
-      STORAGE_KEYS.USER,
-    ]);
+    if (keepSession) {
+      // Soft logout: solo se borra el access token local.
+      // El refresh token (Keychain) y el user quedan para Face ID.
+      await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    } else {
+      // Hard logout: se borra todo.
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.ACCESS_TOKEN,
+        STORAGE_KEYS.USER,
+        'BIOMETRICS_ENABLED',
+      ]);
+      await Keychain.resetGenericPassword({ service: 'refreshTokenService' });
+    }
   }
 }
 
-async function restoreSession(): Promise<AuthResponse | null> {
-  const [token, refreshToken, userStr] = await Promise.all([
-    AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
-    AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
-    AsyncStorage.getItem(STORAGE_KEYS.USER),
-  ]);
+/**
+ * Restaura la sesión al arrancar la app o al usar Face ID.
+ *
+ * skipBiometrics = true → el llamador ya verificó la identidad (botón Face ID).
+ *
+ * Flujos soportados:
+ *  A) App arranca con access token válido → restaura directo (sin biometría prompt).
+ *  B) App arranca, BIOMETRICS_ENABLED=true y no hay access token (soft logout) →
+ *     pide Face ID → llama /refresh → obtiene nuevo access token → restaura.
+ *  C) Botón Face ID en LoginScreen → skipBiometrics=true → llama /refresh → restaura.
+ */
+async function restoreSession(skipBiometrics = false): Promise<AuthResponse | null> {
+  const credentials = await Keychain.getGenericPassword({ service: 'refreshTokenService' });
+  const refreshToken = credentials ? credentials.password : null;
+  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  const userStr = await AsyncStorage.getItem(STORAGE_KEYS.USER);
 
-  if (!token || !refreshToken || !userStr) return null;
+  if (!refreshToken || !userStr) {
+    if (skipBiometrics) {
+      throw new Error(`Datos locales perdidos: refreshToken=${!!refreshToken}, user=${!!userStr}`);
+    }
+    return null;
+  }
+
+  const biometricsEnabled = await AsyncStorage.getItem('BIOMETRICS_ENABLED');
+
+  // Si no hay access token local (soft logout) y la biometría está habilitada,
+  // pedimos verificación biométrica antes de renovar la sesión.
+  const needsBiometricPrompt = !token && biometricsEnabled === 'true' && !skipBiometrics;
+
+  if (needsBiometricPrompt) {
+    const rnBiometrics = new ReactNativeBiometrics();
+    const { available } = await rnBiometrics.isSensorAvailable();
+
+    if (available) {
+      try {
+        const { success } = await rnBiometrics.simplePrompt({
+          promptMessage: 'Inicia sesión para continuar',
+        });
+        if (!success) return null;
+      } catch (error) {
+        console.log('Biometrics error', error);
+        return null;
+      }
+    }
+  }
+
+  // Si no hay access token (soft logout o expirado), intentamos renovarlo con /refresh.
+  if (!token) {
+    try {
+      const deviceId = await getOrCreateDeviceId();
+      const { data } = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/refresh`, {
+        refreshToken,
+        deviceId,
+      });
+
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS.ACCESS_TOKEN, data.accessToken],
+        [STORAGE_KEYS.USER, JSON.stringify(data.user)],
+      ]);
+      // Actualizar el refresh token en Keychain si el backend devuelve uno nuevo
+      await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
+        service: 'refreshTokenService',
+      });
+
+      return data;
+    } catch (error: any) {
+      // Refresh token inválido/expirado → sesión terminada definitivamente
+      await AsyncStorage.multiRemove([STORAGE_KEYS.ACCESS_TOKEN, STORAGE_KEYS.USER, 'BIOMETRICS_ENABLED']);
+      await Keychain.resetGenericPassword({ service: 'refreshTokenService' });
+      
+      const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Error desconocido';
+      throw new Error(`Refresh failed: ${errMsg}`);
+    }
+  }
 
   return {
     accessToken: token,
@@ -81,4 +165,19 @@ async function register(email: string, password: string): Promise<void> {
   });
 }
 
-export const authService = { login, logout, register, restoreSession, getOrCreateDeviceId };
+async function enableBiometrics(): Promise<boolean> {
+  const rnBiometrics = new ReactNativeBiometrics();
+  const { available } = await rnBiometrics.isSensorAvailable();
+  if (available) {
+    const { success } = await rnBiometrics.simplePrompt({
+      promptMessage: 'Activa biometría para PrintOps',
+    });
+    if (success) {
+      await AsyncStorage.setItem('BIOMETRICS_ENABLED', 'true');
+      return true;
+    }
+  }
+  return false;
+}
+
+export const authService = { login, logout, register, restoreSession, getOrCreateDeviceId, enableBiometrics };

@@ -58,7 +58,8 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      const credentials = await Keychain.getGenericPassword({ service: 'refreshTokenService' });
+      const refreshToken = credentials ? credentials.password : null;
       const deviceId = await AsyncStorage.getItem(STORAGE_KEYS.DEVICE_ID);
 
       if (!refreshToken || !deviceId) {
@@ -77,11 +78,9 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      await AsyncStorage.multiRemove([
-        STORAGE_KEYS.ACCESS_TOKEN,
-        STORAGE_KEYS.REFRESH_TOKEN,
-        STORAGE_KEYS.USER,
-      ]);
+      // Solo limpiamos el access token local. BIOMETRICS_ENABLED y el Keychain
+      // se limpian en authService si el refresh token está definitivamente inválido.
+      await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

@@ -4,6 +4,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
+import { Colors } from '../constants/theme';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Splash'>;
@@ -12,26 +13,14 @@ type Props = {
 export default function SplashScreen({ navigation }: Props) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
-  useEffect(() => {
-    if (isLoading) return;
-
-    // Duración mínima de 1.5 segundos para UX
-    const timer = setTimeout(() => {
-      if (isAuthenticated && user) {
-        navigation.replace('Role');
-      } else {
-        navigation.replace('Login');
-      }
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [isLoading, isAuthenticated, user, navigation]);
+  // El enrutador (AppNavigator) desmonta esta pantalla automáticamente cuando isLoading pasa a false.
+  // No necesitamos navegar manualmente.
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>PrintOps</Text>
       <Text style={styles.subtitle}>Gestión de impresoras 3D</Text>
-      <ActivityIndicator size="large" color="#007AFF" style={styles.spinner} />
+      <ActivityIndicator size="large" color={Colors.accent} style={styles.spinner} />
     </View>
   );
 }
@@ -41,17 +30,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
   },
   title: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#1a1a2e',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: Colors.textSecondary,
     marginBottom: 40,
   },
   spinner: {
