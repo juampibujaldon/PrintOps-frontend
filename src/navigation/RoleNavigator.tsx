@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ReactNativeBiometrics from 'react-native-biometrics';
 import { useAuth } from '../hooks/useAuth';
 import AdminStack from './AdminStack';
-import TecnicoStack from './TecnicoStack';
+import TecnicoDrawer from './TecnicoDrawer';
 import { authService } from '../services/authService';
 
 // Redirige al stack correspondiente según el role del usuario autenticado
@@ -48,8 +48,8 @@ export default function RoleNavigator() {
     case 'ADMIN':
       return <AdminStack />;
     case 'TECNICO':
-      return <TecnicoStack />;
+      return <TecnicoDrawer />;
     default:
-      return <TecnicoStack />;
+      return <TecnicoDrawer />;
   }
 }

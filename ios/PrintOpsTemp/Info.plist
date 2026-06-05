@@ -50,5 +50,9 @@
 	<false/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>PrintOps necesita usar Face ID para que puedas iniciar sesión de forma rápida y segura.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PrintOps necesita usar la cámara para registrar impresoras nuevas.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PrintOps necesita acceder a tu galería para subir fotos de las impresoras.</string>
 </dict>
 </plist>

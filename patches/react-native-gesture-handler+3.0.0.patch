@@ -1,0 +1,43 @@
+diff --git a/node_modules/react-native-gesture-handler/lib/module/components/GestureHandlerRootView.js b/node_modules/react-native-gesture-handler/lib/module/components/GestureHandlerRootView.js
+index e96d713..39e725d 100644
+--- a/node_modules/react-native-gesture-handler/lib/module/components/GestureHandlerRootView.js
++++ b/node_modules/react-native-gesture-handler/lib/module/components/GestureHandlerRootView.js
+@@ -8,7 +8,7 @@ export default function GestureHandlerRootView({
+   style,
+   ...rest
+ }) {
+-  return /*#__PURE__*/_jsx(GestureHandlerRootViewContext, {
++  return /*#__PURE__*/_jsx(GestureHandlerRootViewContext.Provider, {
+     value: true,
+     children: /*#__PURE__*/_jsx(View, {
+       style: style ?? styles.container,
+diff --git a/node_modules/react-native-gesture-handler/shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/RNGestureHandlerDetectorShadowNode.cpp b/node_modules/react-native-gesture-handler/shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/RNGestureHandlerDetectorShadowNode.cpp
+index b434082..8c952d8 100644
+--- a/node_modules/react-native-gesture-handler/shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/RNGestureHandlerDetectorShadowNode.cpp
++++ b/node_modules/react-native-gesture-handler/shared/shadowNodes/react/renderer/components/rngesturehandler_codegen/RNGestureHandlerDetectorShadowNode.cpp
+@@ -19,9 +19,6 @@ extern const char RNGestureHandlerDetectorComponentName[] =
+     "RNGestureHandlerDetector";
+ 
+ void RNGestureHandlerDetectorShadowNode::initialize() {
+-  // Disable forcing view flattening
+-  ShadowNode::traits_.unset(ShadowNodeTraits::ForceFlattenView);
+-
+   // When the detector is cloned and has child nodes, the children should be
+   // cloned as well to ensure they are mutable.
+   const auto &children = getChildren();
+diff --git a/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.tsx b/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.tsx
+index b2b80bd..00c327a 100644
+--- a/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.tsx
++++ b/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.tsx
+@@ -13,9 +13,9 @@ export default function GestureHandlerRootView({
+   ...rest
+ }: GestureHandlerRootViewProps) {
+   return (
+-    <GestureHandlerRootViewContext value>
++    <GestureHandlerRootViewContext.Provider value={true}>
+       <View style={style ?? styles.container} {...rest} />
+-    </GestureHandlerRootViewContext>
++    </GestureHandlerRootViewContext.Provider>
+   );
+ }
+ 
