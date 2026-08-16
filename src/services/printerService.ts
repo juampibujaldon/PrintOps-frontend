@@ -38,7 +38,7 @@ export interface PhotoAsset {
 const createPrinter = async (data: PrinterData, photo?: PhotoAsset): Promise<PrinterResponse> => {
   const formData = new FormData();
 
-  // Agregar los datos del JSON como un blob o string para el @RequestPart("printer")
+  // Part "printer": JSON con Content-Type application/json (estilo React Native).
   formData.append('printer', {
     string: JSON.stringify(data),
     type: 'application/json',
@@ -52,11 +52,9 @@ const createPrinter = async (data: PrinterData, photo?: PhotoAsset): Promise<Pri
     } as any);
   }
 
-  const response = await api.post<PrinterResponse>(`${API_BASE_URL}/api/printers`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // ERR-03: NO seteamos Content-Type manualmente. Axios / el networking nativo
+  // de React Native generan el multipart/form-data con el boundary correcto.
+  const response = await api.post<PrinterResponse>(`${API_BASE_URL}/api/printers`, formData);
 
   return response.data;
 };

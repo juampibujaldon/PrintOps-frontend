@@ -1,6 +1,6 @@
 // src/screens/PrinterDetailScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import QRCode from 'react-native-qrcode-svg';
 import { Colors } from '../constants/theme';
@@ -12,8 +12,8 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
   const { printer } = route.params;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>¡Impresora Registrada!</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Impresora</Text>
 
       <View style={styles.card}>
         {printer.photoUrl && (
@@ -23,7 +23,10 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         <Text style={styles.infoText}><Text style={styles.label}>Modelo:</Text> {printer.model}</Text>
         <Text style={styles.infoText}><Text style={styles.label}>N° Serie:</Text> {printer.serialNumber}</Text>
         <Text style={styles.infoText}><Text style={styles.label}>Estado:</Text> {printer.status}</Text>
-        
+        {printer.location && (
+          <Text style={styles.infoText}><Text style={styles.label}>Ubicación:</Text> {printer.location}</Text>
+        )}
+
         <View style={styles.qrContainer}>
           <Text style={styles.qrText}>Escaneá este código para operar la máquina:</Text>
           <View style={styles.qrBox}>
@@ -32,23 +35,33 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('TecnicoHome')}>
-        <Text style={styles.buttonText}>Volver al inicio</Text>
+      {/* US-04: acceso a la creación de una orden de mantenimiento */}
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => navigation.navigate('CreateOrder', { printer })}
+      >
+        <Text style={styles.primaryButtonText}>+ Nueva orden de mantenimiento</Text>
       </TouchableOpacity>
-    </View>
+
+      <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('TecnicoHome')}>
+        <Text style={styles.secondaryButtonText}>Volver al inicio</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: Colors.background, justifyContent: 'center' },
+  container: { flexGrow: 1, padding: 24, backgroundColor: Colors.background },
   title: { fontSize: 24, fontWeight: 'bold', color: Colors.primary, marginBottom: 20, textAlign: 'center' },
-  card: { backgroundColor: Colors.inputBackground, padding: 20, borderRadius: 16, alignItems: 'center' },
+  card: { backgroundColor: Colors.inputBackground, padding: 20, borderRadius: 16, alignItems: 'center', marginBottom: 20 },
   photo: { width: '100%', height: 200, borderRadius: 10, marginBottom: 16, resizeMode: 'cover' },
   infoText: { fontSize: 16, color: Colors.textPrimary, marginBottom: 8, alignSelf: 'flex-start' },
   label: { fontWeight: 'bold' },
   qrContainer: { marginTop: 24, alignItems: 'center' },
   qrText: { color: Colors.textSecondary, marginBottom: 12, textAlign: 'center' },
   qrBox: { padding: 16, backgroundColor: 'white', borderRadius: 8 },
-  button: { backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24 },
-  buttonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' }
+  primaryButton: { backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 4 },
+  primaryButtonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
+  secondaryButton: { padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12 },
+  secondaryButtonText: { color: Colors.accent, fontSize: 16, fontWeight: '600' },
 });

@@ -54,5 +54,7 @@
 	<string>PrintOps necesita usar la cámara para registrar impresoras nuevas.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PrintOps necesita acceder a tu galería para subir fotos de las impresoras.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PrintOps necesita guardar fotos de las impresoras en tu galería.</string>
 </dict>
 </plist>

@@ -1,16 +1,27 @@
 // src/hooks/useCameraPermission.ts
-import { Alert, Linking } from 'react-native';
-import { check, request, PERMISSIONS, RESULTS, type Permission } from 'react-native-permissions';
+import { Alert } from 'react-native';
+import {
+  check,
+  request,
+  openSettings,
+  PERMISSIONS,
+  RESULTS,
+  type Permission,
+} from 'react-native-permissions';
 
-// Hook reutilizable (FIX 6): centraliza la verificación y solicitud de permisos
-// de cámara y galería antes de usar launchCamera / launchImageLibrary.
+// Hook reutilizable (ERR-02 / FIX 6): centraliza la verificación y solicitud de
+// permisos de cámara y galería antes de usar launchCamera / launchImageLibrary.
+//
+// Flujo: check → (si DENIED) request → (si BLOCKED) openSettings.
 
 type PermissionSource = 'camera' | 'library';
 
 export function useCameraPermission() {
   const ensurePermission = async (source: PermissionSource): Promise<boolean> => {
     const isCamera = source === 'camera';
-    const permission: Permission = isCamera ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.IOS.PHOTO_LIBRARY;
+    const permission: Permission = isCamera
+      ? PERMISSIONS.IOS.CAMERA
+      : PERMISSIONS.IOS.PHOTO_LIBRARY;
     const label = isCamera ? 'cámara' : 'galería';
 
     let status = await check(permission);
@@ -27,14 +38,17 @@ export function useCameraPermission() {
 
     // BLOCKED / UNAVAILABLE: el usuario lo rechazó de forma definitiva o el
     // permiso no está disponible; solo se puede desbloquear desde Ajustes.
-    Alert.alert(
-      `Permiso de ${label} bloqueado`,
-      `Para continuar, habilitá el acceso a la ${label} desde los ajustes del sistema.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Abrir configuración', onPress: () => Linking.openSettings() },
-      ]
-    );
+    if (status === RESULTS.BLOCKED || status === RESULTS.UNAVAILABLE) {
+      Alert.alert(
+        `Permiso de ${label} bloqueado`,
+        `Para continuar, habilitá el acceso a la ${label} desde los ajustes del sistema.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir configuración', onPress: () => openSettings().catch(() => {}) },
+        ]
+      );
+    }
+
     return false;
   };
 

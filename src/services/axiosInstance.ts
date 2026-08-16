@@ -1,27 +1,36 @@
 // src/services/axiosInstance.ts
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Keychain from 'react-native-keychain';
 import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
+  // No fijamos Content-Type por defecto: axios lo genera solo
+  // (application/json para objetos y multipart/form-data con boundary para FormData).
 });
 
-// Adjunta Bearer token en cada request
+// ── Request interceptor: adjunta el Bearer token y loguea el request ──
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    if (__DEV__) {
+      console.log(
+        `[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+        '| auth:', config.headers.Authorization ? 'Bearer ***' : 'NONE',
+      );
+    }
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// Renueva automáticamente si recibe 401
+// ── Response interceptor: refresca el token ante 401 ──
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: string) => void; reject: (reason?: unknown) => void }> = [];
 
@@ -40,8 +49,19 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const status = error.response?.status;
 
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    if (__DEV__) {
+      console.log(`[API] response ${status} ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`);
+    }
+
+    // 403 = autenticado pero sin permiso: no sirve refrescar, rechazamos directo.
+    if (status === 403) {
+      return Promise.reject(error);
+    }
+
+    // Solo manejamos 401 (token expirado/inválido).
+    if (status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 
