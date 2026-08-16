@@ -67,6 +67,14 @@ const getAllPrinters = async (location?: string): Promise<PrinterResponse[]> => 
   return response.data;
 };
 
+// Lookup por número de serie (usado por el lector de QR).
+const getBySerialNumber = async (serialNumber: string): Promise<PrinterResponse> => {
+  const response = await api.get<PrinterResponse>(
+    `${API_BASE_URL}/api/printers/by-serial/${encodeURIComponent(serialNumber)}`
+  );
+  return response.data;
+};
+
 // FIX 4: actualiza la fecha del próximo mantenimiento (ej. al cerrar una orden).
 const updateNextMaintenanceDate = async (
   id: number,
@@ -82,5 +90,6 @@ const updateNextMaintenanceDate = async (
 export const printerService = {
   createPrinter,
   getAllPrinters,
+  getBySerialNumber,
   updateNextMaintenanceDate,
 };

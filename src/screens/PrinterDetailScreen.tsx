@@ -19,12 +19,21 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         {printer.photoUrl && (
           <Image source={{ uri: printer.photoUrl }} style={styles.photo} />
         )}
+        {printer.name && (
+          <Text style={styles.infoText}><Text style={styles.label}>Nombre:</Text> {printer.name}</Text>
+        )}
         <Text style={styles.infoText}><Text style={styles.label}>Marca:</Text> {printer.brand}</Text>
         <Text style={styles.infoText}><Text style={styles.label}>Modelo:</Text> {printer.model}</Text>
         <Text style={styles.infoText}><Text style={styles.label}>N° Serie:</Text> {printer.serialNumber}</Text>
         <Text style={styles.infoText}><Text style={styles.label}>Estado:</Text> {printer.status}</Text>
         {printer.location && (
           <Text style={styles.infoText}><Text style={styles.label}>Ubicación:</Text> {printer.location}</Text>
+        )}
+        {printer.purchaseDate && (
+          <Text style={styles.infoText}><Text style={styles.label}>Fecha de compra:</Text> {printer.purchaseDate}</Text>
+        )}
+        {printer.nextMaintenanceDate && (
+          <Text style={styles.infoText}><Text style={styles.label}>Próximo mantenimiento:</Text> {printer.nextMaintenanceDate}</Text>
         )}
 
         <View style={styles.qrContainer}>

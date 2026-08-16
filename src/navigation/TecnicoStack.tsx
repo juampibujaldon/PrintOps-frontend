@@ -9,6 +9,7 @@ export type TecnicoStackParamList = {
   PrinterDetail: { printer: any };
   CreateOrder: { printer: any };
   OrderDetail: { orderId: number };
+  ScanPrinter: undefined;
 };
 
 const Stack = createNativeStackNavigator<TecnicoStackParamList>();
@@ -47,6 +48,11 @@ export default function TecnicoStack() {
         name="OrderDetail"
         component={require('../screens/OrderDetailScreen').default}
         options={{ title: 'Detalle de orden' }}
+      />
+      <Stack.Screen
+        name="ScanPrinter"
+        component={require('../screens/ScanPrinterScreen').default}
+        options={{ title: 'Escanear QR', headerShown: true }}
       />
     </Stack.Navigator>
   );

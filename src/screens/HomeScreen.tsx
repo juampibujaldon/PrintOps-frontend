@@ -32,6 +32,8 @@ interface PrinterCard {
   location?: string | null; // FIX 3
   nextMaintenanceDate?: string | null; // FIX 4
   photoUrl?: string | null;
+  purchaseDate?: string | null;
+  qrCodeData?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -90,7 +92,7 @@ function StatusPill({ status }: { status: PrinterStatus }) {
 }
 
 // ─── Componente: PrinterCardItem ─────────────────────────────────────────────
-function PrinterCardItem({ printer, index }: { printer: PrinterCard; index: number }) {
+function PrinterCardItem({ printer, index, onPress }: { printer: PrinterCard; index: number; onPress: () => void }) {
   const translateY = useRef(new Animated.Value(30)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -106,7 +108,7 @@ function PrinterCardItem({ printer, index }: { printer: PrinterCard; index: numb
 
   return (
     <Animated.View style={{ transform: [{ translateY }], opacity }}>
-      <TouchableOpacity style={styles.printerCard} activeOpacity={0.82}>
+      <TouchableOpacity style={styles.printerCard} activeOpacity={0.82} onPress={onPress}>
         {/* Accent left bar */}
         <View
           style={[styles.accentBar, { backgroundColor: STATUS_CONFIG[printer.status].color }]}
@@ -292,6 +294,8 @@ export default function HomeScreen() {
   }, [printers, statusFilter, brandFilter, locationFilter]);
 
   const handleAddPrinter = () => navigation.navigate('AddPrinter');
+  const handleScan = () => navigation.navigate('ScanPrinter');
+  const handleOpenPrinter = (printer: PrinterCard) => navigation.navigate('PrinterDetail', { printer });
 
   return (
     <SafeAreaView style={styles.root}>
@@ -303,6 +307,9 @@ export default function HomeScreen() {
           <Text style={styles.headerTitle}>PrintOps</Text>
           <Text style={styles.headerSub}>Panel de Control</Text>
         </View>
+        <TouchableOpacity style={styles.scanButton} onPress={handleScan}>
+          <Text style={styles.scanButtonText}>QR</Text>
+        </TouchableOpacity>
       </Animated.View>
 
       {/* ── User Badge ── */}
@@ -344,7 +351,7 @@ export default function HomeScreen() {
         data={filteredPrinters}
         keyExtractor={item => String(item.id)}
         renderItem={({ item, index }) => (
-          <PrinterCardItem printer={item} index={index} />
+          <PrinterCardItem printer={item} index={index} onPress={() => handleOpenPrinter(item)} />
         )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -395,6 +402,19 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginTop: 1,
+  },
+  scanButton: {
+    backgroundColor: Colors.primaryGlow,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  scanButtonText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   // User Badge
