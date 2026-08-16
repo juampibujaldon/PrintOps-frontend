@@ -158,11 +158,19 @@ async function restoreSession(skipBiometrics = false): Promise<AuthResponse | nu
   };
 }
 
-async function register(email: string, password: string): Promise<void> {
-  await axios.post(`${API_BASE_URL}/api/auth/register`, {
+async function register(email: string, password: string): Promise<string> {
+  const { data } = await axios.post<{ message?: string }>(`${API_BASE_URL}/api/auth/register`, {
     email,
     password,
   });
+  return data.message ?? 'Usuario registrado. Verificá tu email para activar tu cuenta.';
+}
+
+async function resendVerification(email: string): Promise<string> {
+  const { data } = await axios.post<{ message?: string }>(`${API_BASE_URL}/api/auth/resend-verification`, {
+    email,
+  });
+  return data.message ?? 'Reenviamos el email de verificación.';
 }
 
 async function enableBiometrics(): Promise<boolean> {
@@ -180,4 +188,4 @@ async function enableBiometrics(): Promise<boolean> {
   return false;
 }
 
-export const authService = { login, logout, register, restoreSession, getOrCreateDeviceId, enableBiometrics };
+export const authService = { login, logout, register, resendVerification, restoreSession, getOrCreateDeviceId, enableBiometrics };

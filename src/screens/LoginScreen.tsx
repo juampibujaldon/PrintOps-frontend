@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/authService';
 import { STORAGE_KEYS } from '../constants/api';
 import { LoginFormData } from '../types/auth';
 import { Colors } from '../constants/theme';
@@ -112,13 +113,36 @@ export default function LoginScreen({ navigation }: Props) {
       // Ahora sí hacemos login
       await login(data.email, data.password, data.rememberMe);
     } catch (error: any) {
+      const status = error?.response?.status;
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         'Error al iniciar sesión';
-      Alert.alert('Error', message);
+
+      // Email sin verificar: ofrecer reenvío del enlace.
+      if (status === 403 && /verific/i.test(message)) {
+        Alert.alert('Email no verificado', message, [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Reenviar email', onPress: () => handleResendVerification(data.email) },
+        ]);
+      } else {
+        Alert.alert('Error', message);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async (email: string) => {
+    try {
+      const message = await authService.resendVerification(email);
+      Alert.alert('Email reenviado', message);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        'No se pudo reenviar el email';
+      Alert.alert('Error', message);
     }
   };
 

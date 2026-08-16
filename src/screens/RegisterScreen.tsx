@@ -48,8 +48,10 @@ export default function RegisterScreen({ navigation }: Props) {
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     try {
-      await register(data.email, data.password);
-      // Tras registrarse exitosamente e iniciar sesión automático, AppNavigator cambiará a 'Role'
+      const message = await register(data.email, data.password);
+      Alert.alert('Verificá tu email', message, [
+        { text: 'Entendido', onPress: () => navigation.navigate('Login') },
+      ]);
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||

@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,35 +10,56 @@ import {
   Animated,
   Image,
   SafeAreaView,
+  TextInput,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
-import { printerService } from '../services/printerService';
+import { printerService, PrinterStatus } from '../services/printerService';
 
 type NavProp = NativeStackNavigationProp<TecnicoStackParamList, 'TecnicoHome'>;
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
-type PrinterStatus = 'OPERATIVA' | 'EN_MANTENIMIENTO' | 'FUERA_DE_SERVICIO';
-
 interface PrinterCard {
-  id: string;
+  id: number;
   name?: string | null;
   brand: string;
   model: string;
   serialNumber: string;
   status: PrinterStatus;
+  location?: string | null; // FIX 3
+  nextMaintenanceDate?: string | null; // FIX 4
   photoUrl?: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<PrinterStatus, { label: string; color: string; icon: string }> = {
-  OPERATIVA: { label: 'Operativa', color: Colors.statusOperativa, icon: '●' },
-  EN_MANTENIMIENTO: { label: 'En Mantenimiento', color: Colors.statusMantenim, icon: '●' },
-  FUERA_DE_SERVICIO: { label: 'Fuera de Servicio', color: Colors.statusFuera, icon: '●' },
+  OPERATIVE: { label: 'Operativa', color: Colors.statusOperativa, icon: '●' },
+  MAINTENANCE: { label: 'En Mantenimiento', color: Colors.statusMantenim, icon: '●' },
+  OUT_OF_SERVICE: { label: 'Fuera de Servicio', color: Colors.statusFuera, icon: '●' },
 };
+
+// FIX 4: calcula el badge de mantenimiento según la fecha del próximo mantenimiento.
+function getMaintenanceBadge(nextMaintenanceDate?: string | null): { label: string; color: string; bg: string } | null {
+  if (!nextMaintenanceDate) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const next = new Date(`${nextMaintenanceDate}T00:00:00`);
+  if (isNaN(next.getTime())) return null;
+
+  const diffDays = Math.ceil((next.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) {
+    return { label: 'Mantenimiento vencido', color: Colors.statusFuera, bg: Colors.statusFuera + '18' };
+  }
+  if (diffDays <= 7) {
+    return { label: 'Próximo', color: Colors.statusMantenim, bg: Colors.statusMantenim + '18' };
+  }
+  return null;
+}
 
 // ─── Componente: StatusPill ──────────────────────────────────────────────────
 function StatusPill({ status }: { status: PrinterStatus }) {
@@ -46,7 +67,7 @@ function StatusPill({ status }: { status: PrinterStatus }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (status === 'OPERATIVA') {
+    if (status === 'OPERATIVE') {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulse, { toValue: 0.4, duration: 900, useNativeDriver: true }),
@@ -59,7 +80,7 @@ function StatusPill({ status }: { status: PrinterStatus }) {
   return (
     <View style={[styles.statusPill, { borderColor: cfg.color + '40', backgroundColor: cfg.color + '18' }]}>
       <Animated.Text
-        style={[styles.statusDot, { color: cfg.color, opacity: status === 'OPERATIVA' ? pulse : 1 }]}
+        style={[styles.statusDot, { color: cfg.color, opacity: status === 'OPERATIVE' ? pulse : 1 }]}
       >
         {cfg.icon}
       </Animated.Text>
@@ -81,6 +102,7 @@ function PrinterCardItem({ printer, index }: { printer: PrinterCard; index: numb
   }, []);
 
   const hasPhoto = printer.photoUrl != null;
+  const maintenanceBadge = getMaintenanceBadge(printer.nextMaintenanceDate);
 
   return (
     <Animated.View style={{ transform: [{ translateY }], opacity }}>
@@ -112,7 +134,28 @@ function PrinterCardItem({ printer, index }: { printer: PrinterCard; index: numb
           <Text style={styles.cardSerial} numberOfLines={1}>
             S/N: {printer.serialNumber}
           </Text>
-          <StatusPill status={printer.status} />
+          {/* FIX 3: ubicación en la tarjeta */}
+          {!!printer.location && (
+            <Text style={styles.cardLocation} numberOfLines={1}>
+              📍 {printer.location}
+            </Text>
+          )}
+          {/* FIX 4: próximo mantenimiento + badge de alerta */}
+          {!!printer.nextMaintenanceDate && (
+            <Text style={styles.cardMaintenance} numberOfLines={1}>
+              Mantenimiento: {printer.nextMaintenanceDate}
+            </Text>
+          )}
+          <View style={styles.cardBadges}>
+            <StatusPill status={printer.status} />
+            {maintenanceBadge && (
+              <View style={[styles.maintenanceBadge, { backgroundColor: maintenanceBadge.bg, borderColor: maintenanceBadge.color + '40' }]}>
+                <Text style={[styles.maintenanceBadgeText, { color: maintenanceBadge.color }]}>
+                  {maintenanceBadge.label}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Chevron */}
@@ -126,9 +169,9 @@ function PrinterCardItem({ printer, index }: { printer: PrinterCard; index: numb
 function SummaryBar({ printers }: { printers: PrinterCard[] }) {
   const counts = {
     total: printers.length,
-    operativas: printers.filter(p => p.status === 'OPERATIVA').length,
-    mantenimiento: printers.filter(p => p.status === 'EN_MANTENIMIENTO').length,
-    fuera: printers.filter(p => p.status === 'FUERA_DE_SERVICIO').length,
+    operativas: printers.filter(p => p.status === 'OPERATIVE').length,
+    mantenimiento: printers.filter(p => p.status === 'MAINTENANCE').length,
+    fuera: printers.filter(p => p.status === 'OUT_OF_SERVICE').length,
   };
 
   return (
@@ -153,11 +196,71 @@ function SummaryStat({ label, value, color }: { label: string; value: number; co
   );
 }
 
+// ─── Componente: FiltersBar ──────────────────────────────────────────────────
+function FiltersBar({
+  statusFilter,
+  onStatusFilter,
+  brandFilter,
+  onBrandFilter,
+  locationFilter,
+  onLocationFilter,
+}: {
+  statusFilter: 'ALL' | PrinterStatus;
+  onStatusFilter: (s: 'ALL' | PrinterStatus) => void;
+  brandFilter: string;
+  onBrandFilter: (s: string) => void;
+  locationFilter: string;
+  onLocationFilter: (s: string) => void;
+}) {
+  const chips: { value: 'ALL' | PrinterStatus; label: string }[] = [
+    { value: 'ALL', label: 'Todos' },
+    { value: 'OPERATIVE', label: 'Operativa' },
+    { value: 'MAINTENANCE', label: 'En mant.' },
+    { value: 'OUT_OF_SERVICE', label: 'Fuera serv.' },
+  ];
+
+  return (
+    <View style={styles.filtersBar}>
+      <View style={styles.chipsRow}>
+        {chips.map(chip => (
+          <TouchableOpacity
+            key={chip.value}
+            style={[styles.chip, statusFilter === chip.value && styles.chipSelected]}
+            onPress={() => onStatusFilter(chip.value)}
+          >
+            <Text style={[styles.chipText, statusFilter === chip.value && styles.chipTextSelected]}>
+              {chip.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {/* FIX 3: filtro por marca y por ubicación (junto al de estado) */}
+      <TextInput
+        style={styles.filterInput}
+        placeholder="Filtrar por marca"
+        placeholderTextColor={Colors.textSecondary}
+        value={brandFilter}
+        onChangeText={onBrandFilter}
+      />
+      <TextInput
+        style={styles.filterInput}
+        placeholder="Filtrar por ubicación"
+        placeholderTextColor={Colors.textSecondary}
+        value={locationFilter}
+        onChangeText={onLocationFilter}
+      />
+    </View>
+  );
+}
+
 // ─── Screen Principal ────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<NavProp>();
   const [printers, setPrinters] = useState<PrinterCard[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | PrinterStatus>('ALL');
+  const [brandFilter, setBrandFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const headerOpacity = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
@@ -177,6 +280,16 @@ export default function HomeScreen() {
   useEffect(() => {
     Animated.timing(headerOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
+
+  // FIX 3: filtrado combinado por estado, marca y ubicación.
+  const filteredPrinters = useMemo(() => {
+    return printers.filter(p => {
+      if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+      if (brandFilter && !p.brand.toLowerCase().includes(brandFilter.toLowerCase())) return false;
+      if (locationFilter && !(p.location ?? '').toLowerCase().includes(locationFilter.toLowerCase())) return false;
+      return true;
+    });
+  }, [printers, statusFilter, brandFilter, locationFilter]);
 
   const handleAddPrinter = () => navigation.navigate('AddPrinter');
 
@@ -208,6 +321,16 @@ export default function HomeScreen() {
       {/* ── Summary Bar ── */}
       <SummaryBar printers={printers} />
 
+      {/* ── Filters ── */}
+      <FiltersBar
+        statusFilter={statusFilter}
+        onStatusFilter={setStatusFilter}
+        brandFilter={brandFilter}
+        onBrandFilter={setBrandFilter}
+        locationFilter={locationFilter}
+        onLocationFilter={setLocationFilter}
+      />
+
       {/* ── Section Header ── */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>INVENTARIO</Text>
@@ -218,8 +341,8 @@ export default function HomeScreen() {
 
       {/* ── Printer List ── */}
       <FlatList
-        data={printers}
-        keyExtractor={item => item.id}
+        data={filteredPrinters}
+        keyExtractor={item => String(item.id)}
         renderItem={({ item, index }) => (
           <PrinterCardItem printer={item} index={index} />
         )}
@@ -272,18 +395,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginTop: 1,
-  },
-  logoutBtn: {
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  logoutBtnText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
   },
 
   // User Badge
@@ -361,6 +472,47 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: Colors.surfaceBorder,
     marginVertical: 8,
+  },
+
+  // Filters Bar (FIX 3)
+  filtersBar: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: Colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+  },
+  chipSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipTextSelected: {
+    color: Colors.background,
+  },
+  filterInput: {
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    backgroundColor: Colors.surfaceBase,
+    color: Colors.textPrimary,
   },
 
   // Section header
@@ -457,7 +609,22 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: 'Courier New',
     letterSpacing: 0.5,
-    marginBottom: 6,
+  },
+  cardLocation: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  cardMaintenance: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  cardBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    flexWrap: 'wrap',
   },
   chevron: {
     fontSize: 22,
@@ -482,6 +649,21 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   statusLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
+  // Maintenance Badge (FIX 4)
+  maintenanceBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  maintenanceBadgeText: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
