@@ -8,7 +8,7 @@ interface UseAuthReturn {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
-  register: (email: string, password: string) => Promise<string>;
+  register: (email: string, password: string, inviteToken?: string, workspaceName?: string) => Promise<string>;
   logout: () => Promise<void>;
   restore: (skipBiometrics?: boolean) => Promise<boolean>;
 }

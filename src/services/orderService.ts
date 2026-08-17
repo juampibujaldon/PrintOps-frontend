@@ -4,7 +4,7 @@ import api from './axiosInstance';
 import { PhotoAsset } from './printerService';
 
 export type OrderType = 'PREVENTIVE' | 'CORRECTIVE' | 'CALIBRATION';
-export type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 export interface ChecklistItemInput {
   text: string;

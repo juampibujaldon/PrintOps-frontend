@@ -50,7 +50,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
-  register: (email: string, password: string) => Promise<string>;
+  register: (email: string, password: string, inviteToken?: string, workspaceName?: string) => Promise<string>;
   logout: () => Promise<void>;
   restore: (skipBiometrics?: boolean) => Promise<boolean>;
 }
@@ -80,9 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const register = async (email: string, password: string): Promise<string> => {
+  const register = async (
+    email: string,
+    password: string,
+    inviteToken?: string,
+    workspaceName?: string,
+  ): Promise<string> => {
     // Sin auto-login: el usuario debe verificar su email antes de iniciar sesión.
-    return await authService.register(email, password);
+    return await authService.register(email, password, inviteToken, workspaceName);
   };
 
   const logout = async () => {

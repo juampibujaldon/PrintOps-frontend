@@ -3,15 +3,12 @@ import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ReactNativeBiometrics from 'react-native-biometrics';
-import { useAuth } from '../hooks/useAuth';
-import AdminStack from './AdminStack';
 import TecnicoDrawer from './TecnicoDrawer';
 import { authService } from '../services/authService';
 
-// Redirige al stack correspondiente según el role del usuario autenticado
+// MANAGER y TECNICO comparten la navegación: la diferencia de permisos se
+// resuelve dentro de cada pantalla según el rol (ej. aprobar órdenes).
 export default function RoleNavigator() {
-  const { user } = useAuth();
-
   useEffect(() => {
     checkAndPromptBiometrics();
   }, []);
@@ -44,12 +41,5 @@ export default function RoleNavigator() {
     }
   };
 
-  switch (user?.role) {
-    case 'ADMIN':
-      return <AdminStack />;
-    case 'TECNICO':
-      return <TecnicoDrawer />;
-    default:
-      return <TecnicoDrawer />;
-  }
+  return <TecnicoDrawer />;
 }

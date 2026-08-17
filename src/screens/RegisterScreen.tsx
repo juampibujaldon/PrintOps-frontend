@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -26,6 +26,8 @@ const schema = yup.object({
     .string()
     .oneOf([yup.ref('password')], 'Las contraseñas no coinciden')
     .required('Debes confirmar la contraseña'),
+  inviteToken: yup.string().optional(),
+  workspaceName: yup.string().optional(),
 });
 
 type Props = {
@@ -35,6 +37,7 @@ type Props = {
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [isTecnico, setIsTecnico] = useState(false);
 
   const {
     control,
@@ -42,13 +45,22 @@ export default function RegisterScreen({ navigation }: Props) {
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: yupResolver(schema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '', inviteToken: '', workspaceName: '' },
   });
 
   const onSubmit = async (data: RegisterFormData) => {
+    if (isTecnico && !data.inviteToken?.trim()) {
+      Alert.alert('Atención', 'Ingresá el código de invitación que te envió el manager.');
+      return;
+    }
     setLoading(true);
     try {
-      const message = await register(data.email, data.password);
+      const message = await register(
+        data.email,
+        data.password,
+        isTecnico ? data.inviteToken?.trim() : undefined,
+        isTecnico ? undefined : data.workspaceName?.trim(),
+      );
       Alert.alert('Verificá tu email', message, [
         { text: 'Entendido', onPress: () => navigation.navigate('Login') },
       ]);
@@ -66,6 +78,11 @@ export default function RegisterScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Crear cuenta</Text>
+
+      <View style={styles.modeRow}>
+        <Text style={styles.modeText}>Soy técnico (tengo invitación)</Text>
+        <Switch value={isTecnico} onValueChange={setIsTecnico} />
+      </View>
 
       <Controller
         control={control}
@@ -120,6 +137,42 @@ export default function RegisterScreen({ navigation }: Props) {
         )}
       />
 
+      {isTecnico ? (
+        <Controller
+          control={control}
+          name="inviteToken"
+          render={({ field: { onChange, value } }) => (
+            <View style={styles.fieldContainer}>
+              <TextInput
+                style={[styles.input, errors.inviteToken && styles.inputError]}
+                placeholder="Código de invitación"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                value={value}
+                onChangeText={onChange}
+              />
+              {errors.inviteToken && <Text style={styles.errorText}>{errors.inviteToken.message}</Text>}
+            </View>
+          )}
+        />
+      ) : (
+        <Controller
+          control={control}
+          name="workspaceName"
+          render={({ field: { onChange, value } }) => (
+            <View style={styles.fieldContainer}>
+              <TextInput
+                style={[styles.input, errors.workspaceName && styles.inputError]}
+                placeholder="Nombre del taller (opcional)"
+                value={value}
+                onChangeText={onChange}
+              />
+              {errors.workspaceName && <Text style={styles.errorText}>{errors.workspaceName.message}</Text>}
+            </View>
+          )}
+        />
+      )}
+
       <TouchableOpacity
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleSubmit(onSubmit)}
@@ -128,7 +181,7 @@ export default function RegisterScreen({ navigation }: Props) {
         {loading ? (
           <ActivityIndicator color={Colors.background} />
         ) : (
-          <Text style={styles.buttonText}>Registrarse</Text>
+          <Text style={styles.buttonText}>{isTecnico ? 'Unirme al taller' : 'Crear taller'}</Text>
         )}
       </TouchableOpacity>
 
@@ -153,8 +206,19 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: Colors.textPrimary,
-    marginBottom: 32,
+    marginBottom: 24,
     textAlign: 'center',
+  },
+  modeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  modeText: {
+    fontSize: 15,
+    color: Colors.textSecondary,
   },
   fieldContainer: {
     marginBottom: 16,

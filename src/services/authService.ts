@@ -158,10 +158,17 @@ async function restoreSession(skipBiometrics = false): Promise<AuthResponse | nu
   };
 }
 
-async function register(email: string, password: string): Promise<string> {
+async function register(
+  email: string,
+  password: string,
+  inviteToken?: string,
+  workspaceName?: string,
+): Promise<string> {
   const { data } = await axios.post<{ message?: string }>(`${API_BASE_URL}/api/auth/register`, {
     email,
     password,
+    inviteToken: inviteToken || undefined,
+    workspaceName: workspaceName || undefined,
   });
   return data.message ?? 'Usuario registrado. Verificá tu email para activar tu cuenta.';
 }

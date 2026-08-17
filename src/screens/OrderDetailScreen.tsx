@@ -8,18 +8,23 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderResponse, OrderStatus } from '../services/orderService';
+import { useAuth } from '../hooks/useAuth';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'OrderDetail'>;
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: 'Pendiente',
   IN_PROGRESS: 'En progreso',
-  COMPLETED: 'Completada',
+  IN_REVIEW: 'En revisión',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
   CANCELLED: 'Cancelada',
 };
 
 export default function OrderDetailScreen({ route }: Props) {
   const { orderId } = route.params;
+  const { user } = useAuth();
+  const isManager = user?.role === 'MANAGER';
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -125,20 +130,47 @@ export default function OrderDetailScreen({ route }: Props) {
       )}
 
       <View style={styles.actions}>
-        {order.status === 'PENDING' && (
-          <TouchableOpacity style={styles.button} onPress={() => changeStatus('IN_PROGRESS')}>
-            <Text style={styles.buttonText}>Comenzar</Text>
-          </TouchableOpacity>
-        )}
-        {(order.status === 'PENDING' || order.status === 'IN_PROGRESS') && (
-          <TouchableOpacity style={styles.button} onPress={() => changeStatus('COMPLETED')}>
-            <Text style={styles.buttonText}>Completar</Text>
-          </TouchableOpacity>
-        )}
-        {order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
-          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => changeStatus('CANCELLED')}>
-            <Text style={styles.buttonText}>Cancelar</Text>
-          </TouchableOpacity>
+        {isManager ? (
+          <>
+            {order.status === 'IN_REVIEW' && (
+              <>
+                <TouchableOpacity style={styles.button} onPress={() => changeStatus('APPROVED')}>
+                  <Text style={styles.buttonText}>Aprobar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => changeStatus('REJECTED')}>
+                  <Text style={styles.buttonText}>Rechazar</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            {(order.status === 'PENDING' || order.status === 'IN_PROGRESS' || order.status === 'IN_REVIEW') && (
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => changeStatus('CANCELLED')}>
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <>
+            {order.status === 'PENDING' && (
+              <TouchableOpacity style={styles.button} onPress={() => changeStatus('IN_PROGRESS')}>
+                <Text style={styles.buttonText}>Comenzar</Text>
+              </TouchableOpacity>
+            )}
+            {order.status === 'IN_PROGRESS' && (
+              <TouchableOpacity style={styles.button} onPress={() => changeStatus('IN_REVIEW')}>
+                <Text style={styles.buttonText}>Enviar a revisión</Text>
+              </TouchableOpacity>
+            )}
+            {order.status === 'REJECTED' && (
+              <TouchableOpacity style={styles.button} onPress={() => changeStatus('IN_PROGRESS')}>
+                <Text style={styles.buttonText}>Retomar</Text>
+              </TouchableOpacity>
+            )}
+            {(order.status === 'PENDING' || order.status === 'IN_PROGRESS') && (
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => changeStatus('CANCELLED')}>
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
     </ScrollView>

@@ -11,6 +11,7 @@ import {
   Image,
   SafeAreaView,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { Colors, Radius, Spacing } from '../constants/theme';
@@ -18,6 +19,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { printerService, PrinterStatus } from '../services/printerService';
+import { workspaceService } from '../services/workspaceService';
 
 type NavProp = NativeStackNavigationProp<TecnicoStackParamList, 'TecnicoHome'>;
 
@@ -297,6 +299,26 @@ export default function HomeScreen() {
   const handleScan = () => navigation.navigate('ScanPrinter');
   const handleOpenPrinter = (printer: PrinterCard) => navigation.navigate('PrinterDetail', { printer });
 
+  // Solo MANAGER: invita a un técnico por email.
+  const handleInvite = () => {
+    Alert.prompt(
+      'Invitar técnico',
+      'Ingresá el email del técnico a invitar:',
+      async (email?: string) => {
+        if (!email) return;
+        try {
+          const res = await workspaceService.invite(email.trim());
+          Alert.alert('Invitación enviada', res.message + (res.inviteToken ? `\nCódigo: ${res.inviteToken}` : ''));
+        } catch (error: any) {
+          Alert.alert('Error', error?.response?.data?.message || 'No se pudo invitar');
+        }
+      },
+      'plain-text',
+      '',
+      'email-address',
+    );
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
@@ -307,9 +329,16 @@ export default function HomeScreen() {
           <Text style={styles.headerTitle}>PrintOps</Text>
           <Text style={styles.headerSub}>Panel de Control</Text>
         </View>
-        <TouchableOpacity style={styles.scanButton} onPress={handleScan}>
-          <Text style={styles.scanButtonText}>QR</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {user?.role === 'MANAGER' && (
+            <TouchableOpacity style={styles.scanButton} onPress={handleInvite}>
+              <Text style={styles.scanButtonText}>Invitar</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.scanButton} onPress={handleScan}>
+            <Text style={styles.scanButtonText}>QR</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       {/* ── User Badge ── */}
@@ -410,6 +439,10 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   scanButtonText: {
     color: Colors.primary,

@@ -1,11 +1,12 @@
 // src/types/auth.ts
 
-export type Role = 'ADMIN' | 'TECNICO';
+export type Role = 'MANAGER' | 'TECNICO';
 
 export interface UserInfo {
   id: number;
   email: string;
   role: Role;
+  workspaceId: number | null;
 }
 
 export interface AuthResponse {
@@ -25,6 +26,8 @@ export interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
+  inviteToken?: string;
+  workspaceName?: string;
 }
 
 export type AuthAction =
