@@ -92,6 +92,11 @@ api.interceptors.response.use(
       });
 
       await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+      if (data.refreshToken) {
+        await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
+          service: 'refreshTokenService',
+        });
+      }
 
       processQueue(null, data.accessToken);
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;

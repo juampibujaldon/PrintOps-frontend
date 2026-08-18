@@ -62,22 +62,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Restaurar sesión al iniciar
   useEffect(() => {
-    authService.restoreSession().then((session) => {
-      setTimeout(() => {
-        dispatch({ type: 'RESTORE_TOKEN', payload: session
-          ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
-          : null });
-      }, 1000); // Pequeño delay para que se aprecie el SplashScreen
-    });
+    authService.restoreSession()
+      .then((session) => {
+        setTimeout(() => {
+          dispatch({ type: 'RESTORE_TOKEN', payload: session
+            ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
+            : null });
+        }, 1000); // Pequeño delay para que se aprecie el SplashScreen
+      })
+      .catch(() => {
+        // Si la restauración falla (ej. refresh token expirado), ir al login
+        // en lugar de quedarse colgado en el Splash.
+        dispatch({ type: 'RESTORE_TOKEN', payload: null });
+      });
   }, []);
 
   const login = async (email: string, password: string, rememberMe: boolean) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    const data = await authService.login(email, password, rememberMe);
-    dispatch({
-      type: 'LOGIN_SUCCESS',
-      payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
-    });
+    try {
+      const data = await authService.login(email, password, rememberMe);
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
+      });
+    } catch (error) {
+      // Si el login falla, no dejamos la app clavada en el Splash.
+      dispatch({ type: 'SET_LOADING', payload: false });
+      throw error;
+    }
   };
 
   const register = async (
@@ -91,11 +103,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    const deviceId = await authService.getOrCreateDeviceId();
-    if (state.token) {
-      await authService.logout(deviceId, state.token);
+    try {
+      const deviceId = await authService.getOrCreateDeviceId();
+      if (state.token) {
+        await authService.logout(deviceId, state.token);
+      }
+    } finally {
+      // Siempre limpiamos el estado local, aunque la llamada remota falle.
+      dispatch({ type: 'LOGOUT' });
     }
-    dispatch({ type: 'LOGOUT' });
   };
 
   const restore = async (skipBiometrics = false) => {

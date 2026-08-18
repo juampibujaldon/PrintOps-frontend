@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import RoleNavigator from './RoleNavigator';
 import { useAuth } from '../hooks/useAuth';
 
@@ -12,6 +13,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Register: undefined;
+  ResetPassword: undefined;
   Role: undefined;
 };
 
@@ -31,6 +33,7 @@ export default function AppNavigator() {
           <Stack.Group>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

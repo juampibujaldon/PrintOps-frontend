@@ -85,7 +85,6 @@ export default function LoginScreen({ navigation }: Props) {
         {
           text: 'Activar',
           onPress: async () => {
-            const { authService } = await import('../services/authService');
             const ok = await authService.enableBiometrics();
             if (ok) {
               setBiometricEnabled(true);
@@ -164,8 +163,7 @@ export default function LoginScreen({ navigation }: Props) {
         Alert.alert('Autenticación fallida', 'No se pudo verificar la identidad');
       }
     } catch (error: any) {
-      const errMsg = error.message || 'Error desconocido';
-      Alert.alert('Error de Biometría', errMsg);
+      Alert.alert('No se pudo iniciar', error?.message || 'Tu sesión expiró. Iniciá sesión con contraseña nuevamente.');
     }
   };
 
@@ -241,6 +239,10 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.biometricText}>Iniciar con Face ID</Text>
         </TouchableOpacity>
       )}
+
+      <TouchableOpacity style={styles.forgotButton} onPress={() => navigation.navigate('ResetPassword')}>
+        <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+      </TouchableOpacity>
 
       <View style={styles.registerContainer}>
         <Text style={styles.registerText}>¿No tienes cuenta? </Text>
@@ -333,6 +335,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
+  },
+  forgotButton: {
+    alignItems: 'center',
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  forgotText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   registerText: {
     color: Colors.textSecondary,

@@ -4,7 +4,7 @@ import api from './axiosInstance';
 import { PhotoAsset } from './printerService';
 
 export type OrderType = 'PREVENTIVE' | 'CORRECTIVE' | 'CALIBRATION';
-export type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type OrderStatus = 'PENDING' | 'IN_PROGRESS' | 'IN_REVIEW' | 'COMPLETED' | 'CANCELLED';
 
 export interface ChecklistItemInput {
   text: string;
@@ -41,9 +41,22 @@ export interface OrderPhoto {
   label: string | null;
 }
 
+export interface StatusHistory {
+  id: number;
+  orderId: number;
+  fromStatus: OrderStatus | null;
+  toStatus: OrderStatus;
+  comment: string | null;
+  changedById: number | null;
+  changedByName: string | null;
+  changedAt: string;
+}
+
 export interface OrderResponse {
   id: number;
   printerId: number;
+  assignedToId: number | null;
+  assignedToName: string | null;
   type: OrderType;
   status: OrderStatus;
   description: string | null;
@@ -87,15 +100,21 @@ const getOrder = async (id: number): Promise<OrderResponse> => {
   return response.data;
 };
 
+// Cambio de estado (US-05). `comment` es obligatorio solo en rechazos.
 const updateStatus = async (
   id: number,
-  status: OrderStatus,
-  actualTimeMinutes?: number,
+  newStatus: OrderStatus,
+  comment?: string,
 ): Promise<OrderResponse> => {
   const response = await api.patch<OrderResponse>(`${API_BASE_URL}/api/orders/${id}/status`, {
-    status,
-    actualTimeMinutes,
+    newStatus,
+    comment: comment || undefined,
   });
+  return response.data;
+};
+
+const getHistory = async (id: number): Promise<StatusHistory[]> => {
+  const response = await api.get<StatusHistory[]>(`${API_BASE_URL}/api/orders/${id}/history`);
   return response.data;
 };
 
@@ -118,4 +137,4 @@ const addPhotos = async (orderId: number, photos: PhotoAsset[]): Promise<OrderRe
   return response.data;
 };
 
-export const orderService = { createOrder, listOrders, getOrder, updateStatus, addPart, addPhotos };
+export const orderService = { createOrder, listOrders, getOrder, updateStatus, getHistory, addPart, addPhotos };

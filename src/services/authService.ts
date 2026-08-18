@@ -80,7 +80,7 @@ async function logout(deviceId: string, token: string): Promise<void> {
  * skipBiometrics = true → el llamador ya verificó la identidad (botón Face ID).
  *
  * Flujos soportados:
- *  A) App arranca con access token válido → restaura directo (sin biometría prompt).
+ *  A) App arranca con access token válido → refresca para traer usuario fresco → restaura.
  *  B) App arranca, BIOMETRICS_ENABLED=true y no hay access token (soft logout) →
  *     pide Face ID → llama /refresh → obtiene nuevo access token → restaura.
  *  C) Botón Face ID en LoginScreen → skipBiometrics=true → llama /refresh → restaura.
@@ -93,7 +93,7 @@ async function restoreSession(skipBiometrics = false): Promise<AuthResponse | nu
 
   if (!refreshToken || !userStr) {
     if (skipBiometrics) {
-      throw new Error(`Datos locales perdidos: refreshToken=${!!refreshToken}, user=${!!userStr}`);
+      throw new Error('No hay una sesión guardada para restaurar con Face ID. Iniciá sesión con contraseña.');
     }
     return null;
   }
@@ -121,41 +121,46 @@ async function restoreSession(skipBiometrics = false): Promise<AuthResponse | nu
     }
   }
 
-  // Si no hay access token (soft logout o expirado), intentamos renovarlo con /refresh.
-  if (!token) {
-    try {
-      const deviceId = await getOrCreateDeviceId();
-      const { data } = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/refresh`, {
+  // Siempre intentamos refrescar para obtener token y usuario frescos
+  // (rol/workspaceId actualizados, ej. tras cambios de rol).
+  try {
+    const deviceId = await getOrCreateDeviceId();
+    const { data } = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/refresh`, {
+      refreshToken,
+      deviceId,
+    });
+
+    await AsyncStorage.multiSet([
+      [STORAGE_KEYS.ACCESS_TOKEN, data.accessToken],
+      [STORAGE_KEYS.USER, JSON.stringify(data.user)],
+    ]);
+    await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
+      service: 'refreshTokenService',
+    });
+
+    return data;
+  } catch (error: any) {
+    const networkError = !error.response;
+
+    // Error de red (backend caído): usamos el token guardado para no sacar al usuario.
+    if (networkError && token) {
+      return {
+        accessToken: token,
         refreshToken,
-        deviceId,
-      });
-
-      await AsyncStorage.multiSet([
-        [STORAGE_KEYS.ACCESS_TOKEN, data.accessToken],
-        [STORAGE_KEYS.USER, JSON.stringify(data.user)],
-      ]);
-      // Actualizar el refresh token en Keychain si el backend devuelve uno nuevo
-      await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
-        service: 'refreshTokenService',
-      });
-
-      return data;
-    } catch (error: any) {
-      // Refresh token inválido/expirado → sesión terminada definitivamente
-      await AsyncStorage.multiRemove([STORAGE_KEYS.ACCESS_TOKEN, STORAGE_KEYS.USER, 'BIOMETRICS_ENABLED']);
-      await Keychain.resetGenericPassword({ service: 'refreshTokenService' });
-      
-      const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Error desconocido';
-      throw new Error(`Refresh failed: ${errMsg}`);
+        expiresIn: 900,
+        user: JSON.parse(userStr),
+      };
     }
-  }
 
-  return {
-    accessToken: token,
-    refreshToken,
-    expiresIn: 900,
-    user: JSON.parse(userStr),
-  };
+    // Refresh token inválido/expirado → sesión terminada definitivamente.
+    await AsyncStorage.multiRemove([STORAGE_KEYS.ACCESS_TOKEN, STORAGE_KEYS.USER, 'BIOMETRICS_ENABLED']);
+    await Keychain.resetGenericPassword({ service: 'refreshTokenService' });
+
+    if (skipBiometrics) {
+      throw new Error('Tu sesión expiró. Iniciá sesión con contraseña nuevamente.');
+    }
+    return null;
+  }
 }
 
 async function register(
@@ -180,6 +185,21 @@ async function resendVerification(email: string): Promise<string> {
   return data.message ?? 'Reenviamos el email de verificación.';
 }
 
+async function forgotPassword(email: string): Promise<string> {
+  const { data } = await axios.post<{ message?: string }>(`${API_BASE_URL}/api/auth/forgot-password`, {
+    email,
+  });
+  return data.message ?? 'Si el email existe, recibirás instrucciones de reset.';
+}
+
+async function resetPassword(token: string, newPassword: string): Promise<string> {
+  const { data } = await axios.post<{ message?: string }>(`${API_BASE_URL}/api/auth/reset-password`, {
+    token,
+    newPassword,
+  });
+  return data.message ?? 'Contraseña restablecida correctamente.';
+}
+
 async function enableBiometrics(): Promise<boolean> {
   const rnBiometrics = new ReactNativeBiometrics();
   const { available } = await rnBiometrics.isSensorAvailable();
@@ -195,4 +215,4 @@ async function enableBiometrics(): Promise<boolean> {
   return false;
 }
 
-export const authService = { login, logout, register, resendVerification, restoreSession, getOrCreateDeviceId, enableBiometrics };
+export const authService = { login, logout, register, resendVerification, restoreSession, getOrCreateDeviceId, enableBiometrics, forgotPassword, resetPassword };

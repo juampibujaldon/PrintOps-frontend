@@ -5,11 +5,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import QRCode from 'react-native-qrcode-svg';
 import { Colors } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
+import { useAuth } from '../hooks/useAuth';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'PrinterDetail'>;
 
 export default function PrinterDetailScreen({ route, navigation }: Props) {
   const { printer } = route.params;
+  const { user } = useAuth();
+  const isTecnico = user?.role === 'TECNICO';
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -44,13 +47,15 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      {/* US-04: acceso a la creación de una orden de mantenimiento */}
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => navigation.navigate('CreateOrder', { printer })}
-      >
-        <Text style={styles.primaryButtonText}>+ Nueva orden de mantenimiento</Text>
-      </TouchableOpacity>
+      {/* US-04: solo los técnicos crean órdenes de mantenimiento (US-05). */}
+      {isTecnico && (
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('CreateOrder', { printer })}
+        >
+          <Text style={styles.primaryButtonText}>+ Nueva orden de mantenimiento</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('TecnicoHome')}>
         <Text style={styles.secondaryButtonText}>Volver al inicio</Text>

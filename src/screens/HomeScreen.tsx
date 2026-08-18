@@ -12,31 +12,17 @@ import {
   SafeAreaView,
   TextInput,
   Alert,
+  Modal,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
-import { printerService, PrinterStatus } from '../services/printerService';
+import { printerService, PrinterStatus, PrinterResponse } from '../services/printerService';
 import { workspaceService } from '../services/workspaceService';
 
 type NavProp = NativeStackNavigationProp<TecnicoStackParamList, 'TecnicoHome'>;
-
-// ─── Tipos ──────────────────────────────────────────────────────────────────
-interface PrinterCard {
-  id: number;
-  name?: string | null;
-  brand: string;
-  model: string;
-  serialNumber: string;
-  status: PrinterStatus;
-  location?: string | null; // FIX 3
-  nextMaintenanceDate?: string | null; // FIX 4
-  photoUrl?: string | null;
-  purchaseDate?: string | null;
-  qrCodeData?: string | null;
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<PrinterStatus, { label: string; color: string; icon: string }> = {
@@ -94,7 +80,7 @@ function StatusPill({ status }: { status: PrinterStatus }) {
 }
 
 // ─── Componente: PrinterCardItem ─────────────────────────────────────────────
-function PrinterCardItem({ printer, index, onPress }: { printer: PrinterCard; index: number; onPress: () => void }) {
+function PrinterCardItem({ printer, index, onPress }: { printer: PrinterResponse; index: number; onPress: () => void }) {
   const translateY = useRef(new Animated.Value(30)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -170,7 +156,7 @@ function PrinterCardItem({ printer, index, onPress }: { printer: PrinterCard; in
 }
 
 // ─── Componente: SummaryBar ──────────────────────────────────────────────────
-function SummaryBar({ printers }: { printers: PrinterCard[] }) {
+function SummaryBar({ printers }: { printers: PrinterResponse[] }) {
   const counts = {
     total: printers.length,
     operativas: printers.filter(p => p.status === 'OPERATIVE').length,
@@ -261,10 +247,13 @@ function FiltersBar({
 export default function HomeScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<NavProp>();
-  const [printers, setPrinters] = useState<PrinterCard[]>([]);
+  const [printers, setPrinters] = useState<PrinterResponse[]>([]);
   const [statusFilter, setStatusFilter] = useState<'ALL' | PrinterStatus>('ALL');
   const [brandFilter, setBrandFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
   const headerOpacity = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
@@ -297,26 +286,28 @@ export default function HomeScreen() {
 
   const handleAddPrinter = () => navigation.navigate('AddPrinter');
   const handleScan = () => navigation.navigate('ScanPrinter');
-  const handleOpenPrinter = (printer: PrinterCard) => navigation.navigate('PrinterDetail', { printer });
+  const handleOpenOrders = () => navigation.navigate('OrdersList');
+  const handleOpenPrinter = (printer: PrinterResponse) => navigation.navigate('PrinterDetail', { printer });
 
   // Solo MANAGER: invita a un técnico por email.
   const handleInvite = () => {
-    Alert.prompt(
-      'Invitar técnico',
-      'Ingresá el email del técnico a invitar:',
-      async (email?: string) => {
-        if (!email) return;
-        try {
-          const res = await workspaceService.invite(email.trim());
-          Alert.alert('Invitación enviada', res.message + (res.inviteToken ? `\nCódigo: ${res.inviteToken}` : ''));
-        } catch (error: any) {
-          Alert.alert('Error', error?.response?.data?.message || 'No se pudo invitar');
-        }
-      },
-      'plain-text',
-      '',
-      'email-address',
-    );
+    setInviteEmail('');
+    setInviteVisible(true);
+  };
+
+  const sendInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    setInviteSending(true);
+    try {
+      const res = await workspaceService.invite(email);
+      setInviteVisible(false);
+      Alert.alert('Invitación enviada', res.message + (res.inviteToken ? `\nCódigo: ${res.inviteToken}` : ''));
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message || 'No se pudo invitar');
+    } finally {
+      setInviteSending(false);
+    }
   };
 
   return (
@@ -330,6 +321,9 @@ export default function HomeScreen() {
           <Text style={styles.headerSub}>Panel de Control</Text>
         </View>
         <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.scanButton} onPress={handleOpenOrders}>
+            <Text style={styles.scanButtonText}>Órdenes</Text>
+          </TouchableOpacity>
           {user?.role === 'MANAGER' && (
             <TouchableOpacity style={styles.scanButton} onPress={handleInvite}>
               <Text style={styles.scanButtonText}>Invitar</Text>
@@ -399,6 +393,41 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.fab} onPress={handleAddPrinter} activeOpacity={0.85}>
         <Text style={styles.fabText}>＋</Text>
       </TouchableOpacity>
+
+      {/* ── Modal: invitar técnico ── */}
+      <Modal visible={inviteVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Invitar técnico</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Email del técnico"
+              placeholderTextColor={Colors.textSecondary}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setInviteVisible(false)}
+                disabled={inviteSending}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, inviteSending && styles.modalButtonDisabled]}
+                onPress={sendInvite}
+                disabled={inviteSending}
+              >
+                <Text style={styles.modalButtonText}>Enviar invitación</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -769,5 +798,63 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+
+  // Modal invitar técnico
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: Colors.background,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    backgroundColor: Colors.inputBackground,
+    color: Colors.textPrimary,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    alignItems: 'center',
+  },
+  modalCancel: {
+    padding: 12,
+  },
+  modalCancelText: {
+    color: Colors.accent,
+    fontWeight: '600',
+  },
+  modalButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalButtonText: {
+    color: Colors.background,
+    fontWeight: '700',
   },
 });

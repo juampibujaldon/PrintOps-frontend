@@ -2,13 +2,15 @@ import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
+import { PrinterResponse } from '../services/printerService';
 
 export type TecnicoStackParamList = {
   TecnicoHome: undefined;
   AddPrinter: undefined;
-  PrinterDetail: { printer: any };
-  CreateOrder: { printer: any };
+  PrinterDetail: { printer: PrinterResponse };
+  CreateOrder: { printer: PrinterResponse };
   OrderDetail: { orderId: number };
+  OrdersList: undefined;
   ScanPrinter: undefined;
 };
 
@@ -48,6 +50,11 @@ export default function TecnicoStack() {
         name="OrderDetail"
         component={require('../screens/OrderDetailScreen').default}
         options={{ title: 'Detalle de orden' }}
+      />
+      <Stack.Screen
+        name="OrdersList"
+        component={require('../screens/OrdersListScreen').default}
+        options={{ title: 'Órdenes' }}
       />
       <Stack.Screen
         name="ScanPrinter"

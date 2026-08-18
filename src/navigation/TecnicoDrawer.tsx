@@ -5,6 +5,7 @@ import TecnicoStack from './TecnicoStack';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import TallerScreen from '../screens/TallerScreen';
 import PerfilScreen from '../screens/PerfilScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import { Colors } from '../constants/theme';
 
 export type TecnicoDrawerParamList = {
@@ -12,6 +13,7 @@ export type TecnicoDrawerParamList = {
   Taller: undefined;
   Configuracion: undefined;
   Perfil: undefined;
+  Notificaciones: undefined;
 };
 
 const Drawer = createDrawerNavigator<TecnicoDrawerParamList>();
@@ -46,6 +48,11 @@ export default function TecnicoDrawer() {
         name="Perfil" 
         component={PerfilScreen} 
         options={{ title: 'Mi Perfil' }} 
+      />
+      <Drawer.Screen 
+        name="Notificaciones" 
+        component={NotificationsScreen} 
+        options={{ title: 'Notificaciones' }} 
       />
     </Drawer.Navigator>
   );

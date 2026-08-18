@@ -1,21 +1,10 @@
 // src/screens/SplashScreen.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { useAuth } from '../hooks/useAuth';
 import { Colors } from '../constants/theme';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Splash'>;
-};
-
-export default function SplashScreen({ navigation }: Props) {
-  const { isAuthenticated, isLoading, user } = useAuth();
-
+export default function SplashScreen() {
   // El enrutador (AppNavigator) desmonta esta pantalla automáticamente cuando isLoading pasa a false.
-  // No necesitamos navegar manualmente.
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>PrintOps</Text>
