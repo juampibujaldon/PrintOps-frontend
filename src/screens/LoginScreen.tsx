@@ -1,8 +1,7 @@
 // src/screens/LoginScreen.tsx
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator, Switch, Image
+  View, Text, StyleSheet, Alert, Switch, Image,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -13,9 +12,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
-import { STORAGE_KEYS } from '../constants/api';
 import { LoginFormData } from '../types/auth';
-import { Colors } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
+import TextField from '../components/ui/TextField';
+import Button from '../components/ui/Button';
+import PressableScale from '../components/ui/PressableScale';
 
 const schema = yup.object({
   email: yup
@@ -37,7 +38,6 @@ export default function LoginScreen({ navigation }: Props) {
   const { login, restore } = useAuth();
   const [loading, setLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  // Solo true si el hardware está disponible Y el usuario habilitó Face ID explícitamente
   const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   const {
@@ -49,7 +49,6 @@ export default function LoginScreen({ navigation }: Props) {
     defaultValues: { email: '', password: '', rememberMe: false },
   });
 
-  // Verificar disponibilidad biométrica al montar
   React.useEffect(() => {
     checkBiometrics();
   }, []);
@@ -86,12 +85,7 @@ export default function LoginScreen({ navigation }: Props) {
           text: 'Activar',
           onPress: async () => {
             const ok = await authService.enableBiometrics();
-            if (ok) {
-              setBiometricEnabled(true);
-            } else {
-              // Si falla la biometría por alguna razón, no lo marcamos como activado
-              // ni lo declinamos permanentemente.
-            }
+            if (ok) setBiometricEnabled(true);
             resolve(ok);
           },
         },
@@ -103,13 +97,11 @@ export default function LoginScreen({ navigation }: Props) {
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     try {
-      // Preguntar si quiere activar Face ID ANTES de hacer login y cambiar de pantalla.
       const declined = await AsyncStorage.getItem('BIOMETRICS_DECLINED');
       if (biometricAvailable && !biometricEnabled && declined !== 'true') {
         await promptFaceIdAsync();
       }
 
-      // Ahora sí hacemos login
       await login(data.email, data.password, data.rememberMe);
     } catch (error: any) {
       const status = error?.response?.status;
@@ -118,7 +110,6 @@ export default function LoginScreen({ navigation }: Props) {
         error?.response?.data?.error ||
         'Error al iniciar sesión';
 
-      // Email sin verificar: ofrecer reenvío del enlace.
       if (status === 403 && /verific/i.test(message)) {
         Alert.alert('Email no verificado', message, [
           { text: 'Cancelar', style: 'cancel' },
@@ -153,11 +144,9 @@ export default function LoginScreen({ navigation }: Props) {
       });
 
       if (success) {
-        // Intentar restaurar la sesión usando el token guardado en el Keychain.
-        // skipBiometrics=true porque ya verificamos la identidad arriba.
         const restored = await restore(true);
         if (!restored) {
-           Alert.alert('Sesión expirada', 'Debes iniciar sesión con contraseña al menos una vez.');
+          Alert.alert('Sesión expirada', 'Debes iniciar sesión con contraseña al menos una vez.');
         }
       } else {
         Alert.alert('Autenticación fallida', 'No se pudo verificar la identidad');
@@ -170,23 +159,22 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Iniciar sesión</Text>
+      <Text style={styles.subtitle}>Ingresá a tu taller para gestionar tus impresoras.</Text>
 
       <Controller
         control={control}
         name="email"
         render={({ field: { onChange, value } }) => (
-          <View style={styles.fieldContainer}>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="Email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={value}
-              onChangeText={onChange}
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-          </View>
+          <TextField
+            label="Email"
+            placeholder="taller@ejemplo.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={value}
+            onChangeText={onChange}
+            error={errors.email?.message}
+          />
         )}
       />
 
@@ -194,16 +182,14 @@ export default function LoginScreen({ navigation }: Props) {
         control={control}
         name="password"
         render={({ field: { onChange, value } }) => (
-          <View style={styles.fieldContainer}>
-            <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
-              placeholder="Contraseña"
-              secureTextEntry
-              value={value}
-              onChangeText={onChange}
-            />
-            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-          </View>
+          <TextField
+            label="Contraseña"
+            placeholder="Mínimo 8 caracteres"
+            secureTextEntry
+            value={value}
+            onChangeText={onChange}
+            error={errors.password?.message}
+          />
         )}
       />
 
@@ -218,37 +204,27 @@ export default function LoginScreen({ navigation }: Props) {
         )}
       />
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color={Colors.background} />
-        ) : (
-          <Text style={styles.buttonText}>Ingresar</Text>
-        )}
-      </TouchableOpacity>
+      <Button title="Ingresar" onPress={handleSubmit(onSubmit)} loading={loading} />
 
       {biometricEnabled && (
-        <TouchableOpacity style={styles.biometricButton} onPress={onBiometricLogin}>
-          <Image 
-            source={{ uri: 'https://img.icons8.com/ios/100/000000/face-id.png' }} 
-            style={[styles.faceIdIcon, { tintColor: Colors.textPrimary }]} 
+        <PressableScale style={styles.biometricButton} onPress={onBiometricLogin}>
+          <Image
+            source={{ uri: 'https://img.icons8.com/ios/100/000000/face-id.png' }}
+            style={[styles.faceIdIcon, { tintColor: Colors.textPrimary }]}
           />
           <Text style={styles.biometricText}>Iniciar con Face ID</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
-      <TouchableOpacity style={styles.forgotButton} onPress={() => navigation.navigate('ResetPassword')}>
-        <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-      </TouchableOpacity>
+      <PressableScale style={styles.linkButton} onPress={() => navigation.navigate('ResetPassword')}>
+        <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
+      </PressableScale>
 
       <View style={styles.registerContainer}>
         <Text style={styles.registerText}>¿No tienes cuenta? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <PressableScale onPress={() => navigation.navigate('Register')}>
           <Text style={styles.registerLink}>Regístrate</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </View>
   );
@@ -258,101 +234,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.background,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...Typography.title1,
     color: Colors.textPrimary,
-    marginBottom: 32,
     textAlign: 'center',
+    marginBottom: Spacing.sm,
   },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: Colors.inputBackground,
-    color: Colors.textPrimary,
-  },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
+  subtitle: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
   },
   rememberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-    paddingHorizontal: 4,
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xs,
   },
   rememberText: {
-    fontSize: 15,
+    ...Typography.subheadline,
     color: Colors.textSecondary,
-  },
-  button: {
-    backgroundColor: Colors.primaryButton,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: Colors.background,
-    fontSize: 16,
-    fontWeight: '600',
   },
   biometricButton: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.sm,
   },
   faceIdIcon: {
     width: 45,
     height: 45,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   biometricText: {
+    ...Typography.subheadline,
     color: Colors.accent,
-    fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  linkButton: {
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  linkText: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    fontWeight: '600',
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
-  },
-  forgotButton: {
-    alignItems: 'center',
-    marginTop: 8,
-    paddingVertical: 8,
-  },
-  forgotText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
+    marginTop: Spacing.lg,
   },
   registerText: {
+    ...Typography.subheadline,
     color: Colors.textSecondary,
-    fontSize: 15,
   },
   registerLink: {
+    ...Typography.subheadline,
     color: Colors.accent,
-    fontSize: 15,
     fontWeight: '600',
   },
 });

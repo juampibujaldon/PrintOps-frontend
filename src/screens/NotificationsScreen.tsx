@@ -1,11 +1,13 @@
 // src/screens/NotificationsScreen.tsx
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, FlatList, ActivityIndicator, Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
 import { notificationService, AppNotification } from '../services/notificationService';
+import Card from '../components/ui/Card';
+import PressableScale from '../components/ui/PressableScale';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -42,7 +44,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={Colors.accent} />
       </View>
     );
   }
@@ -58,27 +60,57 @@ export default function NotificationsScreen() {
         </View>
       }
       renderItem={({ item }) => (
-        <TouchableOpacity
-          style={[styles.card, item.read && styles.cardRead]}
-          activeOpacity={0.8}
-          onPress={() => handlePress(item)}
-        >
-          <Text style={styles.message}>{item.message}</Text>
-          <Text style={styles.date}>{new Date(item.createdAt).toLocaleString()}</Text>
-          {!item.read && <View style={styles.unreadDot} />}
-        </TouchableOpacity>
+        <PressableScale onPress={() => handlePress(item)}>
+          <Card style={[styles.card, item.read && styles.cardRead]}>
+            <Text style={styles.message}>{item.message}</Text>
+            <Text style={styles.date}>{new Date(item.createdAt).toLocaleString()}</Text>
+            {!item.read && <View style={styles.unreadDot} />}
+          </Card>
+        </PressableScale>
       )}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: Colors.background, flexGrow: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  card: { backgroundColor: Colors.inputBackground, padding: 16, borderRadius: 12, marginBottom: 12, position: 'relative' },
-  cardRead: { opacity: 0.6 },
-  message: { fontSize: 15, color: Colors.textPrimary },
-  date: { fontSize: 12, color: Colors.textSecondary, marginTop: 6 },
-  unreadDot: { position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.accent },
-  emptyText: { color: Colors.textSecondary, fontSize: 14 },
+  container: {
+    padding: Spacing.md,
+    backgroundColor: Colors.background,
+    flexGrow: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  card: {
+    marginBottom: Spacing.md,
+  },
+  cardRead: {
+    opacity: 0.6,
+  },
+  message: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+    paddingRight: Spacing.lg,
+  },
+  date: {
+    ...Typography.caption1,
+    color: Colors.textSecondary,
+    marginTop: 6,
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.accent,
+  },
+  emptyText: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+  },
 });

@@ -1,34 +1,23 @@
 // src/screens/OrderDetailScreen.tsx
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
-  ActivityIndicator, Alert, Modal, TextInput,
+  View, Text, StyleSheet, ScrollView, Image,
+  ActivityIndicator, Alert, Modal,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors } from '../constants/theme';
+import { Colors, Radius, Spacing, Typography } from '../constants/theme';
+import { ORDER_STATUS } from '../constants/orders';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderResponse, OrderStatus, StatusHistory } from '../services/orderService';
 import { useAuth } from '../hooks/useAuth';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import TextField from '../components/ui/TextField';
+import PressableScale from '../components/ui/PressableScale';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'OrderDetail'>;
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: 'Pendiente',
-  IN_PROGRESS: 'En progreso',
-  IN_REVIEW: 'En revisión',
-  COMPLETED: 'Completada',
-  CANCELLED: 'Cancelada',
-};
-
-// Colores semánticos para el badge (US-05).
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  PENDING: '#6b7280',
-  IN_PROGRESS: '#3b82f6',
-  IN_REVIEW: '#f59e0b',
-  COMPLETED: '#10b981',
-  CANCELLED: '#ef4444',
-};
 
 export default function OrderDetailScreen({ route }: Props) {
   const { orderId } = route.params;
@@ -84,7 +73,7 @@ export default function OrderDetailScreen({ route }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={Colors.accent} />
       </View>
     );
   }
@@ -97,15 +86,14 @@ export default function OrderDetailScreen({ route }: Props) {
     );
   }
 
-  const statusColor = STATUS_COLORS[order.status] ?? '#6b7280';
+  const status = ORDER_STATUS[order.status];
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Cabecera con estado prominente */}
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Text style={styles.type}>Orden #{order.id} · {order.type}</Text>
-        <View style={[styles.statusPill, { backgroundColor: statusColor + '22', borderColor: statusColor }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>{STATUS_LABELS[order.status] ?? 'Desconocido'}</Text>
+        <View style={styles.statusWrap}>
+          <Badge label={status.label} color={status.color} />
         </View>
 
         {order.description && (
@@ -116,58 +104,44 @@ export default function OrderDetailScreen({ route }: Props) {
           <Text style={styles.meta}>Estimado: {order.estimatedTimeMinutes ?? '-'} min</Text>
           <Text style={styles.meta}>Real: {order.actualTimeMinutes ?? '-'} min</Text>
         </View>
-      </View>
+      </Card>
 
-      {/* Acciones (elemento prominente) */}
       <View style={styles.actions}>
         {isManager ? (
           <>
             {order.status === 'IN_REVIEW' && (
               <>
-                <TouchableOpacity style={styles.button} onPress={() => changeStatus('COMPLETED')}>
-                  <Text style={styles.buttonText}>Aprobar ✓</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.rejectButton]} onPress={() => setRejectVisible(true)}>
-                  <Text style={styles.buttonText}>Rechazar ✗</Text>
-                </TouchableOpacity>
+                <Button title="Aprobar" onPress={() => changeStatus('COMPLETED')} style={styles.actionButton} />
+                <Button title="Rechazar" variant="danger" onPress={() => setRejectVisible(true)} style={styles.actionButton} />
               </>
             )}
             {(order.status === 'PENDING' || order.status === 'IN_PROGRESS' || order.status === 'IN_REVIEW') && (
-              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => changeStatus('CANCELLED')}>
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </TouchableOpacity>
+              <Button title="Cancelar" variant="secondary" onPress={() => changeStatus('CANCELLED')} style={styles.actionButton} />
             )}
           </>
         ) : (
           <>
             {order.status === 'PENDING' && (
-              <TouchableOpacity style={styles.button} onPress={() => changeStatus('IN_PROGRESS')}>
-                <Text style={styles.buttonText}>Comenzar</Text>
-              </TouchableOpacity>
+              <Button title="Comenzar" onPress={() => changeStatus('IN_PROGRESS')} style={styles.actionButton} />
             )}
             {order.status === 'IN_PROGRESS' && (
-              <TouchableOpacity style={styles.button} onPress={() => changeStatus('IN_REVIEW')}>
-                <Text style={styles.buttonText}>Enviar a revisión</Text>
-              </TouchableOpacity>
+              <Button title="Enviar a revisión" onPress={() => changeStatus('IN_REVIEW')} style={styles.actionButton} />
             )}
             {(order.status === 'PENDING' || order.status === 'IN_PROGRESS') && (
-              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => changeStatus('CANCELLED')}>
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </TouchableOpacity>
+              <Button title="Cancelar" variant="secondary" onPress={() => changeStatus('CANCELLED')} style={styles.actionButton} />
             )}
           </>
         )}
       </View>
 
-      {/* Historial (timeline) */}
       <Text style={styles.sectionTitle}>Historial</Text>
-      <View style={styles.card}>
+      <Card style={styles.card}>
         {history.map(h => (
           <View key={h.id} style={styles.timelineRow}>
-            <View style={[styles.timelineDot, { backgroundColor: STATUS_COLORS[h.toStatus] ?? '#6b7280' }]} />
+            <View style={[styles.timelineDot, { backgroundColor: ORDER_STATUS[h.toStatus]?.color ?? Colors.statusUnknown }]} />
             <View style={styles.timelineInfo}>
               <Text style={styles.timelineStatus}>
-                {h.fromStatus ? `${STATUS_LABELS[h.fromStatus] ?? 'Desconocido'} → ` : ''}{STATUS_LABELS[h.toStatus] ?? 'Desconocido'}
+                {h.fromStatus ? `${ORDER_STATUS[h.fromStatus]?.label ?? 'Desconocido'} → ` : ''}{ORDER_STATUS[h.toStatus]?.label ?? 'Desconocido'}
               </Text>
               {h.comment && <Text style={styles.timelineComment}>"{h.comment}"</Text>}
               <Text style={styles.timelineMeta}>
@@ -177,10 +151,10 @@ export default function OrderDetailScreen({ route }: Props) {
           </View>
         ))}
         {history.length === 0 && <Text style={styles.emptyText}>Sin cambios registrados</Text>}
-      </View>
+      </Card>
 
       <Text style={styles.sectionTitle}>Checklist</Text>
-      <View style={styles.card}>
+      <Card style={styles.card}>
         {order.checklistItems.length === 0 && (
           <Text style={styles.emptyText}>Sin ítems de checklist</Text>
         )}
@@ -194,10 +168,10 @@ export default function OrderDetailScreen({ route }: Props) {
             </Text>
           </View>
         ))}
-      </View>
+      </Card>
 
       <Text style={styles.sectionTitle}>Piezas</Text>
-      <View style={styles.card}>
+      <Card style={styles.card}>
         {order.parts.length === 0 && (
           <Text style={styles.emptyText}>Sin piezas registradas</Text>
         )}
@@ -207,7 +181,7 @@ export default function OrderDetailScreen({ route }: Props) {
             <Text style={styles.partQty}>x{part.quantity}</Text>
           </View>
         ))}
-      </View>
+      </Card>
 
       {order.photos.length > 0 && (
         <>
@@ -220,25 +194,22 @@ export default function OrderDetailScreen({ route }: Props) {
         </>
       )}
 
-      {/* Bottom sheet de rechazo */}
       <Modal visible={rejectVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Rechazar orden</Text>
-            <TextInput
-              style={styles.commentInput}
+            <TextField
               multiline
               placeholder="Comentario obligatorio (motivo del rechazo)..."
               value={rejectComment}
               onChangeText={setRejectComment}
+              style={styles.commentInput}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancel} onPress={() => setRejectVisible(false)}>
+              <PressableScale style={styles.modalCancel} onPress={() => setRejectVisible(false)}>
                 <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={confirmReject}>
-                <Text style={styles.buttonText}>Confirmar rechazo</Text>
-              </TouchableOpacity>
+              </PressableScale>
+              <Button title="Confirmar rechazo" variant="danger" onPress={confirmReject} />
             </View>
           </View>
         </View>
@@ -248,46 +219,172 @@ export default function OrderDetailScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40, backgroundColor: Colors.background, flexGrow: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  card: { backgroundColor: Colors.inputBackground, padding: 16, borderRadius: 12, marginBottom: 16 },
-  type: { fontSize: 20, fontWeight: 'bold', color: Colors.textPrimary, textTransform: 'capitalize' },
-  statusPill: { alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginTop: 8, borderWidth: 1 },
-  statusText: { fontSize: 13, fontWeight: '700' },
-  description: { color: Colors.textSecondary, fontSize: 14, marginTop: 10 },
-  metaRow: { flexDirection: 'row', gap: 16, marginTop: 10 },
-  meta: { color: Colors.textSecondary, fontSize: 13 },
-  actions: { flexDirection: 'row', gap: 10, marginBottom: 16, flexWrap: 'wrap' },
-  button: { flexGrow: 1, backgroundColor: Colors.primary, padding: 16, borderRadius: 10, alignItems: 'center' },
-  rejectButton: { backgroundColor: Colors.error },
-  cancelButton: { backgroundColor: Colors.textSecondary },
-  buttonText: { color: Colors.background, fontWeight: '700' },
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
-  timelineRow: { flexDirection: 'row', gap: 10, paddingVertical: 8 },
-  timelineDot: { width: 12, height: 12, borderRadius: 6, marginTop: 4 },
-  timelineInfo: { flex: 1 },
-  timelineStatus: { fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
-  timelineComment: { fontSize: 13, color: Colors.accent, marginTop: 2, fontStyle: 'italic' },
-  timelineMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  checkbox: { fontSize: 16, color: Colors.accent, width: 24 },
-  checkboxDone: { color: Colors.statusOperativa },
-  checklistText: { fontSize: 15, color: Colors.textPrimary, flex: 1 },
-  checklistTextMuted: { color: Colors.textSecondary, textDecorationLine: 'line-through' },
-  partRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  partName: { fontSize: 15, color: Colors.textPrimary },
-  partQty: { fontSize: 15, color: Colors.textSecondary, fontWeight: '700' },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  photo: { width: 100, height: 100, borderRadius: 8 },
-  emptyText: { color: Colors.textSecondary, fontSize: 14, paddingVertical: 8 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: Colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 16 },
-  commentInput: {
-    borderWidth: 1, borderColor: Colors.surfaceBorder, borderRadius: 10, padding: 12,
-    minHeight: 90, textAlignVertical: 'top', backgroundColor: Colors.inputBackground, color: Colors.textPrimary,
+  container: {
+    padding: Spacing.lg,
+    paddingBottom: 40,
+    backgroundColor: Colors.background,
+    flexGrow: 1,
   },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 16, alignItems: 'center' },
-  modalCancel: { padding: 14 },
-  modalCancelText: { color: Colors.accent, fontWeight: '600' },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  card: {
+    marginBottom: Spacing.md,
+  },
+  type: {
+    ...Typography.title3,
+    color: Colors.textPrimary,
+    textTransform: 'capitalize',
+  },
+  statusWrap: {
+    marginTop: Spacing.sm,
+  },
+  description: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    marginTop: Spacing.sm,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  meta: {
+    ...Typography.footnote,
+    color: Colors.textSecondary,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    flexWrap: 'wrap',
+  },
+  actionButton: {
+    flexGrow: 1,
+    minWidth: 120,
+  },
+  sectionTitle: {
+    ...Typography.labelUppercase,
+    color: Colors.textTertiary,
+    marginBottom: Spacing.sm,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  timelineInfo: {
+    flex: 1,
+  },
+  timelineStatus: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
+  timelineComment: {
+    ...Typography.footnote,
+    color: Colors.accent,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  timelineMeta: {
+    ...Typography.caption1,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 6,
+  },
+  checkbox: {
+    ...Typography.body,
+    color: Colors.accent,
+    width: 24,
+  },
+  checkboxDone: {
+    color: Colors.statusOperativa,
+  },
+  checklistText: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  checklistTextMuted: {
+    color: Colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  partRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  partName: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+  },
+  partQty: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    fontWeight: '700',
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  photo: {
+    width: 100,
+    height: 100,
+    borderRadius: Radius.sm,
+  },
+  emptyText: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    paddingVertical: Spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.lg,
+  },
+  modalTitle: {
+    ...Typography.title3,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  commentInput: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    alignItems: 'center',
+  },
+  modalCancel: {
+    padding: Spacing.md,
+  },
+  modalCancelText: {
+    ...Typography.subheadline,
+    color: Colors.accent,
+    fontWeight: '600',
+  },
 });

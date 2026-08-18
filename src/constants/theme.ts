@@ -1,26 +1,30 @@
 // src/constants/theme.ts
-export const Colors = {
-  background: '#f8f0d8', // Fondo crema cálido principal
-  inputBackground: '#f0e6c4', // Fondo de inputs (crema más oscuro)
-  inputFocus: '#f8f0d8', // Fondo al enfocar (para dar profundidad)
-  primaryButton: '#283618', // Botón principal (black_forest)
-  accent: '#bc6c25', // Acentos y links (copperwood)
-  textPrimary: '#1a2410', // Textos en verde muy oscuro
-  textSecondary: '#283618', // Textos secundarios en verde bosque
-  error: '#d9534f', // Rojo para errores
-  
-  // Status colors para las impresoras (se mantienen del rediseño)
-  statusOperativa:  '#00d4a1',   // Teal — Operational
-  statusMantenim:   '#f59e0b',   // Amber — In maintenance
-  statusFuera:      '#ef4444',   // Red — Out of service
-  statusUnknown:    '#6b7280',   // Gray — Unknown
+import { TextStyle, ViewStyle } from 'react-native';
 
-  // Alias para la Home Rediseñada
-  surfaceBase: '#ffffff',
-  surfaceBorder: '#e6d8b8',
-  surfaceElevated: '#f0e6c4',
-  primaryGlow: '#e8dcba',
-  primary: '#283618',
+// Paleta neutra industrial (tokens estilo iOS).
+export const Colors = {
+  background: '#F2F2F7', // fondo de pantalla
+  surface: '#FFFFFF', // tarjetas / superficies elevadas
+  separator: '#E5E5EA', // bordes y divisores
+  textPrimary: '#1C1C1E', // títulos / texto principal
+  textSecondary: '#3C3C43', // texto secundario
+  textTertiary: '#6B7280', // texto terciario / placeholders
+  accent: '#0A84FF', // acciones y links
+  onAccent: '#FFFFFF', // texto sobre acento
+  error: '#FF3B30',
+
+  // Estados de impresora
+  statusOperativa: '#34C759',
+  statusMantenim: '#FF9500',
+  statusFuera: '#FF3B30',
+  statusUnknown: '#8E8E93',
+
+  // Estados de orden
+  orderPending: '#8E8E93',
+  orderInProgress: '#0A84FF',
+  orderInReview: '#FF9500',
+  orderCompleted: '#34C759',
+  orderCancelled: '#FF3B30',
 };
 
 export const Spacing = {
@@ -32,17 +36,48 @@ export const Spacing = {
 };
 
 export const Radius = {
-  sm: 6,
-  md: 10,
+  sm: 8,
+  md: 12,
   lg: 16,
   xl: 20,
+  full: 999,
 };
 
-export const Typography = {
-  labelMono: {
-    fontFamily: 'Courier New',
+// Sombras sutiles tipo iOS para el toque premium.
+export const Shadows: Record<'card' | 'floating', ViewStyle> = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  floating: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+};
+
+// Escala tipográfica iOS (SF Pro cae por defecto en iOS).
+export const Typography: Record<string, TextStyle> = {
+  largeTitle: { fontSize: 34, fontWeight: '700', letterSpacing: 0.37 },
+  title1: { fontSize: 28, fontWeight: '700', letterSpacing: 0.36 },
+  title2: { fontSize: 22, fontWeight: '700', letterSpacing: 0.35 },
+  title3: { fontSize: 20, fontWeight: '600', letterSpacing: 0.38 },
+  headline: { fontSize: 17, fontWeight: '600', letterSpacing: -0.41 },
+  body: { fontSize: 17, fontWeight: '400', letterSpacing: -0.41 },
+  callout: { fontSize: 16, fontWeight: '400', letterSpacing: -0.32 },
+  subheadline: { fontSize: 15, fontWeight: '400', letterSpacing: -0.24 },
+  footnote: { fontSize: 13, fontWeight: '400', letterSpacing: -0.08 },
+  caption1: { fontSize: 12, fontWeight: '400', letterSpacing: 0 },
+  caption2: { fontSize: 11, fontWeight: '400', letterSpacing: 0.07 },
+  labelUppercase: {
     fontSize: 11,
+    fontWeight: '700',
     letterSpacing: 1.2,
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
   },
 };

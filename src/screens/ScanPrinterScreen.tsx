@@ -73,7 +73,7 @@ export default function ScanPrinterScreen() {
   if (checking) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={Colors.accent} />
       </View>
     );
   }
@@ -121,10 +121,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, padding: 24 },
   text: { color: Colors.textPrimary, fontSize: 15, textAlign: 'center', marginBottom: 16 },
   overlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  viewfinder: { width: 240, height: 240, borderWidth: 2, borderColor: Colors.primary, borderRadius: 16 },
+  viewfinder: { width: 240, height: 240, borderWidth: 2, borderColor: Colors.accent, borderRadius: 16 },
   hint: { color: '#fff', marginTop: 20, fontSize: 14 },
   close: { position: 'absolute', bottom: 48, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10 },
   closeText: { color: '#fff', fontWeight: '700' },
-  button: { backgroundColor: Colors.primary, padding: 14, borderRadius: 10 },
+  button: { backgroundColor: Colors.accent, padding: 14, borderRadius: 10 },
   buttonText: { color: Colors.background, fontWeight: '700' },
 });

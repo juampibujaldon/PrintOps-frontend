@@ -1,17 +1,21 @@
 // src/screens/CreateOrderScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Image, Modal, FlatList, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, ScrollView, Image, Modal,
+  FlatList, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../constants/theme';
+import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderType, ChecklistItemInput, PartInput } from '../services/orderService';
 import { partService, Part } from '../services/partService';
 import { useCameraPermission } from '../hooks/useCameraPermission';
+import Button from '../components/ui/Button';
+import TextField from '../components/ui/TextField';
+import Card from '../components/ui/Card';
+import PressableScale from '../components/ui/PressableScale';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'CreateOrder'>;
 
@@ -23,7 +27,6 @@ const TYPE_LABELS: Record<OrderType, string> = {
   CALIBRATION: 'Calibración',
 };
 
-// Checklist por defecto según el tipo de orden (US-04).
 const DEFAULT_CHECKLISTS: Record<OrderType, string[]> = {
   PREVENTIVE: [
     'Limpieza de boquilla y hotend',
@@ -65,7 +68,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
-  // Parts selector
   const [partsModalVisible, setPartsModalVisible] = useState(false);
   const [partSearch, setPartSearch] = useState('');
   const [catalogResults, setCatalogResults] = useState<Part[]>([]);
@@ -75,7 +77,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
 
   const { requestCameraPermission, requestLibraryPermission } = useCameraPermission();
 
-  // Restaurar borrador al montar
   useEffect(() => {
     AsyncStorage.getItem(draftKey).then(raw => {
       if (!raw) return;
@@ -94,20 +95,18 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
         // Borrador corrupto: se ignora.
       }
     });
-  }, []);
+  }, [draftKey]);
 
-  // Autosave del borrador cada 30 segundos (las fotos no se persisten).
   useEffect(() => {
     const id = setInterval(() => {
       AsyncStorage.setItem(draftKey, JSON.stringify({ type, description, checklist, parts, estimatedTime }));
     }, 30000);
     return () => clearInterval(id);
-  }, [type, description, checklist, parts, estimatedTime]);
+  }, [draftKey, type, description, checklist, parts, estimatedTime]);
 
   const selectType = (t: OrderType) => {
     if (forceCorrective && t !== 'CORRECTIVE') return;
     setType(t);
-    // Cargar checklist por defecto solo si todavía no hay ítems.
     setChecklist(prev => (prev.length === 0 ? DEFAULT_CHECKLISTS[t].map(text => ({ text, done: false, na: false })) : prev));
   };
 
@@ -119,7 +118,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     return true;
   };
 
-  // ── Checklist helpers ──
   const updateChecklistItem = (index: number, patch: Partial<ChecklistItemInput>) => {
     setChecklist(prev => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   };
@@ -132,7 +130,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     setChecklist(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ── Parts helpers ──
   const searchParts = async () => {
     setSearchingParts(true);
     try {
@@ -164,7 +161,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     setParts(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ── Photos helpers ──
   const takePhoto = async () => {
     if (photos.length >= MAX_PHOTOS) return;
     const allowed = await requestCameraPermission();
@@ -185,7 +181,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ── Save ──
   const handleSave = async () => {
     if (!type) return;
     setSaving(true);
@@ -216,11 +211,9 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     }
   };
 
-  // ─── Render ───
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.container}>
-        {/* Stepper */}
         <View style={styles.stepper}>
           {['Tipo', 'Checklist', 'Piezas/Fotos'].map((label, i) => (
             <View key={label} style={styles.stepperStep}>
@@ -243,30 +236,29 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
               <View style={styles.typeGroup}>
                 {(Object.keys(TYPE_LABELS) as OrderType[]).map(t => {
                   const disabled = forceCorrective && t !== 'CORRECTIVE';
+                  const selected = type === t;
                   return (
-                    <TouchableOpacity
+                    <PressableScale
                       key={t}
                       disabled={disabled}
-                      style={[styles.typeOption, type === t && styles.typeOptionSelected, disabled && styles.typeOptionDisabled]}
+                      style={[styles.typeOption, selected && styles.typeOptionSelected, disabled && styles.typeOptionDisabled]}
                       onPress={() => selectType(t)}
                     >
-                      <Text style={[styles.typeText, type === t && styles.typeTextSelected]}>{TYPE_LABELS[t]}</Text>
-                    </TouchableOpacity>
+                      <Text style={[styles.typeText, selected && styles.typeTextSelected]}>{TYPE_LABELS[t]}</Text>
+                    </PressableScale>
                   );
                 })}
               </View>
 
               {type === 'CORRECTIVE' && (
-                <View style={styles.field}>
-                  <Text style={styles.label}>Descripción del problema (obligatorio)</Text>
-                  <TextInput
-                    style={styles.input}
-                    multiline
-                    placeholder="Describí el problema observado..."
-                    value={description}
-                    onChangeText={setDescription}
-                  />
-                </View>
+                <TextField
+                  label="Descripción del problema (obligatorio)"
+                  multiline
+                  placeholder="Describí el problema observado..."
+                  value={description}
+                  onChangeText={setDescription}
+                  style={styles.multiline}
+                />
               )}
             </View>
           )}
@@ -274,47 +266,46 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
           {step === 2 && (
             <View>
               {type !== 'CORRECTIVE' && (
-                <View style={styles.field}>
-                  <Text style={styles.label}>Descripción (opcional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    multiline
-                    placeholder="Detalle del trabajo a realizar..."
-                    value={description}
-                    onChangeText={setDescription}
-                  />
-                </View>
+                <TextField
+                  label="Descripción (opcional)"
+                  multiline
+                  placeholder="Detalle del trabajo a realizar..."
+                  value={description}
+                  onChangeText={setDescription}
+                  style={styles.multiline}
+                />
               )}
 
               <Text style={styles.stepTitle}>Checklist</Text>
               {checklist.map((item, index) => (
                 <View key={index} style={styles.checklistItem}>
-                  <TouchableOpacity
+                  <PressableScale
                     style={[styles.checkToggle, item.done && styles.checkToggleDone]}
                     onPress={() => updateChecklistItem(index, { done: !item.done, na: false })}
                   >
                     <Text style={styles.checkToggleText}>{item.done ? '✓' : ''}</Text>
-                  </TouchableOpacity>
-                  <TextInput
-                    style={[styles.checklistText, (item.done || item.na) && styles.checklistTextMuted]}
+                  </PressableScale>
+                  <TextField
+                    containerStyle={styles.checklistField}
                     value={item.text}
                     onChangeText={t => updateChecklistItem(index, { text: t })}
                     placeholder="Ítem..."
+                    style={[styles.checklistInput, (item.done || item.na) && styles.checklistTextMuted]}
                   />
-                  <TouchableOpacity
+                  <PressableScale
                     style={[styles.naToggle, item.na && styles.naToggleActive]}
                     onPress={() => updateChecklistItem(index, { na: !item.na, done: false })}
                   >
                     <Text style={[styles.naToggleText, item.na && styles.naToggleTextActive]}>N/A</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeChecklistItem(index)}>
+                  </PressableScale>
+                  <PressableScale onPress={() => removeChecklistItem(index)}>
                     <Text style={styles.removeText}>✕</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               ))}
-              <TouchableOpacity style={styles.addItemButton} onPress={addChecklistItem}>
+              <PressableScale style={styles.addItemButton} onPress={addChecklistItem}>
                 <Text style={styles.addItemText}>+ Agregar ítem</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           )}
 
@@ -326,104 +317,94 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
                   <Text style={styles.partRowText}>
                     {p.partNumber || `Pieza #${p.partId}`} × {p.quantity}{p.external ? ' (externa)' : ''}
                   </Text>
-                  <TouchableOpacity onPress={() => removePart(index)}>
+                  <PressableScale onPress={() => removePart(index)}>
                     <Text style={styles.removeText}>✕</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               ))}
-              <TouchableOpacity style={styles.addItemButton} onPress={() => setPartsModalVisible(true)}>
+              <PressableScale style={styles.addItemButton} onPress={() => setPartsModalVisible(true)}>
                 <Text style={styles.addItemText}>+ Agregar pieza del catálogo / externa</Text>
-              </TouchableOpacity>
+              </PressableScale>
 
               <Text style={styles.stepTitle}>Fotos ({photos.length}/{MAX_PHOTOS})</Text>
               <View style={styles.photoGrid}>
                 {photos.map((p, index) => (
                   <View key={index} style={styles.photoTile}>
                     <Image source={{ uri: p.uri! }} style={styles.photo} />
-                    <TouchableOpacity style={styles.photoRemove} onPress={() => removePhoto(index)}>
+                    <PressableScale style={styles.photoRemove} onPress={() => removePhoto(index)}>
                       <Text style={styles.photoRemoveText}>✕</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   </View>
                 ))}
                 {photos.length < MAX_PHOTOS && (
-                  <TouchableOpacity style={styles.photoAdd} onPress={pickPhoto}>
+                  <PressableScale style={styles.photoAdd} onPress={pickPhoto}>
                     <Text style={styles.photoAddText}>＋</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
               </View>
               <View style={styles.photoActions}>
-                <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
+                <PressableScale style={styles.photoButton} onPress={takePhoto}>
                   <Text style={styles.photoButtonText}>Cámara</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.photoButton} onPress={pickPhoto}>
+                </PressableScale>
+                <PressableScale style={styles.photoButton} onPress={pickPhoto}>
                   <Text style={styles.photoButtonText}>Galería</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Tiempo estimado (minutos)</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  placeholder="Ej: 45"
-                  value={estimatedTime}
-                  onChangeText={setEstimatedTime}
-                />
-              </View>
+              <TextField
+                label="Tiempo estimado (minutos)"
+                keyboardType="number-pad"
+                placeholder="Ej: 45"
+                value={estimatedTime}
+                onChangeText={setEstimatedTime}
+              />
             </View>
           )}
         </ScrollView>
 
-        {/* Navegación */}
         <View style={styles.footer}>
           {step > 1 && (
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => setStep(step - 1)}>
-              <Text style={styles.secondaryButtonText}>Anterior</Text>
-            </TouchableOpacity>
+            <Button variant="ghost" title="Anterior" onPress={() => setStep(step - 1)} style={styles.footerGhost} />
           )}
           {step < 3 ? (
-            <TouchableOpacity
-              style={[styles.primaryButton, !canGoNext() && styles.disabled]}
-              disabled={!canGoNext()}
+            <Button
+              title="Siguiente"
               onPress={() => setStep(step + 1)}
-            >
-              <Text style={styles.primaryButtonText}>Siguiente</Text>
-            </TouchableOpacity>
+              disabled={!canGoNext()}
+              style={styles.footerPrimary}
+            />
           ) : (
-            <TouchableOpacity style={styles.primaryButton} onPress={() => setShowSummary(true)}>
-              <Text style={styles.primaryButtonText}>Guardar</Text>
-            </TouchableOpacity>
+            <Button title="Guardar" onPress={() => setShowSummary(true)} style={styles.footerPrimary} />
           )}
         </View>
 
-        {/* Parts selector modal */}
         <Modal visible={partsModalVisible} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
+            <Card style={styles.modalCard}>
               <Text style={styles.modalTitle}>Agregar pieza</Text>
               <View style={styles.searchRow}>
-                <TextInput
-                  style={[styles.input, styles.flex]}
+                <TextField
+                  containerStyle={styles.flex}
                   placeholder="Buscar en catálogo..."
                   value={partSearch}
                   onChangeText={setPartSearch}
                 />
-                <TouchableOpacity style={styles.searchButton} onPress={searchParts}>
+                <PressableScale style={styles.searchButton} onPress={searchParts}>
                   <Text style={styles.searchButtonText}>Buscar</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
               {searchingParts ? (
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={Colors.accent} />
               ) : (
                 <FlatList
                   data={catalogResults}
                   keyExtractor={item => String(item.id)}
                   style={styles.catalogList}
                   renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.catalogRow} onPress={() => addCatalogPart(item)}>
+                    <PressableScale style={styles.catalogRow} onPress={() => addCatalogPart(item)}>
                       <Text style={styles.catalogName}>{item.name}</Text>
                       <Text style={styles.catalogMeta}>{item.partNumber} · stock {item.stockQuantity}</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   )}
                   ListEmptyComponent={<Text style={styles.emptyText}>Sin resultados</Text>}
                 />
@@ -431,35 +412,32 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
 
               <Text style={styles.modalSubtitle}>Pieza externa (no está en el catálogo)</Text>
               <View style={styles.searchRow}>
-                <TextInput
-                  style={[styles.input, styles.flex]}
+                <TextField
+                  containerStyle={styles.flex}
                   placeholder="Número de parte"
                   value={externalNumber}
                   onChangeText={setExternalNumber}
                 />
-                <TextInput
-                  style={[styles.input, styles.qtyInput]}
+                <TextField
+                  containerStyle={styles.qtyInput}
                   keyboardType="number-pad"
                   placeholder="Cant."
                   value={externalQty}
                   onChangeText={setExternalQty}
                 />
               </View>
-              <TouchableOpacity style={styles.addItemButton} onPress={addExternalPart}>
+              <PressableScale style={styles.addItemButton} onPress={addExternalPart}>
                 <Text style={styles.addItemText}>+ Agregar pieza externa</Text>
-              </TouchableOpacity>
+              </PressableScale>
 
-              <TouchableOpacity style={styles.modalClose} onPress={() => setPartsModalVisible(false)}>
-                <Text style={styles.modalCloseText}>Listo</Text>
-              </TouchableOpacity>
-            </View>
+              <Button title="Listo" onPress={() => setPartsModalVisible(false)} style={styles.modalClose} />
+            </Card>
           </View>
         </Modal>
 
-        {/* Resumen antes de guardar */}
         <Modal visible={showSummary} animationType="fade" transparent>
           <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
+            <Card style={styles.modalCard}>
               <Text style={styles.modalTitle}>Confirmar orden</Text>
               <Text style={styles.summaryLine}>Impresora: {printer.serialNumber}</Text>
               <Text style={styles.summaryLine}>Tipo: {type ? TYPE_LABELS[type] : '-'}</Text>
@@ -468,14 +446,10 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
               <Text style={styles.summaryLine}>Fotos: {photos.length}</Text>
               <Text style={styles.summaryLine}>Tiempo estimado: {estimatedTime ? `${estimatedTime} min` : '-'}</Text>
               <View style={styles.summaryActions}>
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => setShowSummary(false)}>
-                  <Text style={styles.secondaryButtonText}>Volver</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.primaryButton} onPress={handleSave} disabled={saving}>
-                  {saving ? <ActivityIndicator color={Colors.background} /> : <Text style={styles.primaryButtonText}>Confirmar</Text>}
-                </TouchableOpacity>
+                <Button variant="ghost" title="Volver" onPress={() => setShowSummary(false)} style={styles.footerGhost} />
+                <Button title="Confirmar" onPress={handleSave} loading={saving} style={styles.footerPrimary} />
               </View>
-            </View>
+            </Card>
           </View>
         </Modal>
       </View>
@@ -484,74 +458,342 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  stepper: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 16, gap: 8 },
-  stepperStep: { alignItems: 'center', flex: 1 },
-  stepperDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.inputBackground, justifyContent: 'center', alignItems: 'center' },
-  stepperDotActive: { backgroundColor: Colors.primary },
-  stepperDotText: { color: Colors.textSecondary, fontWeight: '700' },
-  stepperDotTextActive: { color: Colors.background },
-  stepperLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4 },
-  stepperLabelActive: { color: Colors.primary, fontWeight: '700' },
-  warning: { color: Colors.error, textAlign: 'center', marginBottom: 8, fontSize: 13, fontWeight: '600' },
-  scrollContent: { padding: 20, paddingBottom: 20 },
-  stepTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
-  typeGroup: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  typeOption: { flex: 1, paddingVertical: 14, backgroundColor: Colors.inputBackground, borderRadius: 10, alignItems: 'center' },
-  typeOptionSelected: { backgroundColor: Colors.primary },
-  typeOptionDisabled: { opacity: 0.4 },
-  typeText: { color: Colors.textSecondary, fontWeight: '600' },
-  typeTextSelected: { color: Colors.background },
-  field: { marginBottom: 16 },
-  label: { color: Colors.textSecondary, fontSize: 12, marginBottom: 4, marginLeft: 4 },
-  input: { borderWidth: 1, borderColor: 'transparent', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, backgroundColor: Colors.inputBackground, color: Colors.textPrimary },
-  checklistItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  checkToggle: { width: 26, height: 26, borderRadius: 6, borderWidth: 1, borderColor: Colors.accent, justifyContent: 'center', alignItems: 'center' },
-  checkToggleDone: { backgroundColor: Colors.statusOperativa, borderColor: Colors.statusOperativa },
-  checkToggleText: { color: Colors.background, fontWeight: '700' },
-  checklistText: { flex: 1, borderWidth: 1, borderColor: 'transparent', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, backgroundColor: Colors.inputBackground, color: Colors.textPrimary },
-  checklistTextMuted: { color: Colors.textSecondary, textDecorationLine: 'line-through' },
-  naToggle: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: Colors.surfaceBorder },
-  naToggleActive: { backgroundColor: Colors.statusMantenim, borderColor: Colors.statusMantenim },
-  naToggleText: { color: Colors.textSecondary, fontSize: 11, fontWeight: '700' },
-  naToggleTextActive: { color: Colors.background },
-  removeText: { color: Colors.error, fontSize: 16, padding: 4 },
-  addItemButton: { borderWidth: 1, borderColor: Colors.accent, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 4 },
-  addItemText: { color: Colors.accent, fontWeight: '600' },
-  partRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.surfaceBorder },
-  partRowText: { color: Colors.textPrimary, fontSize: 15 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  photoTile: { position: 'relative' },
-  photo: { width: 84, height: 84, borderRadius: 8 },
-  photoRemove: { position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.error, justifyContent: 'center', alignItems: 'center' },
-  photoRemoveText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  photoAdd: { width: 84, height: 84, borderRadius: 8, borderWidth: 1, borderColor: Colors.surfaceBorder, backgroundColor: Colors.inputBackground, justifyContent: 'center', alignItems: 'center' },
-  photoAddText: { fontSize: 30, color: Colors.textSecondary },
-  photoActions: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  photoButton: { flex: 1, backgroundColor: Colors.primaryGlow, paddingVertical: 10, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: Colors.primary },
-  photoButtonText: { color: Colors.primary, fontWeight: '700' },
-  footer: { flexDirection: 'row', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: Colors.surfaceBorder },
-  primaryButton: { flex: 1, backgroundColor: Colors.primary, padding: 16, borderRadius: 10, alignItems: 'center' },
-  primaryButtonText: { color: Colors.background, fontWeight: '700', fontSize: 15 },
-  secondaryButton: { padding: 16, borderRadius: 10, alignItems: 'center' },
-  secondaryButtonText: { color: Colors.accent, fontWeight: '600' },
-  disabled: { opacity: 0.5 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
-  modalCard: { backgroundColor: Colors.background, borderRadius: 16, padding: 20, maxHeight: '80%' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 16 },
-  modalSubtitle: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary, marginTop: 16, marginBottom: 8 },
-  searchRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  flex: { flex: 1 },
-  qtyInput: { width: 70 },
-  searchButton: { backgroundColor: Colors.primary, paddingHorizontal: 16, justifyContent: 'center', borderRadius: 10 },
-  searchButtonText: { color: Colors.background, fontWeight: '700' },
-  catalogList: { maxHeight: 220, marginBottom: 4 },
-  catalogRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.surfaceBorder },
-  catalogName: { color: Colors.textPrimary, fontSize: 15 },
-  catalogMeta: { color: Colors.textSecondary, fontSize: 12 },
-  emptyText: { color: Colors.textSecondary, fontSize: 14, paddingVertical: 8, textAlign: 'center' },
-  modalClose: { backgroundColor: Colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 12 },
-  modalCloseText: { color: Colors.background, fontWeight: '700' },
-  summaryLine: { color: Colors.textPrimary, fontSize: 15, marginBottom: 6 },
-  summaryActions: { flexDirection: 'row', gap: 10, marginTop: 16, alignItems: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  stepper: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
+  },
+  stepperStep: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  stepperDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperDotActive: {
+    backgroundColor: Colors.textPrimary,
+    borderColor: Colors.textPrimary,
+  },
+  stepperDotText: {
+    ...Typography.footnote,
+    color: Colors.textSecondary,
+    fontWeight: '700',
+  },
+  stepperDotTextActive: {
+    color: Colors.background,
+  },
+  stepperLabel: {
+    ...Typography.caption2,
+    color: Colors.textTertiary,
+    marginTop: 4,
+  },
+  stepperLabelActive: {
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  warning: {
+    ...Typography.footnote,
+    color: Colors.error,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+    fontWeight: '600',
+  },
+  scrollContent: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  stepTitle: {
+    ...Typography.headline,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  typeGroup: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  typeOption: {
+    flex: 1,
+    paddingVertical: 14,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+  },
+  typeOptionSelected: {
+    backgroundColor: Colors.textPrimary,
+    borderColor: Colors.textPrimary,
+  },
+  typeOptionDisabled: {
+    opacity: 0.4,
+  },
+  typeText: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  typeTextSelected: {
+    color: Colors.background,
+  },
+  multiline: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  checkToggle: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkToggleDone: {
+    backgroundColor: Colors.statusOperativa,
+    borderColor: Colors.statusOperativa,
+  },
+  checkToggleText: {
+    color: Colors.onAccent,
+    fontWeight: '700',
+  },
+  checklistField: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  checklistInput: {
+    paddingVertical: 8,
+  },
+  checklistTextMuted: {
+    color: Colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  naToggle: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+  },
+  naToggleActive: {
+    backgroundColor: Colors.statusMantenim,
+    borderColor: Colors.statusMantenim,
+  },
+  naToggleText: {
+    ...Typography.caption2,
+    color: Colors.textSecondary,
+    fontWeight: '700',
+  },
+  naToggleTextActive: {
+    color: Colors.onAccent,
+  },
+  removeText: {
+    color: Colors.error,
+    fontSize: 16,
+    padding: 4,
+  },
+  addItemButton: {
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  addItemText: {
+    ...Typography.subheadline,
+    color: Colors.accent,
+    fontWeight: '600',
+  },
+  partRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.separator,
+  },
+  partRowText: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  photoTile: {
+    position: 'relative',
+  },
+  photo: {
+    width: 84,
+    height: 84,
+    borderRadius: Radius.sm,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoRemoveText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  photoAdd: {
+    width: 84,
+    height: 84,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoAddText: {
+    fontSize: 30,
+    color: Colors.textTertiary,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  photoButton: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    paddingVertical: 10,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+  },
+  photoButtonText: {
+    ...Typography.footnote,
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.separator,
+    alignItems: 'center',
+  },
+  footerPrimary: {
+    flex: 1,
+  },
+  footerGhost: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  modalCard: {
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    ...Typography.title3,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  modalSubtitle: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    fontWeight: '700',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    alignItems: 'flex-start',
+  },
+  flex: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  qtyInput: {
+    width: 70,
+    marginBottom: 0,
+  },
+  searchButton: {
+    backgroundColor: Colors.textPrimary,
+    paddingHorizontal: Spacing.md,
+    height: 50,
+    justifyContent: 'center',
+    borderRadius: Radius.md,
+  },
+  searchButtonText: {
+    ...Typography.subheadline,
+    color: Colors.background,
+    fontWeight: '700',
+  },
+  catalogList: {
+    maxHeight: 220,
+    marginBottom: Spacing.xs,
+  },
+  catalogRow: {
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.separator,
+  },
+  catalogName: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+  },
+  catalogMeta: {
+    ...Typography.caption1,
+    color: Colors.textSecondary,
+  },
+  emptyText: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    paddingVertical: Spacing.sm,
+    textAlign: 'center',
+  },
+  modalClose: {
+    marginTop: Spacing.md,
+  },
+  summaryLine: {
+    ...Typography.subheadline,
+    color: Colors.textPrimary,
+    marginBottom: 6,
+  },
+  summaryActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    alignItems: 'center',
+  },
 });

@@ -22,11 +22,12 @@ export default function TecnicoDrawer() {
   return (
     <Drawer.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.background },
+        headerStyle: { backgroundColor: Colors.surface },
+        headerShadowVisible: false,
         headerTintColor: Colors.textPrimary,
         drawerActiveTintColor: Colors.accent,
         drawerInactiveTintColor: Colors.textSecondary,
-        drawerStyle: { backgroundColor: Colors.background },
+        drawerStyle: { backgroundColor: Colors.surface },
       }}
     >
       <Drawer.Screen 

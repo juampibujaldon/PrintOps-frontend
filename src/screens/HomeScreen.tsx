@@ -3,252 +3,35 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   FlatList,
   StatusBar,
   Animated,
-  Image,
   SafeAreaView,
-  TextInput,
   Alert,
   Modal,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-import { Colors, Radius, Spacing } from '../constants/theme';
+import { Colors, Radius, Shadows, Spacing, Typography } from '../constants/theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
-import { printerService, PrinterStatus, PrinterResponse } from '../services/printerService';
+import { printerService, PrinterResponse } from '../services/printerService';
 import { workspaceService } from '../services/workspaceService';
+import PrinterCard from '../components/home/PrinterCard';
+import SummaryBar from '../components/home/SummaryBar';
+import FiltersBar from '../components/home/FiltersBar';
+import PressableScale from '../components/ui/PressableScale';
+import TextField from '../components/ui/TextField';
+import Button from '../components/ui/Button';
 
 type NavProp = NativeStackNavigationProp<TecnicoStackParamList, 'TecnicoHome'>;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<PrinterStatus, { label: string; color: string; icon: string }> = {
-  OPERATIVE: { label: 'Operativa', color: Colors.statusOperativa, icon: '●' },
-  MAINTENANCE: { label: 'En Mantenimiento', color: Colors.statusMantenim, icon: '●' },
-  OUT_OF_SERVICE: { label: 'Fuera de Servicio', color: Colors.statusFuera, icon: '●' },
-};
-
-// FIX 4: calcula el badge de mantenimiento según la fecha del próximo mantenimiento.
-function getMaintenanceBadge(nextMaintenanceDate?: string | null): { label: string; color: string; bg: string } | null {
-  if (!nextMaintenanceDate) return null;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const next = new Date(`${nextMaintenanceDate}T00:00:00`);
-  if (isNaN(next.getTime())) return null;
-
-  const diffDays = Math.ceil((next.getTime() - today.getTime()) / 86400000);
-
-  if (diffDays < 0) {
-    return { label: 'Mantenimiento vencido', color: Colors.statusFuera, bg: Colors.statusFuera + '18' };
-  }
-  if (diffDays <= 7) {
-    return { label: 'Próximo', color: Colors.statusMantenim, bg: Colors.statusMantenim + '18' };
-  }
-  return null;
-}
-
-// ─── Componente: StatusPill ──────────────────────────────────────────────────
-function StatusPill({ status }: { status: PrinterStatus }) {
-  const cfg = STATUS_CONFIG[status];
-  const pulse = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (status === 'OPERATIVE') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulse, { toValue: 0.4, duration: 900, useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        ])
-      ).start();
-    }
-  }, [status]);
-
-  return (
-    <View style={[styles.statusPill, { borderColor: cfg.color + '40', backgroundColor: cfg.color + '18' }]}>
-      <Animated.Text
-        style={[styles.statusDot, { color: cfg.color, opacity: status === 'OPERATIVE' ? pulse : 1 }]}
-      >
-        {cfg.icon}
-      </Animated.Text>
-      <Text style={[styles.statusLabel, { color: cfg.color }]}>{cfg.label}</Text>
-    </View>
-  );
-}
-
-// ─── Componente: PrinterCardItem ─────────────────────────────────────────────
-function PrinterCardItem({ printer, index, onPress }: { printer: PrinterResponse; index: number; onPress: () => void }) {
-  const translateY = useRef(new Animated.Value(30)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, { toValue: 0, duration: 350, delay: index * 80, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 350, delay: index * 80, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const hasPhoto = printer.photoUrl != null;
-  const maintenanceBadge = getMaintenanceBadge(printer.nextMaintenanceDate);
-
-  return (
-    <Animated.View style={{ transform: [{ translateY }], opacity }}>
-      <TouchableOpacity style={styles.printerCard} activeOpacity={0.82} onPress={onPress}>
-        {/* Accent left bar */}
-        <View
-          style={[styles.accentBar, { backgroundColor: STATUS_CONFIG[printer.status].color }]}
-        />
-
-        {/* Thumbnail / Placeholder */}
-        <View style={styles.thumbnailWrapper}>
-          {hasPhoto ? (
-            <Image source={{ uri: printer.photoUrl! }} style={styles.thumbnail} />
-          ) : (
-            <View style={styles.thumbnailPlaceholder}>
-              <Text style={styles.printerIcon}>🖨️</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Info */}
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardModel} numberOfLines={1}>
-            {printer.name ? printer.name : printer.model}
-          </Text>
-          <Text style={styles.cardBrand} numberOfLines={1}>
-            {printer.brand}
-          </Text>
-          <Text style={styles.cardSerial} numberOfLines={1}>
-            S/N: {printer.serialNumber}
-          </Text>
-          {/* FIX 3: ubicación en la tarjeta */}
-          {!!printer.location && (
-            <Text style={styles.cardLocation} numberOfLines={1}>
-              📍 {printer.location}
-            </Text>
-          )}
-          {/* FIX 4: próximo mantenimiento + badge de alerta */}
-          {!!printer.nextMaintenanceDate && (
-            <Text style={styles.cardMaintenance} numberOfLines={1}>
-              Mantenimiento: {printer.nextMaintenanceDate}
-            </Text>
-          )}
-          <View style={styles.cardBadges}>
-            <StatusPill status={printer.status} />
-            {maintenanceBadge && (
-              <View style={[styles.maintenanceBadge, { backgroundColor: maintenanceBadge.bg, borderColor: maintenanceBadge.color + '40' }]}>
-                <Text style={[styles.maintenanceBadgeText, { color: maintenanceBadge.color }]}>
-                  {maintenanceBadge.label}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Chevron */}
-        <Text style={styles.chevron}>›</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-// ─── Componente: SummaryBar ──────────────────────────────────────────────────
-function SummaryBar({ printers }: { printers: PrinterResponse[] }) {
-  const counts = {
-    total: printers.length,
-    operativas: printers.filter(p => p.status === 'OPERATIVE').length,
-    mantenimiento: printers.filter(p => p.status === 'MAINTENANCE').length,
-    fuera: printers.filter(p => p.status === 'OUT_OF_SERVICE').length,
-  };
-
-  return (
-    <View style={styles.summaryBar}>
-      <SummaryStat label="Total" value={counts.total} color={Colors.textSecondary} />
-      <View style={styles.summaryDivider} />
-      <SummaryStat label="Operativas" value={counts.operativas} color={Colors.statusOperativa} />
-      <View style={styles.summaryDivider} />
-      <SummaryStat label="Mant." value={counts.mantenimiento} color={Colors.statusMantenim} />
-      <View style={styles.summaryDivider} />
-      <SummaryStat label="Fuera" value={counts.fuera} color={Colors.statusFuera} />
-    </View>
-  );
-}
-
-function SummaryStat({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <View style={styles.summaryStat}>
-      <Text style={[styles.summaryValue, { color }]}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
-  );
-}
-
-// ─── Componente: FiltersBar ──────────────────────────────────────────────────
-function FiltersBar({
-  statusFilter,
-  onStatusFilter,
-  brandFilter,
-  onBrandFilter,
-  locationFilter,
-  onLocationFilter,
-}: {
-  statusFilter: 'ALL' | PrinterStatus;
-  onStatusFilter: (s: 'ALL' | PrinterStatus) => void;
-  brandFilter: string;
-  onBrandFilter: (s: string) => void;
-  locationFilter: string;
-  onLocationFilter: (s: string) => void;
-}) {
-  const chips: { value: 'ALL' | PrinterStatus; label: string }[] = [
-    { value: 'ALL', label: 'Todos' },
-    { value: 'OPERATIVE', label: 'Operativa' },
-    { value: 'MAINTENANCE', label: 'En mant.' },
-    { value: 'OUT_OF_SERVICE', label: 'Fuera serv.' },
-  ];
-
-  return (
-    <View style={styles.filtersBar}>
-      <View style={styles.chipsRow}>
-        {chips.map(chip => (
-          <TouchableOpacity
-            key={chip.value}
-            style={[styles.chip, statusFilter === chip.value && styles.chipSelected]}
-            onPress={() => onStatusFilter(chip.value)}
-          >
-            <Text style={[styles.chipText, statusFilter === chip.value && styles.chipTextSelected]}>
-              {chip.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {/* FIX 3: filtro por marca y por ubicación (junto al de estado) */}
-      <TextInput
-        style={styles.filterInput}
-        placeholder="Filtrar por marca"
-        placeholderTextColor={Colors.textSecondary}
-        value={brandFilter}
-        onChangeText={onBrandFilter}
-      />
-      <TextInput
-        style={styles.filterInput}
-        placeholder="Filtrar por ubicación"
-        placeholderTextColor={Colors.textSecondary}
-        value={locationFilter}
-        onChangeText={onLocationFilter}
-      />
-    </View>
-  );
-}
-
-// ─── Screen Principal ────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<NavProp>();
   const [printers, setPrinters] = useState<PrinterResponse[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | PrinterStatus>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | PrinterResponse['status']>('ALL');
   const [brandFilter, setBrandFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [inviteVisible, setInviteVisible] = useState(false);
@@ -272,9 +55,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     Animated.timing(headerOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-  }, []);
+  }, [headerOpacity]);
 
-  // FIX 3: filtrado combinado por estado, marca y ubicación.
   const filteredPrinters = useMemo(() => {
     return printers.filter(p => {
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
@@ -289,7 +71,6 @@ export default function HomeScreen() {
   const handleOpenOrders = () => navigation.navigate('OrdersList');
   const handleOpenPrinter = (printer: PrinterResponse) => navigation.navigate('PrinterDetail', { printer });
 
-  // Solo MANAGER: invita a un técnico por email.
   const handleInvite = () => {
     setInviteEmail('');
     setInviteVisible(true);
@@ -312,30 +93,20 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
-      {/* ── Top Header ── */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
         <View>
           <Text style={styles.headerTitle}>PrintOps</Text>
           <Text style={styles.headerSub}>Panel de Control</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.scanButton} onPress={handleOpenOrders}>
-            <Text style={styles.scanButtonText}>Órdenes</Text>
-          </TouchableOpacity>
-          {user?.role === 'MANAGER' && (
-            <TouchableOpacity style={styles.scanButton} onPress={handleInvite}>
-              <Text style={styles.scanButtonText}>Invitar</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.scanButton} onPress={handleScan}>
-            <Text style={styles.scanButtonText}>QR</Text>
-          </TouchableOpacity>
+          <HeaderButton label="Órdenes" onPress={handleOpenOrders} />
+          {user?.role === 'MANAGER' && <HeaderButton label="Invitar" onPress={handleInvite} />}
+          <HeaderButton label="QR" onPress={handleScan} />
         </View>
       </Animated.View>
 
-      {/* ── User Badge ── */}
       <View style={styles.userBadge}>
         <View style={styles.userAvatarCircle}>
           <Text style={styles.userAvatarText}>
@@ -348,10 +119,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Summary Bar ── */}
       <SummaryBar printers={printers} />
 
-      {/* ── Filters ── */}
       <FiltersBar
         statusFilter={statusFilter}
         onStatusFilter={setStatusFilter}
@@ -361,20 +130,18 @@ export default function HomeScreen() {
         onLocationFilter={setLocationFilter}
       />
 
-      {/* ── Section Header ── */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>INVENTARIO</Text>
-        <TouchableOpacity onPress={handleAddPrinter} style={styles.addButton}>
+        <Text style={styles.sectionTitle}>Inventario</Text>
+        <PressableScale style={styles.addButton} onPress={handleAddPrinter}>
           <Text style={styles.addButtonText}>+ Nueva</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
-      {/* ── Printer List ── */}
       <FlatList
         data={filteredPrinters}
         keyExtractor={item => String(item.id)}
         renderItem={({ item, index }) => (
-          <PrinterCardItem printer={item} index={index} onPress={() => handleOpenPrinter(item)} />
+          <PrinterCard printer={item} index={index} onPress={() => handleOpenPrinter(item)} />
         )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -389,20 +156,16 @@ export default function HomeScreen() {
         }
       />
 
-      {/* ── FAB ── */}
-      <TouchableOpacity style={styles.fab} onPress={handleAddPrinter} activeOpacity={0.85}>
+      <PressableScale style={styles.fab} onPress={handleAddPrinter} scaleTo={0.94}>
         <Text style={styles.fabText}>＋</Text>
-      </TouchableOpacity>
+      </PressableScale>
 
-      {/* ── Modal: invitar técnico ── */}
       <Modal visible={inviteVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Invitar técnico</Text>
-            <TextInput
-              style={styles.modalInput}
+            <TextField
               placeholder="Email del técnico"
-              placeholderTextColor={Colors.textSecondary}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -410,20 +173,14 @@ export default function HomeScreen() {
               onChangeText={setInviteEmail}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity
+              <PressableScale
                 style={styles.modalCancel}
                 onPress={() => setInviteVisible(false)}
                 disabled={inviteSending}
               >
                 <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, inviteSending && styles.modalButtonDisabled]}
-                onPress={sendInvite}
-                disabled={inviteSending}
-              >
-                <Text style={styles.modalButtonText}>Enviar invitación</Text>
-              </TouchableOpacity>
+              </PressableScale>
+              <Button title="Enviar invitación" onPress={sendInvite} loading={inviteSending} style={styles.modalButton} />
             </View>
           </View>
         </View>
@@ -432,14 +189,19 @@ export default function HomeScreen() {
   );
 }
 
-// ─── Estilos ─────────────────────────────────────────────────────────────────
+function HeaderButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <PressableScale style={styles.scanButton} onPress={onPress}>
+      <Text style={styles.scanButtonText}>{label}</Text>
+    </PressableScale>
+  );
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -449,155 +211,71 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    ...Typography.title2,
     color: Colors.textPrimary,
-    letterSpacing: 0.5,
+    fontWeight: '800',
   },
   headerSub: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    ...Typography.labelUppercase,
+    color: Colors.textTertiary,
     marginTop: 1,
-  },
-  scanButton: {
-    backgroundColor: Colors.primaryGlow,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
   },
   headerActions: {
     flexDirection: 'row',
     gap: 8,
   },
+  scanButton: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
   scanButtonText: {
-    color: Colors.primary,
-    fontSize: 13,
+    ...Typography.caption1,
+    color: Colors.textPrimary,
     fontWeight: '700',
   },
-
-  // User Badge
   userBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.sm,
     marginBottom: Spacing.md,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     padding: Spacing.md,
     gap: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
+    borderColor: Colors.separator,
   },
   userAvatarCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.background,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   userAvatarText: {
-    color: Colors.primary,
-    fontSize: 16,
+    ...Typography.headline,
+    color: Colors.accent,
     fontWeight: '800',
   },
   userEmail: {
+    ...Typography.callout,
     color: Colors.textPrimary,
-    fontSize: 14,
     fontWeight: '600',
     maxWidth: 220,
   },
   userRole: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    ...Typography.labelUppercase,
+    color: Colors.accent,
     marginTop: 2,
   },
-
-  // Summary Bar
-  summaryBar: {
-    flexDirection: 'row',
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.surfaceBase,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    overflow: 'hidden',
-  },
-  summaryStat: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  summaryValue: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  summaryLabel: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginTop: 2,
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: Colors.surfaceBorder,
-    marginVertical: 8,
-  },
-
-  // Filters Bar (FIX 3)
-  filtersBar: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-  },
-  chipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  chipText: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  chipTextSelected: {
-    color: Colors.background,
-  },
-  filterInput: {
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    backgroundColor: Colors.surfaceBase,
-    color: Colors.textPrimary,
-  },
-
-  // Section header
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -606,153 +284,26 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    ...Typography.labelUppercase,
+    color: Colors.textTertiary,
   },
   addButton: {
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.separator,
     borderRadius: Radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   addButtonText: {
-    color: Colors.primary,
-    fontSize: 13,
+    ...Typography.caption1,
+    color: Colors.textPrimary,
     fontWeight: '700',
   },
-
-  // List
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: 100,
   },
-
-  // Printer Card
-  printerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surfaceBase,
-    borderRadius: Radius.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    overflow: 'hidden',
-  },
-  accentBar: {
-    width: 3,
-    alignSelf: 'stretch',
-  },
-  thumbnailWrapper: {
-    margin: Spacing.md,
-    marginLeft: 12,
-  },
-  thumbnail: {
-    width: 68,
-    height: 68,
-    borderRadius: Radius.md,
-  },
-  thumbnailPlaceholder: {
-    width: 68,
-    height: 68,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  printerIcon: {
-    fontSize: 30,
-  },
-  cardInfo: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    paddingRight: Spacing.sm,
-    gap: 3,
-  },
-  cardModel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    letterSpacing: 0.2,
-  },
-  cardBrand: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  cardSerial: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontFamily: 'Courier New',
-    letterSpacing: 0.5,
-  },
-  cardLocation: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  cardMaintenance: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
-  cardBadges: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-    flexWrap: 'wrap',
-  },
-  chevron: {
-    fontSize: 22,
-    color: Colors.surfaceBorder,
-    marginRight: 14,
-    fontWeight: '300',
-  },
-
-  // Status Pill
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 5,
-  },
-  statusDot: {
-    fontSize: 8,
-    lineHeight: 12,
-  },
-  statusLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-
-  // Maintenance Badge (FIX 4)
-  maintenanceBadge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  maintenanceBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-
-  // FAB
   fab: {
     position: 'absolute',
     bottom: 28,
@@ -760,14 +311,10 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.textPrimary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 10,
+    ...Shadows.floating,
   },
   fabText: {
     fontSize: 28,
@@ -775,8 +322,6 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     lineHeight: 32,
   },
-
-  // Empty State
   emptyState: {
     alignItems: 'center',
     paddingTop: 60,
@@ -787,74 +332,49 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   emptyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...Typography.headline,
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 14,
+    ...Typography.subheadline,
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
-
-  // Modal invitar técnico
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     paddingHorizontal: Spacing.lg,
   },
   modalCard: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...Typography.title3,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: Colors.inputBackground,
-    color: Colors.textPrimary,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: Spacing.sm,
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
     alignItems: 'center',
   },
   modalCancel: {
-    padding: 12,
+    padding: Spacing.md,
   },
   modalCancelText: {
+    ...Typography.subheadline,
     color: Colors.accent,
     fontWeight: '600',
   },
   modalButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.sm,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  modalButtonDisabled: {
-    opacity: 0.6,
-  },
-  modalButtonText: {
-    color: Colors.background,
-    fontWeight: '700',
   },
 });

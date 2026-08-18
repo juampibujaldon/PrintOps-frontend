@@ -1,8 +1,7 @@
 // src/screens/RegisterScreen.tsx
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator, Switch,
+  View, Text, StyleSheet, Alert, Switch,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -11,7 +10,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { RegisterFormData } from '../types/auth';
-import { Colors } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
+import TextField from '../components/ui/TextField';
+import Button from '../components/ui/Button';
+import PressableScale from '../components/ui/PressableScale';
 
 const schema = yup.object({
   email: yup
@@ -88,18 +90,16 @@ export default function RegisterScreen({ navigation }: Props) {
         control={control}
         name="email"
         render={({ field: { onChange, value } }) => (
-          <View style={styles.fieldContainer}>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="Email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={value}
-              onChangeText={onChange}
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-          </View>
+          <TextField
+            label="Email"
+            placeholder="taller@ejemplo.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={value}
+            onChangeText={onChange}
+            error={errors.email?.message}
+          />
         )}
       />
 
@@ -107,16 +107,14 @@ export default function RegisterScreen({ navigation }: Props) {
         control={control}
         name="password"
         render={({ field: { onChange, value } }) => (
-          <View style={styles.fieldContainer}>
-            <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
-              placeholder="Contraseña"
-              secureTextEntry
-              value={value}
-              onChangeText={onChange}
-            />
-            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-          </View>
+          <TextField
+            label="Contraseña"
+            placeholder="Mínimo 8 caracteres"
+            secureTextEntry
+            value={value}
+            onChangeText={onChange}
+            error={errors.password?.message}
+          />
         )}
       />
 
@@ -124,16 +122,14 @@ export default function RegisterScreen({ navigation }: Props) {
         control={control}
         name="confirmPassword"
         render={({ field: { onChange, value } }) => (
-          <View style={styles.fieldContainer}>
-            <TextInput
-              style={[styles.input, errors.confirmPassword && styles.inputError]}
-              placeholder="Confirmar Contraseña"
-              secureTextEntry
-              value={value}
-              onChangeText={onChange}
-            />
-            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>}
-          </View>
+          <TextField
+            label="Confirmar contraseña"
+            placeholder="Repetí la contraseña"
+            secureTextEntry
+            value={value}
+            onChangeText={onChange}
+            error={errors.confirmPassword?.message}
+          />
         )}
       />
 
@@ -142,17 +138,15 @@ export default function RegisterScreen({ navigation }: Props) {
           control={control}
           name="inviteToken"
           render={({ field: { onChange, value } }) => (
-            <View style={styles.fieldContainer}>
-              <TextInput
-                style={[styles.input, errors.inviteToken && styles.inputError]}
-                placeholder="Código de invitación"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                value={value}
-                onChangeText={onChange}
-              />
-              {errors.inviteToken && <Text style={styles.errorText}>{errors.inviteToken.message}</Text>}
-            </View>
+            <TextField
+              label="Código de invitación"
+              placeholder="Código enviado por el manager"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              value={value}
+              onChangeText={onChange}
+              error={errors.inviteToken?.message}
+            />
           )}
         />
       ) : (
@@ -160,36 +154,28 @@ export default function RegisterScreen({ navigation }: Props) {
           control={control}
           name="workspaceName"
           render={({ field: { onChange, value } }) => (
-            <View style={styles.fieldContainer}>
-              <TextInput
-                style={[styles.input, errors.workspaceName && styles.inputError]}
-                placeholder="Nombre del taller (opcional)"
-                value={value}
-                onChangeText={onChange}
-              />
-              {errors.workspaceName && <Text style={styles.errorText}>{errors.workspaceName.message}</Text>}
-            </View>
+            <TextField
+              label="Nombre del taller (opcional)"
+              placeholder="Ej. Taller Central"
+              value={value}
+              onChangeText={onChange}
+              error={errors.workspaceName?.message}
+            />
           )}
         />
       )}
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
+      <Button
+        title={isTecnico ? 'Unirme al taller' : 'Crear taller'}
         onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color={Colors.background} />
-        ) : (
-          <Text style={styles.buttonText}>{isTecnico ? 'Unirme al taller' : 'Crear taller'}</Text>
-        )}
-      </TouchableOpacity>
+        loading={loading}
+      />
 
       <View style={styles.loginContainer}>
         <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+        <PressableScale onPress={() => navigation.navigate('Login')}>
           <Text style={styles.loginLink}>Iniciar sesión</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </View>
   );
@@ -199,77 +185,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.background,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...Typography.title1,
     color: Colors.textPrimary,
-    marginBottom: 24,
     textAlign: 'center',
+    marginBottom: Spacing.lg,
   },
   modeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
   },
   modeText: {
-    fontSize: 15,
+    ...Typography.subheadline,
     color: Colors.textSecondary,
-  },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: Colors.inputBackground,
-    color: Colors.textPrimary,
-  },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  button: {
-    backgroundColor: Colors.primaryButton,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: Colors.background,
-    fontSize: 16,
-    fontWeight: '600',
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: Spacing.md,
   },
   loginText: {
+    ...Typography.subheadline,
     color: Colors.textSecondary,
-    fontSize: 15,
   },
   loginLink: {
+    ...Typography.subheadline,
     color: Colors.accent,
-    fontSize: 15,
     fontWeight: '600',
   },
 });

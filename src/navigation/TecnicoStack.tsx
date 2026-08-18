@@ -3,6 +3,7 @@ import { TouchableOpacity, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import { PrinterResponse } from '../services/printerService';
+import { Colors } from '../constants/theme';
 
 export type TecnicoStackParamList = {
   TecnicoHome: undefined;
@@ -18,7 +19,14 @@ const Stack = createNativeStackNavigator<TecnicoStackParamList>();
 
 export default function TecnicoStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: Colors.surface },
+        headerShadowVisible: false,
+        headerTintColor: Colors.textPrimary,
+        headerTitleStyle: { fontWeight: '700' },
+      }}
+    >
       <Stack.Screen
         name="TecnicoHome"
         component={HomeScreen}
@@ -26,7 +34,7 @@ export default function TecnicoStack() {
           title: 'Panel Técnico',
           headerLeft: () => (
             <TouchableOpacity onPress={() => navigation.toggleDrawer()} style={{ marginLeft: 10, marginRight: 15 }}>
-              <Text style={{ fontSize: 24 }}>☰</Text>
+              <Text style={{ fontSize: 24, color: Colors.textPrimary }}>☰</Text>
             </TouchableOpacity>
           ),
         })}

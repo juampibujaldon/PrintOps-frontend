@@ -1,8 +1,10 @@
 // src/screens/PerfilScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors } from '../constants/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { Colors, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
@@ -10,28 +12,56 @@ export default function PerfilScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mi Perfil</Text>
-      
-      <View style={styles.infoCard}>
-        <Text style={styles.label}>Email:</Text>
-        <Text style={styles.value}>{user?.email}</Text>
-        
-        <Text style={styles.label}>Rol:</Text>
-        <Text style={styles.value}>{user?.role}</Text>
-      </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
+      <Card style={styles.infoCard}>
+        <Row label="Email" value={user?.email ?? '-'} />
+        <Row label="Rol" value={user?.role ?? '-'} />
+      </Card>
+
+      <Button title="Cerrar sesión" variant="danger" onPress={logout} style={styles.logoutButton} />
+    </View>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', color: Colors.textPrimary, marginBottom: 20 },
-  infoCard: { width: '100%', backgroundColor: Colors.inputBackground, padding: 20, borderRadius: 12, marginBottom: 30 },
-  label: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600', marginTop: 10 },
-  value: { fontSize: 18, color: Colors.textPrimary, marginBottom: 5 },
-  logoutButton: { backgroundColor: Colors.error, paddingHorizontal: 30, paddingVertical: 14, borderRadius: 8, width: '100%', alignItems: 'center' },
-  logoutText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  container: {
+    flex: 1,
+    padding: Spacing.lg,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    ...Typography.title2,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.lg,
+  },
+  infoCard: {
+    width: '100%',
+    marginBottom: Spacing.xl,
+    gap: Spacing.md,
+  },
+  row: {},
+  label: {
+    ...Typography.footnote,
+    color: Colors.textTertiary,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  value: {
+    ...Typography.title3,
+    color: Colors.textPrimary,
+  },
+  logoutButton: {
+    width: '100%',
+  },
 });

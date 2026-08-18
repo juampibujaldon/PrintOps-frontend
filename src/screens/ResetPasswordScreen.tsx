@@ -1,12 +1,15 @@
 // src/screens/ResetPasswordScreen.tsx
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
+  View, Text, StyleSheet, Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { authService } from '../services/authService';
-import { Colors } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
+import TextField from '../components/ui/TextField';
+import Button from '../components/ui/Button';
+import PressableScale from '../components/ui/PressableScale';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
 
@@ -64,67 +67,44 @@ export default function ResetPasswordScreen({ navigation }: Props) {
           <Text style={styles.subtitle}>
             Ingresá tu email y te enviaremos un código para restablecer la contraseña.
           </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={Colors.textSecondary}
+          <TextField
+            label="Email"
+            placeholder="taller@ejemplo.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             value={email}
             onChangeText={setEmail}
           />
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={requestCode}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.background} />
-            ) : (
-              <Text style={styles.buttonText}>Enviar código</Text>
-            )}
-          </TouchableOpacity>
+          <Button title="Enviar código" onPress={requestCode} loading={loading} />
         </>
       ) : (
         <>
           <Text style={styles.subtitle}>
             Ingresá el código recibido y tu nueva contraseña.
           </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Código de reset"
-            placeholderTextColor={Colors.textSecondary}
+          <TextField
+            label="Código de reset"
+            placeholder="Código recibido por email"
             autoCapitalize="none"
             autoCorrect={false}
             value={token}
             onChangeText={setToken}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Nueva contraseña"
-            placeholderTextColor={Colors.textSecondary}
+          <TextField
+            label="Nueva contraseña"
+            placeholder="Mínimo 8 caracteres"
             secureTextEntry
             value={newPassword}
             onChangeText={setNewPassword}
           />
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={submitReset}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.background} />
-            ) : (
-              <Text style={styles.buttonText}>Restablecer contraseña</Text>
-            )}
-          </TouchableOpacity>
+          <Button title="Restablecer contraseña" onPress={submitReset} loading={loading} />
         </>
       )}
 
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <PressableScale style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backText}>Volver al inicio de sesión</Text>
-      </TouchableOpacity>
+      </PressableScale>
     </View>
   );
 }
@@ -133,56 +113,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.background,
   },
   title: {
-    fontSize: 26,
-    fontWeight: 'bold',
+    ...Typography.title2,
     color: Colors.textPrimary,
-    marginBottom: 12,
     textAlign: 'center',
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
+    ...Typography.subheadline,
     color: Colors.textSecondary,
-    marginBottom: 24,
     textAlign: 'center',
+    marginBottom: Spacing.lg,
     lineHeight: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'transparent',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: Colors.inputBackground,
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  },
-  button: {
-    backgroundColor: Colors.primaryButton,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: Colors.background,
-    fontSize: 16,
-    fontWeight: '600',
   },
   backButton: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
   },
   backText: {
+    ...Typography.subheadline,
     color: Colors.accent,
-    fontSize: 15,
     fontWeight: '600',
   },
 });

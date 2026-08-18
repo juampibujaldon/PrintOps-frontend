@@ -1,31 +1,19 @@
 // src/screens/OrdersListScreen.tsx
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, FlatList, ActivityIndicator, Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
+import { ORDER_STATUS } from '../constants/orders';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
-import { orderService, OrderResponse, OrderStatus } from '../services/orderService';
+import { orderService, OrderResponse } from '../services/orderService';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import PressableScale from '../components/ui/PressableScale';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'OrdersList'>;
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: 'Pendiente',
-  IN_PROGRESS: 'En progreso',
-  IN_REVIEW: 'En revisión',
-  COMPLETED: 'Completada',
-  CANCELLED: 'Cancelada',
-};
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  PENDING: '#6b7280',
-  IN_PROGRESS: '#3b82f6',
-  IN_REVIEW: '#f59e0b',
-  COMPLETED: '#10b981',
-  CANCELLED: '#ef4444',
-};
 
 export default function OrdersListScreen({ navigation }: Props) {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
@@ -51,7 +39,7 @@ export default function OrdersListScreen({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={Colors.accent} />
       </View>
     );
   }
@@ -67,24 +55,20 @@ export default function OrdersListScreen({ navigation }: Props) {
         </View>
       }
       renderItem={({ item }) => {
-        const color = STATUS_COLORS[item.status] ?? '#6b7280';
+        const status = ORDER_STATUS[item.status];
         return (
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.orderType}>#{item.id} · {item.type}</Text>
-              <View style={[styles.badge, { backgroundColor: color + '22', borderColor: color }]}>
-                <Text style={[styles.badgeText, { color }]}>{STATUS_LABELS[item.status] ?? 'Desconocido'}</Text>
+          <PressableScale onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}>
+            <Card style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.orderType}>#{item.id} · {item.type}</Text>
+                <Badge label={status.label} color={status.color} />
               </View>
-            </View>
-            <Text style={styles.meta}>
-              {item.assignedToName ? `Asignada a: ${item.assignedToName}` : 'Sin asignar'}
-              {'\n'}Creada: {new Date(item.createdAt).toLocaleDateString()}
-            </Text>
-          </TouchableOpacity>
+              <Text style={styles.meta}>
+                {item.assignedToName ? `Asignada a: ${item.assignedToName}` : 'Sin asignar'}
+                {'\n'}Creada: {new Date(item.createdAt).toLocaleDateString()}
+              </Text>
+            </Card>
+          </PressableScale>
         );
       }}
     />
@@ -92,13 +76,40 @@ export default function OrdersListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: Colors.background, flexGrow: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  card: { backgroundColor: Colors.inputBackground, padding: 16, borderRadius: 12, marginBottom: 12 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  orderType: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, textTransform: 'capitalize' },
-  badge: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  meta: { color: Colors.textSecondary, fontSize: 13 },
-  emptyText: { color: Colors.textSecondary, fontSize: 14 },
+  container: {
+    padding: Spacing.md,
+    backgroundColor: Colors.background,
+    flexGrow: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  card: {
+    marginBottom: Spacing.md,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  orderType: {
+    ...Typography.headline,
+    color: Colors.textPrimary,
+    textTransform: 'capitalize',
+    flexShrink: 1,
+  },
+  meta: {
+    ...Typography.footnote,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  emptyText: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+  },
 });
