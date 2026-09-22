@@ -51,21 +51,26 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         />
       )}
 
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('PrinterRules', { printer })}
+      >
+        <Text style={styles.buttonText}>Reglas de mantenimiento</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('PrinterHistory', { printer })}
+      >
+        <Text style={styles.buttonText}>Historial de mantenimiento</Text>
+      </TouchableOpacity>
+
       <Button
         variant="ghost"
         title="Volver al inicio"
         onPress={() => navigation.navigate('TecnicoHome')}
         style={styles.secondary}
       />
-    </ScrollView>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -127,5 +132,31 @@ const styles = StyleSheet.create({
   },
   secondary: {
     marginTop: Spacing.sm,
+  },
+  button: {
+    backgroundColor: Colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  buttonText: {
+    color: Colors.background,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  buttonSecondaryText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
