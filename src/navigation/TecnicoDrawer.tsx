@@ -6,10 +6,12 @@ import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import TallerScreen from '../screens/TallerScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import DashboardScreen from '../screens/DashboardScreen';
 import { Colors } from '../constants/theme';
 
 export type TecnicoDrawerParamList = {
   InicioStack: undefined;
+  Dashboard: undefined;
   Taller: undefined;
   Configuracion: undefined;
   Perfil: undefined;
@@ -34,6 +36,11 @@ export default function TecnicoDrawer() {
         name="InicioStack" 
         component={TecnicoStack} 
         options={{ title: 'Inicio', headerShown: false }} 
+      />
+      <Drawer.Screen 
+        name="Dashboard" 
+        component={DashboardScreen} 
+        options={{ title: 'Dashboard' }} 
       />
       <Drawer.Screen 
         name="Taller" 
