@@ -9,6 +9,7 @@ export type TecnicoStackParamList = {
   TecnicoHome: undefined;
   AddPrinter: undefined;
   PrinterDetail: { printer: any };
+  PrinterRules: { printer: any };
 };
 
 const Stack = createNativeStackNavigator<TecnicoStackParamList>();
@@ -37,6 +38,11 @@ export default function TecnicoStack() {
         name="PrinterDetail"
         component={require('../screens/PrinterDetailScreen').default}
         options={{ title: 'Detalle Impresora' }}
+      />
+      <Stack.Screen
+        name="PrinterRules"
+        component={require('../screens/PrinterRulesScreen').default}
+        options={{ title: 'Reglas de mantenimiento' }}
       />
     </Stack.Navigator>
   );

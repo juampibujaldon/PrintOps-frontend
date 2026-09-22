@@ -32,8 +32,12 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('TecnicoHome')}>
-        <Text style={styles.buttonText}>Volver al inicio</Text>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('PrinterRules', { printer })}>
+        <Text style={styles.buttonText}>Reglas de mantenimiento</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('TecnicoHome')}>
+        <Text style={styles.buttonSecondaryText}>Volver al inicio</Text>
       </TouchableOpacity>
     </View>
   );
@@ -50,5 +54,7 @@ const styles = StyleSheet.create({
   qrText: { color: Colors.textSecondary, marginBottom: 12, textAlign: 'center' },
   qrBox: { padding: 16, backgroundColor: 'white', borderRadius: 8 },
   button: { backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24 },
-  buttonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' }
+  buttonText: { color: Colors.background, fontSize: 16, fontWeight: 'bold' },
+  buttonSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12 },
+  buttonSecondaryText: { color: Colors.primary, fontSize: 16, fontWeight: 'bold' }
 });
