@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, Modal,
-  FlatList, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
@@ -10,8 +10,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderType, ChecklistItemInput, PartInput } from '../services/orderService';
-import { partService, Part } from '../services/partService';
+import { SparePartDTO } from '../types/parts';
 import { useCameraPermission } from '../hooks/useCameraPermission';
+import PartsSelectorModal from '../components/PartsSelectorModal';
 import Button from '../components/ui/Button';
 import TextField from '../components/ui/TextField';
 import Card from '../components/ui/Card';
@@ -69,11 +70,6 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
   const [showSummary, setShowSummary] = useState(false);
 
   const [partsModalVisible, setPartsModalVisible] = useState(false);
-  const [partSearch, setPartSearch] = useState('');
-  const [catalogResults, setCatalogResults] = useState<Part[]>([]);
-  const [searchingParts, setSearchingParts] = useState(false);
-  const [externalNumber, setExternalNumber] = useState('');
-  const [externalQty, setExternalQty] = useState('1');
 
   const { requestCameraPermission, requestLibraryPermission } = useCameraPermission();
 
@@ -130,31 +126,17 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     setChecklist(prev => prev.filter((_, i) => i !== index));
   };
 
-  const searchParts = async () => {
-    setSearchingParts(true);
-    try {
-      const results = await partService.listParts(partSearch.trim() || undefined);
-      setCatalogResults(results);
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo buscar el catálogo');
-    } finally {
-      setSearchingParts(false);
-    }
+  const addCatalogPart = (part: SparePartDTO, quantity: number) => {
+    setParts(prev => [...prev, { partId: part.id, quantity }]);
   };
 
-  const addCatalogPart = (part: Part) => {
-    setParts(prev => [...prev, { partId: part.id, partNumber: part.partNumber, quantity: 1, external: false }]);
-  };
-
-  const addExternalPart = () => {
-    if (!externalNumber.trim()) {
-      Alert.alert('Atención', 'Ingresá el número de parte');
-      return;
-    }
-    const qty = parseInt(externalQty, 10) || 1;
-    setParts(prev => [...prev, { partNumber: externalNumber.trim(), quantity: qty, external: true }]);
-    setExternalNumber('');
-    setExternalQty('1');
+  const addExternalPart = (name: string, partNumber: string, unitPrice: number, quantity: number) => {
+    setParts(prev => [...prev, {
+      quantity,
+      externalPartName: name || null,
+      externalPartNumber: partNumber || null,
+      externalUnitPrice: unitPrice || null,
+    }]);
   };
 
   const removePart = (index: number) => {
@@ -315,7 +297,7 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
               {parts.map((p, index) => (
                 <View key={index} style={styles.partRow}>
                   <Text style={styles.partRowText}>
-                    {p.partNumber || `Pieza #${p.partId}`} × {p.quantity}{p.external ? ' (externa)' : ''}
+                    {p.partId ? `Pieza #${p.partId}` : (p.externalPartName || p.externalPartNumber || 'Pieza externa')} × {p.quantity}
                   </Text>
                   <PressableScale onPress={() => removePart(index)}>
                     <Text style={styles.removeText}>✕</Text>
@@ -378,62 +360,12 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
           )}
         </View>
 
-        <Modal visible={partsModalVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <Card style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Agregar pieza</Text>
-              <View style={styles.searchRow}>
-                <TextField
-                  containerStyle={styles.flex}
-                  placeholder="Buscar en catálogo..."
-                  value={partSearch}
-                  onChangeText={setPartSearch}
-                />
-                <PressableScale style={styles.searchButton} onPress={searchParts}>
-                  <Text style={styles.searchButtonText}>Buscar</Text>
-                </PressableScale>
-              </View>
-              {searchingParts ? (
-                <ActivityIndicator color={Colors.accent} />
-              ) : (
-                <FlatList
-                  data={catalogResults}
-                  keyExtractor={item => String(item.id)}
-                  style={styles.catalogList}
-                  renderItem={({ item }) => (
-                    <PressableScale style={styles.catalogRow} onPress={() => addCatalogPart(item)}>
-                      <Text style={styles.catalogName}>{item.name}</Text>
-                      <Text style={styles.catalogMeta}>{item.partNumber} · stock {item.stockQuantity}</Text>
-                    </PressableScale>
-                  )}
-                  ListEmptyComponent={<Text style={styles.emptyText}>Sin resultados</Text>}
-                />
-              )}
-
-              <Text style={styles.modalSubtitle}>Pieza externa (no está en el catálogo)</Text>
-              <View style={styles.searchRow}>
-                <TextField
-                  containerStyle={styles.flex}
-                  placeholder="Número de parte"
-                  value={externalNumber}
-                  onChangeText={setExternalNumber}
-                />
-                <TextField
-                  containerStyle={styles.qtyInput}
-                  keyboardType="number-pad"
-                  placeholder="Cant."
-                  value={externalQty}
-                  onChangeText={setExternalQty}
-                />
-              </View>
-              <PressableScale style={styles.addItemButton} onPress={addExternalPart}>
-                <Text style={styles.addItemText}>+ Agregar pieza externa</Text>
-              </PressableScale>
-
-              <Button title="Listo" onPress={() => setPartsModalVisible(false)} style={styles.modalClose} />
-            </Card>
-          </View>
-        </Modal>
+        <PartsSelectorModal
+          visible={partsModalVisible}
+          onClose={() => setPartsModalVisible(false)}
+          onAddCatalog={addCatalogPart}
+          onAddExternal={addExternalPart}
+        />
 
         <Modal visible={showSummary} animationType="fade" transparent>
           <View style={styles.modalOverlay}>

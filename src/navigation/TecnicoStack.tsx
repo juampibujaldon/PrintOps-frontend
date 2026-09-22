@@ -15,6 +15,7 @@ export type TecnicoStackParamList = {
   OrderDetail: { orderId: number };
   OrdersList: undefined;
   ScanPrinter: undefined;
+  SparePartDetail: { partId: number };
 };
 
 const Stack = createNativeStackNavigator<TecnicoStackParamList>();
@@ -32,7 +33,7 @@ export default function TecnicoStack() {
       <Stack.Screen
         name="TecnicoHome"
         component={HomeScreen}
-        options={({ navigation }: any) => ({ 
+        options={({ navigation }: any) => ({
           title: 'Panel Técnico',
           headerLeft: () => (
             <TouchableOpacity onPress={() => navigation.toggleDrawer()} style={{ marginLeft: 10, marginRight: 15 }}>
@@ -51,7 +52,6 @@ export default function TecnicoStack() {
         component={require('../screens/PrinterDetailScreen').default}
         options={{ title: 'Detalle Impresora' }}
       />
-      <Stack.Screen
       <Stack.Screen
         name="CreateOrder"
         component={require('../screens/CreateOrderScreen').default}
@@ -82,6 +82,10 @@ export default function TecnicoStack() {
         component={require('../screens/PrinterHistoryScreen').default}
         options={{ title: 'Historial de mantenimiento' }}
       />
+      <Stack.Screen
+        name="SparePartDetail"
+        component={require('../screens/SparePartDetailScreen').default}
+        options={{ title: 'Detalle de repuesto' }}
       />
     </Stack.Navigator>
   );

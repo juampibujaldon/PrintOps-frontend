@@ -1,39 +1,69 @@
 // src/services/partService.ts
 import { API_BASE_URL } from '../constants/api';
 import api from './axiosInstance';
+import { CreateSparePartInput, MovementType, SparePartDTO, StockMovementDTO } from '../types/parts';
 
-export interface Part {
-  id: number;
-  name: string;
-  partNumber: string;
-  stockQuantity: number;
+export interface ListPartsParams {
+  search?: string;
+  category?: string;
+  lowStock?: boolean;
 }
 
-export interface PartInput {
-  name: string;
-  partNumber: string;
-  stockQuantity: number;
-}
-
-const listParts = async (query?: string): Promise<Part[]> => {
-  const response = await api.get<Part[]>(`${API_BASE_URL}/api/parts`, {
-    params: query ? { query } : undefined,
-  });
-  return response.data;
+const listParts = async (params?: ListPartsParams): Promise<SparePartDTO[]> => {
+  const { data } = await api.get<SparePartDTO[]>(`${API_BASE_URL}/api/parts`, { params });
+  return data;
 };
 
-const createPart = async (data: PartInput): Promise<Part> => {
-  const response = await api.post<Part>(`${API_BASE_URL}/api/parts`, data);
-  return response.data;
+const getPart = async (id: number): Promise<SparePartDTO> => {
+  const { data } = await api.get<SparePartDTO>(`${API_BASE_URL}/api/parts/${id}`);
+  return data;
 };
 
-const updatePart = async (id: number, data: PartInput): Promise<Part> => {
-  const response = await api.put<Part>(`${API_BASE_URL}/api/parts/${id}`, data);
-  return response.data;
+const createPart = async (input: CreateSparePartInput): Promise<SparePartDTO> => {
+  const { data } = await api.post<SparePartDTO>(`${API_BASE_URL}/api/parts`, input);
+  return data;
+};
+
+const updatePart = async (id: number, input: CreateSparePartInput): Promise<SparePartDTO> => {
+  const { data } = await api.put<SparePartDTO>(`${API_BASE_URL}/api/parts/${id}`, input);
+  return data;
 };
 
 const deletePart = async (id: number): Promise<void> => {
   await api.delete(`${API_BASE_URL}/api/parts/${id}`);
 };
 
-export const partService = { listParts, createPart, updatePart, deletePart };
+const updateStock = async (
+  id: number,
+  type: MovementType,
+  quantity: number,
+  note?: string,
+): Promise<SparePartDTO> => {
+  const { data } = await api.patch<SparePartDTO>(`${API_BASE_URL}/api/parts/${id}/stock`, {
+    type,
+    quantity,
+    note: note ?? undefined,
+  });
+  return data;
+};
+
+const getMovements = async (id: number): Promise<StockMovementDTO[]> => {
+  const { data } = await api.get<StockMovementDTO[]>(`${API_BASE_URL}/api/parts/${id}/movements`);
+  return data;
+};
+
+const getCategories = async (): Promise<string[]> => {
+  const { data } = await api.get<string[]>(`${API_BASE_URL}/api/parts/categories`);
+  return data;
+};
+
+export const partService = {
+  listParts,
+  getPart,
+  createPart,
+  updatePart,
+  deletePart,
+  updateStock,
+  getMovements,
+  getCategories,
+};

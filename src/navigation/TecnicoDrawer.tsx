@@ -3,7 +3,7 @@ import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import TecnicoStack from './TecnicoStack';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
-import TallerScreen from '../screens/TallerScreen';
+import StockScreen from '../screens/StockScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import DashboardScreen from '../screens/DashboardScreen';
@@ -12,7 +12,7 @@ import { Colors } from '../constants/theme';
 export type TecnicoDrawerParamList = {
   InicioStack: undefined;
   Dashboard: undefined;
-  Taller: undefined;
+  Repuestos: undefined;
   Configuracion: undefined;
   Perfil: undefined;
   Notificaciones: undefined;
@@ -43,9 +43,9 @@ export default function TecnicoDrawer() {
         options={{ title: 'Dashboard' }} 
       />
       <Drawer.Screen 
-        name="Taller" 
-        component={TallerScreen} 
-        options={{ title: 'Taller' }} 
+        name="Repuestos" 
+        component={StockScreen} 
+        options={{ title: 'Repuestos' }} 
       />
       <Drawer.Screen 
         name="Configuracion" 

@@ -14,9 +14,10 @@ export interface ChecklistItemInput {
 
 export interface PartInput {
   partId?: number | null;
-  partNumber?: string | null;
   quantity: number;
-  external: boolean;
+  externalPartName?: string | null;
+  externalPartNumber?: string | null;
+  externalUnitPrice?: number | null;
 }
 
 export interface OrderChecklistItem {
@@ -29,10 +30,13 @@ export interface OrderChecklistItem {
 export interface OrderPart {
   id: number;
   partId: number | null;
-  partNumber: string | null;
   partName: string | null;
+  partNumber: string | null;
   quantity: number;
   external: boolean;
+  externalPartName: string | null;
+  externalPartNumber: string | null;
+  externalUnitPrice: number | null;
 }
 
 export interface OrderPhoto {
