@@ -26,14 +26,21 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>PrintOps necesita usar la cámara para registrar impresoras nuevas.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>PrintOps necesita usar Face ID para que puedas iniciar sesión de forma rápida y segura.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PrintOps necesita guardar fotos de las impresoras en tu galería.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PrintOps necesita acceder a tu galería para subir fotos de las impresoras.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -48,13 +55,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSFaceIDUsageDescription</key>
-	<string>PrintOps necesita usar Face ID para que puedas iniciar sesión de forma rápida y segura.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>PrintOps necesita usar la cámara para registrar impresoras nuevas.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>PrintOps necesita acceder a tu galería para subir fotos de las impresoras.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>PrintOps necesita guardar fotos de las impresoras en tu galería.</string>
 </dict>
 </plist>

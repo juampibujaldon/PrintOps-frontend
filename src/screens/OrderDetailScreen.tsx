@@ -1,34 +1,40 @@
 // src/screens/OrderDetailScreen.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
-  ActivityIndicator, Alert, Modal,
+  ActivityIndicator, Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { ORDER_STATUS } from '../constants/orders';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderResponse, OrderStatus, StatusHistory } from '../services/orderService';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../context/ToastContext';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import TextField from '../components/ui/TextField';
 import PressableScale from '../components/ui/PressableScale';
+import StatusTimeline from '../components/StatusTimeline';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'OrderDetail'>;
+
+const MIN_REJECT_CHARS = 10;
 
 export default function OrderDetailScreen({ route }: Props) {
   const { orderId } = route.params;
   const { user } = useAuth();
+  const { showToast } = useToast();
   const isManager = user?.role === 'MANAGER';
 
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [history, setHistory] = useState<StatusHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rejectVisible, setRejectVisible] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
+  const rejectSheetRef = useRef<BottomSheetModal>(null);
 
   const load = useCallback(async () => {
     try {
@@ -51,10 +57,11 @@ export default function OrderDetailScreen({ route }: Props) {
     }, [load])
   );
 
-  const changeStatus = async (status: OrderStatus, comment?: string) => {
+  const changeStatus = async (status: OrderStatus, comment?: string, successMessage?: string) => {
     try {
       await orderService.updateStatus(orderId, status, comment);
-      setRejectVisible(false);
+      if (successMessage) showToast(successMessage);
+      rejectSheetRef.current?.dismiss();
       setRejectComment('');
       await load();
     } catch (error: any) {
@@ -67,12 +74,17 @@ export default function OrderDetailScreen({ route }: Props) {
     }
   };
 
+  // Confirmación previa a cada PATCH (excepto rechazo, que usa el bottom sheet).
+  const confirmAction = (title: string, message: string, status: OrderStatus, successMessage: string) => {
+    Alert.alert(title, message, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Confirmar', onPress: () => changeStatus(status, undefined, successMessage) },
+    ]);
+  };
+
   const confirmReject = () => {
-    if (!rejectComment.trim()) {
-      Alert.alert('Atención', 'El comentario es obligatorio para rechazar.');
-      return;
-    }
-    changeStatus('IN_PROGRESS', rejectComment.trim());
+    if (rejectComment.trim().length < MIN_REJECT_CHARS) return;
+    changeStatus('IN_PROGRESS', rejectComment.trim(), 'Orden devuelta al técnico');
   };
 
   if (loading) {
@@ -94,132 +106,153 @@ export default function OrderDetailScreen({ route }: Props) {
   const status = ORDER_STATUS[order.status];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Card style={styles.card}>
-        <Text style={styles.type}>Orden #{order.id} · {order.type}</Text>
-        <View style={styles.statusWrap}>
-          <Badge label={status.label} color={status.color} />
+    <BottomSheetModalProvider>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Card style={styles.card}>
+          <Text style={styles.type}>Orden #{order.id} · {order.type}</Text>
+          <View style={styles.statusWrap}>
+            <Badge label={status.label} color={status.color} pulse={order.status === 'IN_REVIEW'} />
+          </View>
+
+          {order.description && (
+            <Text style={styles.description}>{order.description}</Text>
+          )}
+
+          <View style={styles.metaRow}>
+            <Text style={styles.meta}>Estimado: {order.estimatedTimeMinutes ?? '-'} min</Text>
+            <Text style={styles.meta}>Real: {order.actualTimeMinutes ?? '-'} min</Text>
+          </View>
+        </Card>
+
+        <View style={styles.actions}>
+          {isManager ? (
+            <>
+              {order.status === 'IN_REVIEW' && (
+                <>
+                  <Button
+                    title="Aprobar ✓"
+                    onPress={() => confirmAction('Aprobar orden', '¿Confirmás la aprobación y cierre de esta orden?', 'COMPLETED', 'Orden aprobada')}
+                    style={styles.actionButton}
+                  />
+                  <Button
+                    title="Rechazar ✗"
+                    variant="danger"
+                    onPress={() => rejectSheetRef.current?.present()}
+                    style={styles.actionButton}
+                  />
+                </>
+              )}
+              {(order.status === 'PENDING' || order.status === 'IN_PROGRESS' || order.status === 'IN_REVIEW') && (
+                <Button
+                  title="Cancelar"
+                  variant="secondary"
+                  onPress={() => confirmAction('Cancelar orden', '¿Confirmás la cancelación de esta orden?', 'CANCELLED', 'Orden cancelada')}
+                  style={styles.actionButton}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {order.status === 'PENDING' && (
+                <Button
+                  title="Iniciar trabajo"
+                  onPress={() => confirmAction('Iniciar trabajo', '¿Confirmás el inicio de esta orden?', 'IN_PROGRESS', 'Trabajo iniciado')}
+                  style={styles.actionButton}
+                />
+              )}
+              {order.status === 'IN_PROGRESS' && (
+                <Button
+                  title="Enviar a revisión"
+                  onPress={() => confirmAction('Enviar a revisión', '¿Confirmás enviar esta orden a revisión?', 'IN_REVIEW', 'Enviada a revisión')}
+                  style={styles.actionButton}
+                />
+              )}
+              {(order.status === 'PENDING' || order.status === 'IN_PROGRESS') && (
+                <Button
+                  title="Cancelar"
+                  variant="secondary"
+                  onPress={() => confirmAction('Cancelar orden', '¿Confirmás la cancelación de esta orden?', 'CANCELLED', 'Orden cancelada')}
+                  style={styles.actionButton}
+                />
+              )}
+            </>
+          )}
         </View>
 
-        {order.description && (
-          <Text style={styles.description}>{order.description}</Text>
-        )}
+        <Text style={styles.sectionTitle}>Historial</Text>
+        <Card style={styles.card}>
+          <StatusTimeline history={history} />
+        </Card>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>Estimado: {order.estimatedTimeMinutes ?? '-'} min</Text>
-          <Text style={styles.meta}>Real: {order.actualTimeMinutes ?? '-'} min</Text>
-        </View>
-      </Card>
-
-      <View style={styles.actions}>
-        {isManager ? (
-          <>
-            {order.status === 'IN_REVIEW' && (
-              <>
-                <Button title="Aprobar" onPress={() => changeStatus('COMPLETED')} style={styles.actionButton} />
-                <Button title="Rechazar" variant="danger" onPress={() => setRejectVisible(true)} style={styles.actionButton} />
-              </>
-            )}
-            {(order.status === 'PENDING' || order.status === 'IN_PROGRESS' || order.status === 'IN_REVIEW') && (
-              <Button title="Cancelar" variant="secondary" onPress={() => changeStatus('CANCELLED')} style={styles.actionButton} />
-            )}
-          </>
-        ) : (
-          <>
-            {order.status === 'PENDING' && (
-              <Button title="Comenzar" onPress={() => changeStatus('IN_PROGRESS')} style={styles.actionButton} />
-            )}
-            {order.status === 'IN_PROGRESS' && (
-              <Button title="Enviar a revisión" onPress={() => changeStatus('IN_REVIEW')} style={styles.actionButton} />
-            )}
-            {(order.status === 'PENDING' || order.status === 'IN_PROGRESS') && (
-              <Button title="Cancelar" variant="secondary" onPress={() => changeStatus('CANCELLED')} style={styles.actionButton} />
-            )}
-          </>
-        )}
-      </View>
-
-      <Text style={styles.sectionTitle}>Historial</Text>
-      <Card style={styles.card}>
-        {history.map(h => (
-          <View key={h.id} style={styles.timelineRow}>
-            <View style={[styles.timelineDot, { backgroundColor: ORDER_STATUS[h.toStatus]?.color ?? Colors.statusUnknown }]} />
-            <View style={styles.timelineInfo}>
-              <Text style={styles.timelineStatus}>
-                {h.fromStatus ? `${ORDER_STATUS[h.fromStatus]?.label ?? 'Desconocido'} → ` : ''}{ORDER_STATUS[h.toStatus]?.label ?? 'Desconocido'}
+        <Text style={styles.sectionTitle}>Checklist</Text>
+        <Card style={styles.card}>
+          {order.checklistItems.length === 0 && (
+            <Text style={styles.emptyText}>Sin ítems de checklist</Text>
+          )}
+          {order.checklistItems.map(item => (
+            <View key={item.id} style={styles.checklistRow}>
+              <Text style={[styles.checkbox, item.done && styles.checkboxDone]}>
+                {item.done ? '✓' : item.na ? 'N/A' : '○'}
               </Text>
-              {h.comment && <Text style={styles.timelineComment}>"{h.comment}"</Text>}
-              <Text style={styles.timelineMeta}>
-                {h.changedByName || 'Sistema'} · {new Date(h.changedAt).toLocaleString()}
+              <Text style={[styles.checklistText, (item.done || item.na) && styles.checklistTextMuted]}>
+                {item.text}
               </Text>
             </View>
-          </View>
-        ))}
-        {history.length === 0 && <Text style={styles.emptyText}>Sin cambios registrados</Text>}
-      </Card>
+          ))}
+        </Card>
 
-      <Text style={styles.sectionTitle}>Checklist</Text>
-      <Card style={styles.card}>
-        {order.checklistItems.length === 0 && (
-          <Text style={styles.emptyText}>Sin ítems de checklist</Text>
+        <Text style={styles.sectionTitle}>Piezas</Text>
+        <Card style={styles.card}>
+          {order.parts.length === 0 && (
+            <Text style={styles.emptyText}>Sin piezas registradas</Text>
+          )}
+          {order.parts.map(part => (
+            <View key={part.id} style={styles.partRow}>
+              <Text style={styles.partName}>{part.partName || part.partNumber || 'Pieza externa'}</Text>
+              <Text style={styles.partQty}>x{part.quantity}</Text>
+            </View>
+          ))}
+        </Card>
+
+        {order.photos.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Fotos</Text>
+            <View style={styles.photoGrid}>
+              {order.photos.map(photo => (
+                <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
+              ))}
+            </View>
+          </>
         )}
-        {order.checklistItems.map(item => (
-          <View key={item.id} style={styles.checklistRow}>
-            <Text style={[styles.checkbox, item.done && styles.checkboxDone]}>
-              {item.done ? '✓' : item.na ? 'N/A' : '○'}
-            </Text>
-            <Text style={[styles.checklistText, (item.done || item.na) && styles.checklistTextMuted]}>
-              {item.text}
-            </Text>
-          </View>
-        ))}
-      </Card>
 
-      <Text style={styles.sectionTitle}>Piezas</Text>
-      <Card style={styles.card}>
-        {order.parts.length === 0 && (
-          <Text style={styles.emptyText}>Sin piezas registradas</Text>
-        )}
-        {order.parts.map(part => (
-          <View key={part.id} style={styles.partRow}>
-            <Text style={styles.partName}>{part.partName || part.partNumber || 'Pieza externa'}</Text>
-            <Text style={styles.partQty}>x{part.quantity}</Text>
-          </View>
-        ))}
-      </Card>
-
-      {order.photos.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Fotos</Text>
-          <View style={styles.photoGrid}>
-            {order.photos.map(photo => (
-              <Image key={photo.id} source={{ uri: photo.url }} style={styles.photo} />
-            ))}
-          </View>
-        </>
-      )}
-
-      <Modal visible={rejectVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Rechazar orden</Text>
+        <BottomSheetModal
+          ref={rejectSheetRef}
+          snapPoints={['55%']}
+          enablePanDownToClose
+        >
+          <View style={styles.sheetContent}>
+            <Text style={styles.sheetTitle}>¿Por qué rechazás esta orden?</Text>
             <TextField
               multiline
-              placeholder="Comentario obligatorio (motivo del rechazo)..."
+              placeholder={`Escribí el motivo (mínimo ${MIN_REJECT_CHARS} caracteres)...`}
               value={rejectComment}
               onChangeText={setRejectComment}
               style={styles.commentInput}
             />
-            <View style={styles.modalActions}>
-              <PressableScale style={styles.modalCancel} onPress={() => setRejectVisible(false)}>
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </PressableScale>
-              <Button title="Confirmar rechazo" variant="danger" onPress={confirmReject} />
-            </View>
+            <Button
+              title="Confirmar rechazo"
+              variant="danger"
+              disabled={rejectComment.trim().length < MIN_REJECT_CHARS}
+              onPress={confirmReject}
+              style={styles.sheetButton}
+            />
+            <PressableScale style={styles.sheetCancel} onPress={() => rejectSheetRef.current?.dismiss()}>
+              <Text style={styles.sheetCancelText}>Cancelar</Text>
+            </PressableScale>
           </View>
-        </View>
-      </Modal>
-    </ScrollView>
+        </BottomSheetModal>
+      </ScrollView>
+    </BottomSheetModalProvider>
   );
 }
 
@@ -276,36 +309,6 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     marginBottom: Spacing.sm,
   },
-  timelineRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  timelineInfo: {
-    flex: 1,
-  },
-  timelineStatus: {
-    ...Typography.subheadline,
-    color: Colors.textPrimary,
-    fontWeight: '600',
-  },
-  timelineComment: {
-    ...Typography.footnote,
-    color: Colors.accent,
-    marginTop: 2,
-    fontStyle: 'italic',
-  },
-  timelineMeta: {
-    ...Typography.caption1,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
   checklistRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -358,18 +361,11 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     paddingVertical: Spacing.sm,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
+  sheetContent: {
     padding: Spacing.lg,
+    flex: 1,
   },
-  modalTitle: {
+  sheetTitle: {
     ...Typography.title3,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
@@ -378,16 +374,14 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: 'top',
   },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
+  sheetButton: {
+    marginTop: Spacing.sm,
+  },
+  sheetCancel: {
+    padding: Spacing.md,
     alignItems: 'center',
   },
-  modalCancel: {
-    padding: Spacing.md,
-  },
-  modalCancelText: {
+  sheetCancelText: {
     ...Typography.subheadline,
     color: Colors.accent,
     fontWeight: '600',

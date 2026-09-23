@@ -3,9 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
-import { Camera, useCameraDevice, useFrameProcessor } from 'react-native-vision-camera';
-import { scanBarcodes, BarcodeFormat } from 'vision-camera-code-scanner';
-import { runOnJS } from 'react-native-reanimated';
+import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors } from '../constants/theme';
@@ -31,7 +29,7 @@ export default function ScanPrinterScreen() {
     })();
   }, []);
 
-  // Se ejecuta en el thread JS cuando el frame processor detecta códigos.
+  // Se ejecuta en el thread JS cuando el escáner nativo detecta códigos.
   const handleScanned = (values: string[]) => {
     if (handled || values.length === 0) return;
     setHandled(true);
@@ -57,18 +55,15 @@ export default function ScanPrinterScreen() {
       });
   };
 
-  const frameProcessor = useFrameProcessor((frame) => {
-    'worklet';
-    const barcodes = scanBarcodes(frame, [BarcodeFormat.QR_CODE], { checkInverted: true });
-    const values: string[] = [];
-    for (const b of barcodes) {
-      const v = (b as any).rawValue ?? (b as any).value ?? (b as any).displayValue ?? (b as any).content?.data;
-      if (v) values.push(String(v));
-    }
-    if (values.length > 0) {
-      runOnJS(handleScanned)(values);
-    }
-  }, [handled]);
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: (codes) => {
+      const values = codes.map(c => c.value).filter((v): v is string => !!v);
+      if (values.length > 0) {
+        handleScanned(values);
+      }
+    },
+  });
 
   if (checking) {
     return (
@@ -103,7 +98,7 @@ export default function ScanPrinterScreen() {
         style={StyleSheet.absoluteFill}
         device={device}
         isActive
-        frameProcessor={frameProcessor}
+        codeScanner={codeScanner}
       />
       <View style={styles.overlay}>
         <View style={styles.viewfinder} />

@@ -16,6 +16,8 @@ export type TecnicoStackParamList = {
   OrdersList: undefined;
   ScanPrinter: undefined;
   SparePartDetail: { partId: number };
+  QuoteHistory: undefined;
+  QuoteCalculator: { quoteId?: number; title?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<TecnicoStackParamList>();
@@ -53,6 +55,11 @@ export default function TecnicoStack() {
         options={{ title: 'Detalle Impresora' }}
       />
       <Stack.Screen
+        name="PrinterHistory"
+        component={require('../screens/PrinterHistoryScreen').default}
+        options={{ title: 'Historial' }}
+      />
+      <Stack.Screen
         name="CreateOrder"
         component={require('../screens/CreateOrderScreen').default}
         options={{ title: 'Nueva orden' }}
@@ -86,6 +93,16 @@ export default function TecnicoStack() {
         name="SparePartDetail"
         component={require('../screens/SparePartDetailScreen').default}
         options={{ title: 'Detalle de repuesto' }}
+      />
+      <Stack.Screen
+        name="QuoteHistory"
+        component={require('../screens/QuoteHistoryScreen').default}
+        options={{ title: 'Presupuestos' }}
+      />
+      <Stack.Screen
+        name="QuoteCalculator"
+        component={require('../screens/QuoteCalculatorScreen').default}
+        options={{ title: 'Presupuesto' }}
       />
     </Stack.Navigator>
   );

@@ -1,6 +1,7 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import { authService } from '../services/authService';
+import { fcmService } from '../services/fcmService';
 import { AuthAction, AuthState, UserInfo } from '../types/auth';
 
 const initialState: AuthState = {
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'RESTORE_TOKEN', payload: session
             ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
             : null });
+          if (session) fcmService.registerDeviceToken().catch(() => {});
         }, 1000); // Pequeño delay para que se aprecie el SplashScreen
       })
       .catch(() => {
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type: 'LOGIN_SUCCESS',
         payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
       });
+      fcmService.registerDeviceToken().catch(() => {});
     } catch (error) {
       // Si el login falla, no dejamos la app clavada en el Splash.
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -120,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const session = await authService.restoreSession(skipBiometrics);
       if (session) {
         dispatch({ type: 'RESTORE_TOKEN', payload: { user: session.user, token: session.accessToken, refreshToken: session.refreshToken } });
+        fcmService.registerDeviceToken().catch(() => {});
         return true;
       } else {
         dispatch({ type: 'SET_LOADING', payload: false });

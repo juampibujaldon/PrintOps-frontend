@@ -27,6 +27,8 @@ export interface PrinterResponse {
   nextMaintenanceDate: string | null;
   photoUrl: string | null;
   qrCodeData: string;
+  totalPrintingHours: number | null;
+  watts: number | null;
 }
 
 export interface PhotoAsset {

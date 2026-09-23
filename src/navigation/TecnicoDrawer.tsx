@@ -12,7 +12,9 @@ import { Colors } from '../constants/theme';
 export type TecnicoDrawerParamList = {
   InicioStack: undefined;
   Dashboard: undefined;
+  Presupuestos: undefined;
   Repuestos: undefined;
+  Taller: undefined;
   Configuracion: undefined;
   Perfil: undefined;
   Notificaciones: undefined;
@@ -46,6 +48,11 @@ export default function TecnicoDrawer() {
         name="Repuestos" 
         component={StockScreen} 
         options={{ title: 'Repuestos' }} 
+      />
+      <Drawer.Screen 
+        name="Presupuestos" 
+        component={require('../screens/QuoteHistoryScreen').default} 
+        options={{ title: 'Presupuestos' }} 
       />
       <Drawer.Screen 
         name="Configuracion" 

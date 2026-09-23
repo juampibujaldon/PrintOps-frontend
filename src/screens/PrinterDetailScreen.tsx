@@ -66,6 +66,13 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
       </TouchableOpacity>
 
       <Button
+        variant="secondary"
+        title="Ver historial completo"
+        onPress={() => navigation.navigate('PrinterHistory', { printer })}
+        style={styles.secondary}
+      />
+
+      <Button
         variant="ghost"
         title="Volver al inicio"
         onPress={() => navigation.navigate('TecnicoHome')}
