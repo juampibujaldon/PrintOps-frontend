@@ -193,7 +193,7 @@ export default function CreateRuleBottomSheet({ visible, printerId, onClose, onC
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color={Colors.background} />
+                <ActivityIndicator color={Colors.onAccent} />
               ) : (
                 <Text style={styles.submitText}>Crear regla</Text>
               )}
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: Colors.surfaceBorder,
+    backgroundColor: Colors.separator,
     alignSelf: 'center',
     marginBottom: Spacing.md,
   },
@@ -243,14 +243,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
+    borderColor: Colors.separator,
     alignItems: 'center',
   },
-  chipSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  chipSelected: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600' },
-  chipTextSelected: { color: Colors.background },
+  chipTextSelected: { color: Colors.onAccent },
   input: {
     borderWidth: 1,
     borderColor: 'transparent',
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: Colors.inputBackground,
+    backgroundColor: Colors.surface,
     color: Colors.textPrimary,
     marginBottom: Spacing.xs,
   },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.background,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
@@ -277,22 +277,23 @@ const styles = StyleSheet.create({
   addRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   addInput: { flex: 1 },
   addBtn: {
-    backgroundColor: Colors.primaryGlow,
+    backgroundColor: Colors.accent,
+    opacity: 0.7,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     marginBottom: Spacing.xs,
   },
-  addBtnText: { color: Colors.primary, fontWeight: '700', fontSize: 13 },
+  addBtnText: { color: Colors.accent, fontWeight: '700', fontSize: 13 },
   submitBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: Radius.md,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: Spacing.lg,
   },
   disabled: { opacity: 0.7 },
-  submitText: { color: Colors.background, fontSize: 16, fontWeight: '800' },
+  submitText: { color: Colors.onAccent, fontSize: 16, fontWeight: '800' },
 });

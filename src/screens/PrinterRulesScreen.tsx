@@ -94,7 +94,7 @@ export default function PrinterRulesScreen({ route }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={Colors.accent} />
       </View>
     );
   }
@@ -156,12 +156,12 @@ const styles = StyleSheet.create({
   center: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
   errorText: { color: Colors.textSecondary, fontSize: 15, marginBottom: Spacing.md, textAlign: 'center' },
   retryBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.md,
   },
-  retryText: { color: Colors.background, fontWeight: '700' },
+  retryText: { color: Colors.onAccent, fontWeight: '700' },
   listContent: { padding: Spacing.lg, paddingBottom: 120 },
   empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: Spacing.xl },
   emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
@@ -174,14 +174,14 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.primary,
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45,
     shadowRadius: 12,
     elevation: 10,
   },
-  fabText: { fontSize: 28, color: Colors.background, fontWeight: '300', lineHeight: 32 },
+  fabText: { fontSize: 28, color: Colors.onAccent, fontWeight: '300', lineHeight: 32 },
 });

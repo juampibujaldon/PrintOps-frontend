@@ -107,10 +107,10 @@ function TypeCount({ label, value, color }: { label: string; value: number; colo
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surfaceBase,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
+    borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,
   },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   typeCount: {
     flex: 1,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.background,
     borderRadius: Radius.md,
     alignItems: 'center',
     paddingVertical: Spacing.sm,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   typeCountValue: { fontSize: 18, fontWeight: '800' },
   typeCountLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
   skeleton: {
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.background,
     borderRadius: Radius.sm,
     marginTop: Spacing.sm,
   },

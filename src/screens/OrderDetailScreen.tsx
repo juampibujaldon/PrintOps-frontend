@@ -58,7 +58,12 @@ export default function OrderDetailScreen({ route }: Props) {
       setRejectComment('');
       await load();
     } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo cambiar el estado');
+      // FIX 4: 409 = conflicto de concurrencia en el stock (optimistic lock).
+      if (error?.response?.status === 409) {
+        Alert.alert('Conflicto', 'El stock fue modificado por otro proceso. Recargá e intentá de nuevo.');
+      } else {
+        Alert.alert('Error', error?.response?.data?.message || 'No se pudo cambiar el estado');
+      }
     }
   };
 

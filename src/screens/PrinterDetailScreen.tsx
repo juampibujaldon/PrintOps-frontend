@@ -1,6 +1,6 @@
 // src/screens/PrinterDetailScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import QRCode from 'react-native-qrcode-svg';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
@@ -71,6 +71,15 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
         onPress={() => navigation.navigate('TecnicoHome')}
         style={styles.secondary}
       />
+    </ScrollView>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -134,28 +143,28 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 24,
   },
   buttonText: {
-    color: Colors.background,
+    color: Colors.onAccent,
     fontSize: 16,
     fontWeight: 'bold',
   },
   buttonSecondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 12,
   },
   buttonSecondaryText: {
-    color: Colors.primary,
+    color: Colors.accent,
     fontSize: 16,
     fontWeight: 'bold',
   },

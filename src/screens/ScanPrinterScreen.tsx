@@ -126,5 +126,5 @@ const styles = StyleSheet.create({
   close: { position: 'absolute', bottom: 48, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10 },
   closeText: { color: '#fff', fontWeight: '700' },
   button: { backgroundColor: Colors.accent, padding: 14, borderRadius: 10 },
-  buttonText: { color: Colors.background, fontWeight: '700' },
+  buttonText: { color: Colors.onAccent, fontWeight: '700' },
 });

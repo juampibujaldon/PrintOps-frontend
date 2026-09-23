@@ -121,10 +121,10 @@ export default function RuleProgressCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surfaceBase,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
+    borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,
   },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   track: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.surfaceElevated,
+    backgroundColor: Colors.background,
     marginTop: Spacing.md,
     overflow: 'hidden',
   },

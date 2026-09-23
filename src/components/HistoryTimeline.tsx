@@ -134,7 +134,7 @@ export default function HistoryTimeline({
       ListEmptyComponent={empty}
       ListFooterComponent={
         isLoadingMore ? (
-          <ActivityIndicator style={{ marginVertical: Spacing.md }} color={Colors.primary} />
+          <ActivityIndicator style={{ marginVertical: Spacing.md }} color={Colors.accent} />
         ) : null
       }
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -151,13 +151,13 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: 'row' },
   rail: { alignItems: 'center', width: 20, marginRight: Spacing.sm },
   dot: { width: 12, height: 12, borderRadius: 6, marginTop: 4 },
-  line: { flex: 1, width: 2, backgroundColor: Colors.surfaceBorder },
+  line: { flex: 1, width: 2, backgroundColor: Colors.separator },
   itemCard: {
     flex: 1,
-    backgroundColor: Colors.surfaceBase,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
+    borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,
   },
