@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,6 +45,7 @@ const STATUS_FILTERS: Array<{ value: QuoteStatus | 'ALL'; label: string }> = [
 export default function QuoteHistoryScreen({ navigation }: Props) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'ALL'>('ALL');
   const [clientFilter, setClientFilter] = useState('');
   const [query, setQuery] = useState('');
@@ -61,10 +63,12 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
     return () => clearTimeout(timeout);
   }, [clientFilter]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isRefresh = false) => {
     const reqId = ++requestCounter.current;
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      
       const data = await quoteService.list({
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         clientName: query.trim() || undefined,
@@ -81,9 +85,14 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
     } finally {
       if (reqId === requestCounter.current) {
         setLoading(false);
+        setRefreshing(false);
       }
     }
   }, [statusFilter, query, fromDate, toDate]);
+
+  const onRefresh = useCallback(() => {
+    load(true);
+  }, [load]);
 
   useEffect(() => {
     load();
@@ -268,9 +277,9 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {loading ? (
+      {loading && quotes.length === 0 ? (
         <View style={styles.center}>
-          <ActivityIndicator color={Colors.accent} />
+          <ActivityIndicator color={Colors.accent} size="large" />
         </View>
       ) : (
         <FlatList
@@ -278,6 +287,9 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
           keyExtractor={item => String(item.id)}
           contentContainerStyle={styles.list}
           renderItem={renderCard}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
+          }
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>Todavía no tenés presupuestos guardados — creá el primero</Text>
