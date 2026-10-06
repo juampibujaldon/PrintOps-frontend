@@ -8,7 +8,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Calendar, X, Plus } from 'lucide-react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -44,6 +47,8 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
   const [clientFilter, setClientFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [showFrom, setShowFrom] = useState(false);
+  const [showTo, setShowTo] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -66,6 +71,41 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
       load();
     }, [load]),
   );
+
+  const onFromChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowFrom(Platform.OS === 'ios');
+    if (selectedDate) {
+      const yyyy = selectedDate.getFullYear();
+      const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(selectedDate.getDate()).padStart(2, '0');
+      const formatted = `${yyyy}-${mm}-${dd}`;
+      if (toDate && formatted > toDate) {
+        Alert.alert('Error', 'La fecha "Desde" no puede ser posterior a "Hasta"');
+        return;
+      }
+      setFromDate(formatted);
+    }
+  };
+
+  const onToChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowTo(Platform.OS === 'ios');
+    if (selectedDate) {
+      const yyyy = selectedDate.getFullYear();
+      const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(selectedDate.getDate()).padStart(2, '0');
+      const formatted = `${yyyy}-${mm}-${dd}`;
+      if (fromDate && formatted < fromDate) {
+        Alert.alert('Error', 'La fecha "Hasta" no puede ser anterior a "Desde"');
+        return;
+      }
+      setToDate(formatted);
+    }
+  };
+
+  const clearDates = () => {
+    setFromDate('');
+    setToDate('');
+  };
 
   const changeStatus = async (id: number, status: QuoteStatus) => {
     try {
@@ -159,18 +199,41 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
           containerStyle={styles.filterField}
         />
         <View style={styles.dateRow}>
-          <TextField
-            placeholder="Desde (YYYY-MM-DD)"
-            value={fromDate}
-            onChangeText={setFromDate}
-            containerStyle={styles.dateField}
-          />
-          <TextField
-            placeholder="Hasta (YYYY-MM-DD)"
-            value={toDate}
-            onChangeText={setToDate}
-            containerStyle={styles.dateField}
-          />
+          <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowFrom(true)}>
+            <Calendar color={Colors.textSecondary} size={18} />
+            <Text style={fromDate ? styles.dateText : styles.datePlaceholder}>
+              {fromDate ? fromDate.split('-').reverse().join('/') : 'Desde'}
+            </Text>
+          </TouchableOpacity>
+          {showFrom && (
+            <DateTimePicker
+              value={fromDate ? new Date(fromDate + 'T00:00:00') : new Date()}
+              mode="date"
+              display="default"
+              onChange={onFromChange}
+            />
+          )}
+
+          <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowTo(true)}>
+            <Calendar color={Colors.textSecondary} size={18} />
+            <Text style={toDate ? styles.dateText : styles.datePlaceholder}>
+              {toDate ? toDate.split('-').reverse().join('/') : 'Hasta'}
+            </Text>
+          </TouchableOpacity>
+          {showTo && (
+            <DateTimePicker
+              value={toDate ? new Date(toDate + 'T00:00:00') : new Date()}
+              mode="date"
+              display="default"
+              onChange={onToChange}
+            />
+          )}
+
+          {(fromDate !== '' || toDate !== '') && (
+            <TouchableOpacity style={styles.clearDateBtn} onPress={clearDates}>
+              <X color={Colors.textSecondary} size={20} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -212,8 +275,11 @@ const styles = StyleSheet.create({
   chipText: { ...Typography.footnote, color: Colors.textSecondary, fontWeight: '600' },
   chipTextActive: { color: Colors.background },
   filterField: { marginTop: Spacing.sm, marginBottom: 0 },
-  dateRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
-  dateField: { flex: 1, marginBottom: 0 },
+  dateRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, alignItems: 'center' },
+  datePickerBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator, borderRadius: Radius.md, paddingHorizontal: Spacing.sm, height: 44, gap: Spacing.sm },
+  dateText: { ...Typography.body, color: Colors.textPrimary },
+  datePlaceholder: { ...Typography.body, color: Colors.textTertiary },
+  clearDateBtn: { justifyContent: 'center', alignItems: 'center', padding: Spacing.xs },
   list: { padding: Spacing.lg, paddingBottom: 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xl },
   emptyText: { ...Typography.subheadline, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: Spacing.xl },
