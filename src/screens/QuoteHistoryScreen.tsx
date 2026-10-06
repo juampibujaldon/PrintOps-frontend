@@ -1,5 +1,5 @@
 // src/screens/QuoteHistoryScreen.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -45,31 +45,54 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'ALL'>('ALL');
   const [clientFilter, setClientFilter] = useState('');
+  const [query, setQuery] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [showFrom, setShowFrom] = useState(false);
   const [showTo, setShowTo] = useState(false);
 
+  const requestCounter = useRef(0);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setQuery(clientFilter);
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [clientFilter]);
+
   const load = useCallback(async () => {
+    const reqId = ++requestCounter.current;
     try {
+      setLoading(true);
       const data = await quoteService.list({
         status: statusFilter === 'ALL' ? undefined : statusFilter,
-        clientName: clientFilter.trim() || undefined,
+        clientName: query.trim() || undefined,
         from: fromDate.trim() || undefined,
         to: toDate.trim() || undefined,
       });
-      setQuotes(data);
+      if (reqId === requestCounter.current) {
+        setQuotes(data);
+      }
     } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudieron cargar los presupuestos');
+      if (reqId === requestCounter.current) {
+        Alert.alert('Error', error?.response?.data?.message || 'No se pudieron cargar los presupuestos');
+      }
     } finally {
-      setLoading(false);
+      if (reqId === requestCounter.current) {
+        setLoading(false);
+      }
     }
-  }, [statusFilter, clientFilter, fromDate, toDate]);
+  }, [statusFilter, query, fromDate, toDate]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useFocusEffect(
     React.useCallback(() => {
       load();
-    }, [load]),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
 
   const onFromChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
