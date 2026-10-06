@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -204,17 +205,24 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.filters}>
-        <View style={styles.chipsRow}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.chipsScroll} 
+          contentContainerStyle={styles.chipsRow}
+        >
           {STATUS_FILTERS.map(f => (
             <PressableScale
               key={f.value}
               style={[styles.chip, statusFilter === f.value && styles.chipActive]}
               onPress={() => setStatusFilter(f.value)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: statusFilter === f.value }}
             >
               <Text style={[styles.chipText, statusFilter === f.value && styles.chipTextActive]}>{f.label}</Text>
             </PressableScale>
           ))}
-        </View>
+        </ScrollView>
         <TextField
           placeholder="Buscar por cliente"
           value={clientFilter}
@@ -292,8 +300,9 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   filters: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator },
+  chipsScroll: { marginHorizontal: -Spacing.lg },
+  chipsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
+  chip: { paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', borderRadius: Radius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator },
   chipActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
   chipText: { ...Typography.footnote, color: Colors.textSecondary, fontWeight: '600' },
   chipTextActive: { color: Colors.background },
