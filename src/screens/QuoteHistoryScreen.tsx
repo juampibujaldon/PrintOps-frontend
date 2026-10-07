@@ -1,7 +1,5 @@
-// src/screens/QuoteHistoryScreen.tsx
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   RefreshControl,
@@ -12,23 +10,28 @@ import {
   View,
   Platform,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar, X, Plus, FileX } from 'lucide-react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Colors, Radius, Spacing, Typography } from '../constants/theme';
+import { Colors, Radius, Spacing, Typography, Shadows } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { quoteService } from '../services/quoteService';
 import {
   Quote,
   QuoteStatus,
-  QUOTE_STATUS_COLORS,
   QUOTE_STATUS_LABELS,
 } from '../types/quote';
 import Badge from '../components/ui/Badge';
 import TextField from '../components/ui/TextField';
 import PressableScale from '../components/ui/PressableScale';
+import Card from '../components/ui/Card';
+import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
+import Skeleton from '../components/ui/Skeleton';
+import ScreenHeader from '../components/ui/ScreenHeader';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'QuoteHistory'>;
 
@@ -41,6 +44,15 @@ const STATUS_FILTERS: Array<{ value: QuoteStatus | 'ALL'; label: string }> = [
   { value: 'ACCEPTED', label: 'Aceptado' },
   { value: 'REJECTED', label: 'Rechazado' },
 ];
+
+const getStatusColors = (status: QuoteStatus) => {
+  switch (status) {
+    case 'ACCEPTED': return { bg: Colors.successBg, text: Colors.successText };
+    case 'REJECTED': return { bg: Colors.errorBg, text: Colors.errorText };
+    case 'SENT': return { bg: Colors.infoBg, text: Colors.infoText };
+    default: return { bg: Colors.separator, text: Colors.textSecondary };
+  }
+};
 
 export default function QuoteHistoryScreen({ navigation }: Props) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -56,6 +68,12 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
   const [showTo, setShowTo] = useState(false);
 
   const requestCounter = useRef(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      navigation.setOptions({ headerShown: false });
+    }, [navigation])
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -150,8 +168,8 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
     try {
       await quoteService.updateStatus(id, status);
       load();
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo cambiar el estado');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'No se pudo cambiar el estado');
     }
   };
 
@@ -159,8 +177,8 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
     try {
       const q = await quoteService.duplicate(id);
       navigation.navigate('QuoteCalculator', { quoteId: q.id, title: `Basado en ${q.quoteNumber}` });
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo duplicar');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'No se pudo duplicar');
     }
   };
 
@@ -168,57 +186,69 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
     try {
       await quoteService.remove(id);
       load();
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo eliminar');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'No se pudo eliminar');
     }
   };
 
   const renderActions = (quote: Quote) => {
     const actions: Array<{ label: string; color: string; onPress: () => void }> = [];
     if (quote.status === 'DRAFT') {
-      actions.push({ label: 'Enviar', color: Colors.accent, onPress: () => changeStatus(quote.id, 'SENT') });
-      actions.push({ label: 'Eliminar', color: Colors.error, onPress: () => removeQuote(quote.id) });
+      actions.push({ label: 'Enviar', color: Colors.infoBg, onPress: () => changeStatus(quote.id, 'SENT') });
+      actions.push({ label: 'Eliminar', color: Colors.errorBg, onPress: () => removeQuote(quote.id) });
     } else if (quote.status === 'SENT') {
-      actions.push({ label: 'Aceptar', color: Colors.statusOperativa, onPress: () => changeStatus(quote.id, 'ACCEPTED') });
-      actions.push({ label: 'Rechazar', color: Colors.error, onPress: () => changeStatus(quote.id, 'REJECTED') });
+      actions.push({ label: 'Aceptar', color: Colors.successBg, onPress: () => changeStatus(quote.id, 'ACCEPTED') });
+      actions.push({ label: 'Rechazar', color: Colors.errorBg, onPress: () => changeStatus(quote.id, 'REJECTED') });
     }
-    actions.push({ label: 'Duplicar', color: Colors.textSecondary, onPress: () => duplicate(quote.id) });
+    actions.push({ label: 'Duplicar', color: Colors.separator, onPress: () => duplicate(quote.id) });
 
     return (
       <View style={styles.actionsRow}>
         {actions.map(a => (
           <TouchableOpacity key={a.label} style={[styles.actionBtn, { backgroundColor: a.color }]} onPress={a.onPress}>
-            <Text style={styles.actionText}>{a.label}</Text>
+            <Text style={[styles.actionText, { color: Colors.textPrimary }]}>{a.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
     );
   };
 
-  const renderCard = ({ item }: { item: Quote }) => (
-    <ReanimatedSwipeable renderRightActions={() => renderActions(item)} overshootRight={false}>
-      <PressableScale
-        style={styles.card}
-        onPress={() => navigation.navigate('QuoteCalculator', { quoteId: item.id })}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.quoteNumber}>{item.quoteNumber}</Text>
-          <Badge label={QUOTE_STATUS_LABELS[item.status]} color={QUOTE_STATUS_COLORS[item.status]} />
-        </View>
-        <Text style={styles.client} numberOfLines={1}>
-          {item.clientName || 'Sin cliente'}
-          {item.jobDescription ? ` · ${item.jobDescription}` : ''}
-        </Text>
-        <View style={styles.cardFooter}>
-          <Text style={styles.price}>{money(item.totalPrice)}</Text>
-          <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-        </View>
-      </PressableScale>
-    </ReanimatedSwipeable>
-  );
+  const renderCard = ({ item, index }: { item: Quote; index: number }) => {
+    const statusColors = getStatusColors(item.status);
+    return (
+      <Animated.View entering={FadeInDown.delay(index * 50).springify().damping(20)}>
+        <ReanimatedSwipeable renderRightActions={() => renderActions(item)} overshootRight={false}>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() => navigation.navigate('QuoteCalculator', { quoteId: item.id })}
+          >
+            <Card style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.cardHeaderLeft}>
+                  <Text style={styles.client} numberOfLines={1}>
+                    {item.clientName || 'Sin cliente'}
+                  </Text>
+                  <Text style={styles.jobDesc} numberOfLines={1}>
+                    {item.jobDescription || item.quoteNumber}
+                  </Text>
+                </View>
+                <Text style={styles.price}>{money(item.totalPrice)}</Text>
+              </View>
+              <View style={styles.cardFooter}>
+                <Badge label={QUOTE_STATUS_LABELS[item.status]} bgColor={statusColors.bg} textColor={statusColors.text} />
+                <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+              </View>
+            </Card>
+          </PressableScale>
+        </ReanimatedSwipeable>
+      </Animated.View>
+    );
+  };
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Historial de Presupuestos" />
+      
       <View style={styles.filters}>
         <ScrollView 
           horizontal 
@@ -284,16 +314,13 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
       </View>
 
       {loading && quotes.length === 0 && !error ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={Colors.accent} size="large" />
+        <View style={styles.skeletonContainer}>
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} style={styles.skeletonCard} />
+          ))}
         </View>
       ) : error && quotes.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-            <Text style={styles.retryText}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState error={error} onRetry={() => load()} />
       ) : (
         <FlatList
           data={quotes}
@@ -301,26 +328,27 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           renderItem={renderCard}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
           }
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <FileX color={Colors.textTertiary} size={48} />
-              <Text style={styles.emptyText}>Todavía no tenés presupuestos guardados — creá el primero</Text>
-            </View>
+            <EmptyState 
+              icon={<FileX color={Colors.textTertiary} size={48} />}
+              title="Sin presupuestos"
+              description="Todavía no tenés presupuestos guardados — creá el primero"
+            />
           }
         />
       )}
 
-      <TouchableOpacity
+      <PressableScale
         style={styles.fab}
-        activeOpacity={0.85}
+        scaleTo={0.9}
         onPress={() => navigation.navigate('QuoteCalculator', {})}
         accessibilityLabel="Crear nuevo presupuesto"
         accessibilityRole="button"
       >
-        <Plus color={Colors.onAccent} size={28} />
-      </TouchableOpacity>
+        <Plus color={Colors.onPrimary} size={28} />
+      </PressableScale>
     </View>
   );
 }
@@ -330,32 +358,33 @@ const styles = StyleSheet.create({
   filters: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
   chipsScroll: { marginHorizontal: -Spacing.lg },
   chipsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.sm },
-  chip: { paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', borderRadius: Radius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator },
+  chip: { paddingHorizontal: Spacing.lg, minHeight: 36, justifyContent: 'center', borderRadius: Radius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator },
   chipActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
   chipText: { ...Typography.footnote, color: Colors.textSecondary, fontWeight: '600' },
-  chipTextActive: { color: Colors.background },
+  chipTextActive: { color: Colors.surface },
   filterField: { marginTop: Spacing.sm, marginBottom: 0 },
   dateRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, alignItems: 'center' },
   datePickerBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator, borderRadius: Radius.md, paddingHorizontal: Spacing.sm, height: 44, gap: Spacing.sm },
-  dateText: { ...Typography.body, color: Colors.textPrimary },
+  dateText: { ...Typography.body, color: Colors.textPrimary, ...Typography.tabular },
   datePlaceholder: { ...Typography.body, color: Colors.textTertiary },
   clearDateBtn: { justifyContent: 'center', alignItems: 'center', padding: Spacing.xs },
+  
   list: { padding: Spacing.lg, paddingBottom: 100 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xl },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xl * 2, gap: Spacing.md },
-  emptyText: { ...Typography.subheadline, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: Spacing.xl },
-  errorText: { ...Typography.subheadline, color: Colors.error, textAlign: 'center', marginBottom: Spacing.md, paddingHorizontal: Spacing.xl },
-  retryBtn: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator, borderRadius: Radius.md },
-  retryText: { ...Typography.body, color: Colors.textPrimary, fontWeight: '600' },
-  card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.separator },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
-  quoteNumber: { ...Typography.headline, color: Colors.textPrimary, fontWeight: '700' },
-  client: { ...Typography.subheadline, color: Colors.textSecondary, marginBottom: Spacing.xs },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  price: { ...Typography.title3, color: Colors.textPrimary, fontWeight: '700' },
-  date: { ...Typography.caption1, color: Colors.textSecondary },
-  actionsRow: { flexDirection: 'row', alignItems: 'center' },
-  actionBtn: { paddingHorizontal: 14, paddingVertical: 12, justifyContent: 'center' },
-  actionText: { ...Typography.footnote, color: '#ffffff', fontWeight: '700' },
-  fab: { position: 'absolute', bottom: 28, right: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: Colors.accent, justifyContent: 'center', alignItems: 'center', elevation: 10, shadowColor: Colors.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 12 },
+  skeletonContainer: { padding: Spacing.lg },
+  skeletonCard: { height: 100, marginBottom: Spacing.md, borderRadius: Radius.lg },
+  
+  card: { marginBottom: Spacing.md },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.sm },
+  cardHeaderLeft: { flex: 1, marginRight: Spacing.md },
+  client: { ...Typography.headline, color: Colors.textPrimary, marginBottom: 2 },
+  jobDesc: { ...Typography.subheadline, color: Colors.textSecondary },
+  price: { ...Typography.title, color: Colors.textPrimary, ...Typography.tabular },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.xs },
+  date: { ...Typography.caption, color: Colors.textTertiary, ...Typography.tabular },
+  
+  actionsRow: { flexDirection: 'row', alignItems: 'stretch', height: '100%', paddingBottom: Spacing.md },
+  actionBtn: { paddingHorizontal: Spacing.lg, justifyContent: 'center', alignItems: 'center' },
+  actionText: { ...Typography.footnote, fontWeight: '700' },
+  
+  fab: { position: 'absolute', bottom: 28, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center', ...Shadows.floatingLight },
 });
