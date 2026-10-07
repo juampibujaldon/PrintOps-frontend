@@ -1,33 +1,22 @@
-// src/components/ui/Card.tsx
 import React from 'react';
-import { StyleSheet, View, ViewProps, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewProps } from 'react-native';
 import { Colors, Radius, Shadows, Spacing } from '../../constants/theme';
 
-type Props = ViewProps & {
-  padded?: boolean;
-  elevated?: boolean;
-  style?: StyleProp<ViewStyle>;
-};
-
-export default function Card({ padded = true, elevated = false, style, children, ...rest }: Props) {
+export default function Card({ style, children, ...props }: ViewProps) {
   return (
-    <View
-      style={[styles.base, padded && styles.padded, elevated && Shadows.card, style]}
-      {...rest}
-    >
+    <View style={[styles.card, style]} {...props}>
       {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
+  card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    ...Shadows.cardLight,
     borderWidth: 1,
-    borderColor: Colors.separator,
-  },
-  padded: {
-    padding: Spacing.md,
-  },
+    borderColor: Colors.border,
+  }
 });

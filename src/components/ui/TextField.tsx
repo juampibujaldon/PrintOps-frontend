@@ -1,64 +1,40 @@
-// src/components/ui/TextField.tsx
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  TextInput,
-  TextInputProps,
-  View,
-  StyleProp,
-  ViewStyle,
-} from 'react-native';
+import { View, TextInput, Text, StyleSheet, TextInputProps } from 'react-native';
 import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
 
-type Props = TextInputProps & {
+interface Props extends TextInputProps {
   label?: string;
   error?: string;
-  containerStyle?: StyleProp<ViewStyle>;
-};
+  containerStyle?: any;
+}
 
-export default function TextField({ label, error, containerStyle, style, ...rest }: Props) {
+export default function TextField({ label, error, style, containerStyle, ...props }: Props) {
   return (
     <View style={[styles.container, containerStyle]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label && <Text style={styles.label}>{label}</Text>}
       <TextInput
-        style={[styles.input, error != null && styles.inputError, style]}
+        style={[styles.input, error && styles.inputError, style]}
         placeholderTextColor={Colors.textTertiary}
-        {...rest}
+        {...props}
       />
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-  },
-  label: {
-    ...Typography.footnote,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-    marginBottom: Spacing.xs,
-    marginLeft: 2,
-  },
+  container: { marginBottom: Spacing.md },
+  label: { ...Typography.footnote, fontWeight: '600', color: Colors.textSecondary, marginBottom: Spacing.xs },
   input: {
-    ...Typography.body,
-    color: Colors.textPrimary,
+    height: 48,
     backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
+    color: Colors.textPrimary,
+    ...Typography.body,
   },
-  inputError: {
-    borderColor: Colors.error,
-  },
-  errorText: {
-    ...Typography.footnote,
-    color: Colors.error,
-    marginTop: Spacing.xs,
-    marginLeft: 2,
-  },
+  inputError: { borderColor: Colors.error },
+  error: { ...Typography.caption, color: Colors.error, marginTop: Spacing.xs },
 });

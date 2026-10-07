@@ -1,57 +1,31 @@
-// src/components/ui/Badge.tsx
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
-import { Radius } from '../../constants/theme';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Radius, Spacing, Typography } from '../../constants/theme';
 
-type Props = {
+interface BadgeProps {
   label: string;
-  color: string;
-  pulse?: boolean;
-};
+  bgColor: string;
+  textColor: string;
+}
 
-export default function Badge({ label, color, pulse = false }: Props) {
-  const anim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (!pulse) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 0.4, duration: 900, useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse, anim]);
-
+export default function Badge({ label, bgColor, textColor }: BadgeProps) {
   return (
-    <View style={[styles.badge, { borderColor: color + '40', backgroundColor: color + '18' }]}>
-      <Animated.View style={[styles.dot, { backgroundColor: color, opacity: pulse ? anim : 1 }]} />
-      <Text style={[styles.label, { color }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: bgColor }]}>
+      <Text style={[styles.text, { color: textColor }]}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
     borderRadius: Radius.full,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 5,
+    alignSelf: 'flex-start',
   },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  label: {
-    fontSize: 10,
+  text: {
+    ...Typography.caption,
     fontWeight: '700',
-    letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
+  }
 });

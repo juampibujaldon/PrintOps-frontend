@@ -1,62 +1,49 @@
-// src/components/ui/Button.tsx
 import React from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TextStyle,
-  ViewStyle,
-  StyleProp,
-} from 'react-native';
+import { StyleSheet, Text, ActivityIndicator, ViewStyle, StyleProp } from 'react-native';
+import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
 import PressableScale from './PressableScale';
-import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
-type Props = {
+interface ButtonProps {
   title: string;
-  onPress: () => void;
-  variant?: Variant;
-  loading?: boolean;
+  variant?: ButtonVariant;
+  onPress?: () => void;
   disabled?: boolean;
+  loading?: boolean;
   style?: StyleProp<ViewStyle>;
-};
+}
 
-const VIEW_STYLES: Record<Variant, ViewStyle> = {
-  primary: { backgroundColor: Colors.accent },
-  secondary: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator },
-  danger: { backgroundColor: Colors.error },
-  ghost: { backgroundColor: 'transparent' },
-};
-
-const TEXT_STYLES: Record<Variant, TextStyle> = {
-  primary: { color: Colors.onAccent },
-  secondary: { color: Colors.textPrimary },
-  danger: { color: Colors.onAccent },
-  ghost: { color: Colors.accent },
-};
-
-export default function Button({
-  title,
-  onPress,
-  variant = 'primary',
-  loading = false,
-  disabled = false,
-  style,
-}: Props) {
-  const isDisabled = disabled || loading;
-  const spinnerColor = TEXT_STYLES[variant].color as string;
+export default function Button({ title, variant = 'primary', onPress, disabled, loading, style }: ButtonProps) {
+  const isPrimary = variant === 'primary';
+  const isSecondary = variant === 'secondary';
+  
+  let bg = isPrimary ? Colors.primary : isSecondary ? Colors.background : 'transparent';
+  let tc = isPrimary ? Colors.onPrimary : isSecondary ? Colors.textPrimary : Colors.primary;
+  let bc = isSecondary ? Colors.border : 'transparent';
+  
+  if (disabled) {
+    bg = isPrimary ? Colors.primaryDisabled : isSecondary ? Colors.background : 'transparent';
+    tc = isPrimary ? Colors.surface : Colors.textDisabled;
+    bc = isSecondary ? Colors.separator : 'transparent';
+  }
 
   return (
     <PressableScale
       onPress={onPress}
-      disabled={isDisabled}
-      style={[styles.base, VIEW_STYLES[variant], isDisabled && styles.disabled, style]}
+      disabled={disabled || loading}
+      style={[
+        styles.base,
+        { backgroundColor: bg, borderColor: bc, borderWidth: isSecondary ? 1 : 0 },
+        style
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, busy: loading }}
     >
       {loading ? (
-        <ActivityIndicator color={spinnerColor} />
+        <ActivityIndicator color={tc} />
       ) : (
-        <Text style={[styles.text, TEXT_STYLES[variant]]}>{title}</Text>
+        <Text style={[styles.text, { color: tc }]}>{title}</Text>
       )}
     </PressableScale>
   );
@@ -64,19 +51,15 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 50,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.md,
-    alignItems: 'center',
+    height: 48,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
+    alignItems: 'center',
     flexDirection: 'row',
   },
   text: {
-    ...Typography.headline,
+    ...Typography.body,
     fontWeight: '600',
-  },
-  disabled: {
-    opacity: 0.4,
   },
 });
