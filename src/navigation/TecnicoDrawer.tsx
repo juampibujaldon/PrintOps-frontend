@@ -2,7 +2,7 @@
 import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import TecnicoStack from './TecnicoStack';
-import ConfiguracionScreen from '../screens/ConfiguracionScreen';
+import SettingsStack from './SettingsStack';
 import StockScreen from '../screens/StockScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -55,9 +55,14 @@ export default function TecnicoDrawer() {
         options={{ title: 'Presupuestos' }} 
       />
       <Drawer.Screen 
+        name="Taller" 
+        component={require('../screens/WorkshopCanvasScreen').default} 
+        options={{ title: 'Taller', headerShown: false }} 
+      />
+      <Drawer.Screen 
         name="Configuracion" 
-        component={ConfiguracionScreen} 
-        options={{ title: 'Configuración' }} 
+        component={SettingsStack} 
+        options={{ title: 'Configuración', headerShown: false }} 
       />
       <Drawer.Screen 
         name="Perfil" 
