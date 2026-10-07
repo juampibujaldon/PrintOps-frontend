@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, LayoutChangeEvent, TouchableOpacity, Alert } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
 import { canvasService, CanvasLayout } from '../services/canvasService';
@@ -156,7 +156,7 @@ export default function WorkshopCanvasScreen() {
 
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <View style={styles.container}>
       <ScreenHeader title="Taller" />
       <View style={styles.canvasArea} onLayout={(e: LayoutChangeEvent) => {
         setCanvasSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
@@ -256,7 +256,7 @@ export default function WorkshopCanvasScreen() {
           </View>
         )}
       </View>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
