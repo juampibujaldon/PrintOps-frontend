@@ -9,6 +9,8 @@ import { PrinterSummary } from '../types/printer';
 import ErrorState from '../components/ui/ErrorState';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import CanvasNodeItem from '../components/canvas/CanvasNodeItem';
+import CanvasEdgeItem from '../components/canvas/CanvasEdgeItem';
+import Svg from 'react-native-svg';
 
 export default function WorkshopCanvasScreen() {
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,9 @@ export default function WorkshopCanvasScreen() {
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
+  
+  // Shared positions for nodes to drive the SVG lines
+  const positions = useSharedValue<Record<number, { x: number, y: number }>>({});
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
@@ -113,21 +118,36 @@ export default function WorkshopCanvasScreen() {
         <View style={styles.canvasBorder}>
           <GestureDetector gesture={composedGesture}>
             <Animated.View style={[styles.canvasInner, canvasAnimatedStyle]}>
-              {canvasSize.width > 0 && layout.nodes.map(node => {
-                const p = printers.find(x => x.id === node.printerId);
-                if (!p) return null;
-                return (
-                  <CanvasNodeItem
-                    key={node.printerId}
-                    printer={p}
-                    initialX={node.x}
-                    initialY={node.y}
-                    canvasWidth={canvasSize.width}
-                    canvasHeight={canvasSize.height}
-                    onDragEnd={(x, y) => handleDragEnd(p.id, x, y)}
-                  />
-                );
-              })}
+              {canvasSize.width > 0 && (
+                <>
+                  <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+                    {layout.edges.map(edge => (
+                      <CanvasEdgeItem
+                        key={edge.id}
+                        fromId={edge.fromId}
+                        toId={edge.toId}
+                        positions={positions}
+                      />
+                    ))}
+                  </Svg>
+                  {layout.nodes.map(node => {
+                    const p = printers.find(x => x.id === node.printerId);
+                    if (!p) return null;
+                    return (
+                      <CanvasNodeItem
+                        key={node.printerId}
+                        printer={p}
+                        initialX={node.x}
+                        initialY={node.y}
+                        canvasWidth={canvasSize.width}
+                        canvasHeight={canvasSize.height}
+                        onDragEnd={(x, y) => handleDragEnd(p.id, x, y)}
+                        positions={positions}
+                      />
+                    );
+                  })}
+                </>
+              )}
             </Animated.View>
           </GestureDetector>
         </View>

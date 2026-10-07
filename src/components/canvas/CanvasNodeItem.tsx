@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, SharedValue, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors, Typography, Spacing } from '../../constants/theme';
 import { PrinterSummary } from '../../types/printer';
@@ -13,32 +13,27 @@ interface Props {
   canvasHeight: number;
   onDragEnd: (x: number, y: number) => void;
   disabled?: boolean;
+  positions: SharedValue<Record<number, { x: number, y: number }>>;
 }
 
-export default function CanvasNodeItem({ printer, initialX, initialY, canvasWidth, canvasHeight, onDragEnd, disabled = false }: Props) {
+export default function CanvasNodeItem({ printer, initialX, initialY, canvasWidth, canvasHeight, onDragEnd, disabled = false, positions }: Props) {
   const NODE_WIDTH = 120;
   const NODE_HEIGHT = 70;
 
-  const x = useSharedValue(initialX * canvasWidth);
-  const y = useSharedValue(initialY * canvasHeight);
   const isDragging = useSharedValue(false);
 
-  const dragGesture = Gesture.Pan()
-    .enabled(!disabled)
-    .onStart(() => {
-      isDragging.value = true;
-    })
-    .onUpdate((e) => {
-      x.value = Math.max(NODE_WIDTH / 2, Math.min(canvasWidth - NODE_WIDTH / 2, x.value + e.velocityX * 0.01));
-      y.value = Math.max(NODE_HEIGHT / 2, Math.min(canvasHeight - NODE_HEIGHT / 2, y.value + e.velocityY * 0.01));
-      
-      // Real dragging update (workaround for absolute positioning delta)
-      x.value = Math.max(NODE_WIDTH / 2, Math.min(canvasWidth - NODE_WIDTH / 2, e.absoluteX - (canvasWidth / 2))); // This needs to be relative to the canvas.
-    })
-    .onEnd(() => {
-      isDragging.value = false;
-      // Convert back to 0-1
-    });
+  // Initialize position in shared value if not set
+  if (!positions.value[printer.id]) {
+    positions.value = {
+      ...positions.value,
+      [printer.id]: {
+        x: initialX * canvasWidth - NODE_WIDTH / 2,
+        y: initialY * canvasHeight - NODE_HEIGHT / 2
+      }
+    };
+  }
+
+
 
   // Let's implement a simpler approach that tracks translation
   const translateX = useSharedValue(initialX * canvasWidth - NODE_WIDTH / 2);
@@ -50,8 +45,9 @@ export default function CanvasNodeItem({ printer, initialX, initialY, canvasWidt
     .enabled(!disabled)
     .onStart(() => {
       isDragging.value = true;
-      contextX.value = translateX.value;
-      contextY.value = translateY.value;
+      const currentPos = positions.value[printer.id];
+      contextX.value = currentPos ? currentPos.x : 0;
+      contextY.value = currentPos ? currentPos.y : 0;
     })
     .onUpdate((event) => {
       const snapSize = 20; // 20px grid snap
@@ -62,23 +58,30 @@ export default function CanvasNodeItem({ printer, initialX, initialY, canvasWidt
       newX = Math.max(0, Math.min(canvasWidth - NODE_WIDTH, newX));
       newY = Math.max(0, Math.min(canvasHeight - NODE_HEIGHT, newY));
 
-      // Snap to grid
-      translateX.value = Math.round(newX / snapSize) * snapSize;
-      translateY.value = Math.round(newY / snapSize) * snapSize;
+      const snappedX = Math.round(newX / snapSize) * snapSize;
+      const snappedY = Math.round(newY / snapSize) * snapSize;
+      
+      positions.value = {
+        ...positions.value,
+        [printer.id]: { x: snappedX, y: snappedY }
+      };
     })
     .onEnd(() => {
       isDragging.value = false;
-      // Convert to normalized coordinates (0 to 1 based on center of node)
-      const normalizedX = (translateX.value + NODE_WIDTH / 2) / canvasWidth;
-      const normalizedY = (translateY.value + NODE_HEIGHT / 2) / canvasHeight;
-      // We need to call onDragEnd on JS thread
+      const currentPos = positions.value[printer.id];
+      if (currentPos) {
+        const normalizedX = (currentPos.x + NODE_WIDTH / 2) / canvasWidth;
+        const normalizedY = (currentPos.y + NODE_HEIGHT / 2) / canvasHeight;
+        runOnJS(onDragEnd)(normalizedX, normalizedY);
+      }
     });
 
   const animatedStyle = useAnimatedStyle(() => {
+    const currentPos = positions.value[printer.id] || { x: 0, y: 0 };
     return {
       transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
+        { translateX: currentPos.x },
+        { translateY: currentPos.y },
         { scale: withSpring(isDragging.value ? 1.05 : 1) }
       ],
       zIndex: isDragging.value ? 100 : 1,
