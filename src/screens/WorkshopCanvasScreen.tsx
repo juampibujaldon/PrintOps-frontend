@@ -47,26 +47,6 @@ export default function WorkshopCanvasScreen() {
     load();
   }, [load]);
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ScreenHeader title="Taller" />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <ScreenHeader title="Taller" />
-        <ErrorState error={error} onRetry={load} />
-      </View>
-    );
-  }
-
   // Pan & Zoom for the whole canvas
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -153,6 +133,27 @@ export default function WorkshopCanvasScreen() {
       })).concat([{ text: 'Cancelar', style: 'cancel', onPress: () => {} }])
     );
   };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Taller" />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Taller" />
+        <ErrorState error={error} onRetry={load} />
+      </View>
+    );
+  }
+
 
   return (
     <GestureHandlerRootView style={styles.container}>
