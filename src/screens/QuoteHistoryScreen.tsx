@@ -46,6 +46,7 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'ALL'>('ALL');
   const [clientFilter, setClientFilter] = useState('');
   const [query, setQuery] = useState('');
@@ -68,6 +69,7 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
     try {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
+      setError(null);
       
       const data = await quoteService.list({
         status: statusFilter === 'ALL' ? undefined : statusFilter,
@@ -78,9 +80,13 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
       if (reqId === requestCounter.current) {
         setQuotes(data);
       }
-    } catch (error: any) {
+    } catch (e: any) {
       if (reqId === requestCounter.current) {
-        Alert.alert('Error', error?.response?.data?.message || 'No se pudieron cargar los presupuestos');
+        const msg = e?.response?.data?.message || 'No se pudieron cargar los presupuestos';
+        setError(msg);
+        if (quotes.length > 0) {
+          Alert.alert('Error', msg);
+        }
       }
     } finally {
       if (reqId === requestCounter.current) {
@@ -277,9 +283,16 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {loading && quotes.length === 0 ? (
+      {loading && quotes.length === 0 && !error ? (
         <View style={styles.center}>
           <ActivityIndicator color={Colors.accent} size="large" />
+        </View>
+      ) : error && quotes.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -327,6 +340,9 @@ const styles = StyleSheet.create({
   list: { padding: Spacing.lg, paddingBottom: 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xl },
   emptyText: { ...Typography.subheadline, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: Spacing.xl },
+  errorText: { ...Typography.subheadline, color: Colors.error, textAlign: 'center', marginBottom: Spacing.md, paddingHorizontal: Spacing.xl },
+  retryBtn: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator, borderRadius: Radius.md },
+  retryText: { ...Typography.body, color: Colors.textPrimary, fontWeight: '600' },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.separator },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
   quoteNumber: { ...Typography.headline, color: Colors.textPrimary, fontWeight: '700' },
