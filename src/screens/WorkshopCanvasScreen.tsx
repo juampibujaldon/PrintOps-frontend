@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, LayoutChangeEvent, TouchableOpacity, Alert } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Colors, Typography, Spacing } from '../constants/theme';
+import { Colors, Typography, Spacing, Radius } from '../constants/theme';
 import { canvasService, CanvasLayout } from '../services/canvasService';
 import { printerService } from '../services/printerService';
 import { PrinterSummary } from '../types/printer';
@@ -11,11 +11,17 @@ import ScreenHeader from '../components/ui/ScreenHeader';
 import CanvasNodeItem from '../components/canvas/CanvasNodeItem';
 import CanvasEdgeItem from '../components/canvas/CanvasEdgeItem';
 import Svg from 'react-native-svg';
+import { useAuth } from '../hooks/useAuth';
 
 export default function WorkshopCanvasScreen() {
+  const { user } = useAuth();
+  const isManager = user?.role === 'MANAGER';
+
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [editMode, setEditMode] = useState(false);
   
   const [printers, setPrinters] = useState<PrinterSummary[]>([]);
   const [layout, setLayout] = useState<CanvasLayout>({ nodes: [], edges: [] });
@@ -101,9 +107,52 @@ export default function WorkshopCanvasScreen() {
   }));
 
   const handleDragEnd = useCallback((printerId: number, normalizedX: number, normalizedY: number) => {
-    // We will save later. For now, it's optimistic UI via Reanimated state.
-    console.log('Dragged', printerId, normalizedX, normalizedY);
-  }, []);
+    if (!editMode) return;
+    setLayout(prev => ({
+      ...prev,
+      nodes: prev.nodes.map(n => n.printerId === printerId ? { ...n, x: normalizedX, y: normalizedY } : n)
+    }));
+  }, [editMode]);
+
+  const toggleEditMode = () => {
+    if (!isManager) return;
+    setEditMode(!editMode);
+  };
+
+  const saveLayout = async () => {
+    try {
+      setSaving(true);
+      const saved = await canvasService.updateCanvasLayout(layout);
+      setLayout(saved);
+      setEditMode(false);
+    } catch (e: any) {
+      Alert.alert('Error', 'No se pudo guardar el layout');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddPrinter = () => {
+    const unplaced = printers.filter(p => !layout.nodes.some(n => n.printerId === p.id));
+    if (unplaced.length === 0) {
+      Alert.alert('Sin impresoras', 'Todas tus impresoras ya están en el plano.');
+      return;
+    }
+
+    Alert.alert(
+      'Agregar Impresora',
+      'Elegí la impresora a ubicar en el plano',
+      unplaced.map(p => ({
+        text: `${p.brand} ${p.model}`,
+        onPress: () => {
+          setLayout(prev => ({
+            ...prev,
+            nodes: [...prev.nodes, { printerId: p.id, x: 0.5, y: 0.5 }]
+          }));
+        }
+      })).concat([{ text: 'Cancelar', style: 'cancel', onPress: () => {} }])
+    );
+  };
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -143,6 +192,7 @@ export default function WorkshopCanvasScreen() {
                         canvasHeight={canvasSize.height}
                         onDragEnd={(x, y) => handleDragEnd(p.id, x, y)}
                         positions={positions}
+                        disabled={!editMode}
                       />
                     );
                   })}
@@ -151,6 +201,25 @@ export default function WorkshopCanvasScreen() {
             </Animated.View>
           </GestureDetector>
         </View>
+        
+        {isManager && (
+          <View style={styles.toolbar}>
+            {editMode ? (
+              <>
+                <TouchableOpacity style={styles.btnSecondary} onPress={handleAddPrinter}>
+                  <Text style={styles.btnSecondaryText}>+ Agregar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnPrimary} onPress={saveLayout} disabled={saving}>
+                  <Text style={styles.btnPrimaryText}>{saving ? 'Guardando...' : 'Guardar Layout'}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.btnSecondary} onPress={toggleEditMode}>
+                <Text style={styles.btnSecondaryText}>Editar Plano</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     </GestureHandlerRootView>
   );
@@ -173,5 +242,26 @@ const styles = StyleSheet.create({
   canvasInner: {
     flex: 1,
   },
-
+  toolbar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  btnPrimary: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+  },
+  btnPrimaryText: { ...Typography.body, color: Colors.onPrimary, fontWeight: '600' },
+  btnSecondary: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.primary,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+  },
+  btnSecondaryText: { ...Typography.body, color: Colors.primary, fontWeight: '600' },
 });
