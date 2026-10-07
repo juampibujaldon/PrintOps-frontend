@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Calendar, X, Plus } from 'lucide-react-native';
+import { Calendar, X, Plus, FileX } from 'lucide-react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -304,7 +304,8 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
           }
           ListEmptyComponent={
-            <View style={styles.center}>
+            <View style={styles.emptyState}>
+              <FileX color={Colors.textTertiary} size={48} />
               <Text style={styles.emptyText}>Todavía no tenés presupuestos guardados — creá el primero</Text>
             </View>
           }
@@ -315,8 +316,10 @@ export default function QuoteHistoryScreen({ navigation }: Props) {
         style={styles.fab}
         activeOpacity={0.85}
         onPress={() => navigation.navigate('QuoteCalculator', {})}
+        accessibilityLabel="Crear nuevo presupuesto"
+        accessibilityRole="button"
       >
-        <Text style={styles.fabText}>＋</Text>
+        <Plus color={Colors.onAccent} size={28} />
       </TouchableOpacity>
     </View>
   );
@@ -339,6 +342,7 @@ const styles = StyleSheet.create({
   clearDateBtn: { justifyContent: 'center', alignItems: 'center', padding: Spacing.xs },
   list: { padding: Spacing.lg, paddingBottom: 100 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xl },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xl * 2, gap: Spacing.md },
   emptyText: { ...Typography.subheadline, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: Spacing.xl },
   errorText: { ...Typography.subheadline, color: Colors.error, textAlign: 'center', marginBottom: Spacing.md, paddingHorizontal: Spacing.xl },
   retryBtn: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator, borderRadius: Radius.md },
@@ -354,5 +358,4 @@ const styles = StyleSheet.create({
   actionBtn: { paddingHorizontal: 14, paddingVertical: 12, justifyContent: 'center' },
   actionText: { ...Typography.footnote, color: '#ffffff', fontWeight: '700' },
   fab: { position: 'absolute', bottom: 28, right: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: Colors.accent, justifyContent: 'center', alignItems: 'center', elevation: 10, shadowColor: Colors.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 12 },
-  fabText: { fontSize: 28, color: Colors.onAccent, fontWeight: '300', lineHeight: 32 },
 });
