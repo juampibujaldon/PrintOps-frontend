@@ -3,10 +3,10 @@ import { StyleSheet, Text } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, SharedValue, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Colors, Typography, Spacing } from '../../constants/theme';
-import { PrinterSummary } from '../../types/printer';
+import { PrinterResponse } from '../../services/printerService';
 
 interface Props {
-  printer: PrinterSummary;
+  printer: PrinterResponse;
   initialX: number; // 0 to 1
   initialY: number; // 0 to 1
   canvasWidth: number;

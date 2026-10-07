@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing } from '../constants/theme';
-import { printerService } from '../services/printerService';
-import { PrinterSummary } from '../types/printer';
+import { printerService, PrinterResponse } from '../services/printerService';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import SettingsSection from '../components/ui/SettingsSection';
 import SettingsRow from '../components/ui/SettingsRow';
@@ -16,13 +15,13 @@ export default function SettingsPrintersScreen() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [printers, setPrinters] = useState<PrinterSummary[]>([]);
+  const [printers, setPrinters] = useState<PrinterResponse[]>([]);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await printerService.getAll();
+      const data = await printerService.getAllPrinters();
       setPrinters(data);
     } catch (e: any) {
       setError(e.response?.data?.message || 'Error al cargar impresoras');

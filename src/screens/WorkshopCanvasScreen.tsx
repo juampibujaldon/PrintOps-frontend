@@ -4,8 +4,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
 import { canvasService, CanvasLayout } from '../services/canvasService';
-import { printerService } from '../services/printerService';
-import { PrinterSummary } from '../types/printer';
+import { printerService, PrinterResponse } from '../services/printerService';
 import ErrorState from '../components/ui/ErrorState';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import CanvasNodeItem from '../components/canvas/CanvasNodeItem';
@@ -24,7 +23,7 @@ export default function WorkshopCanvasScreen() {
   const [editMode, setEditMode] = useState(false);
   const [viewMode, setViewMode] = useState<'canvas' | 'list'>('canvas');
   
-  const [printers, setPrinters] = useState<PrinterSummary[]>([]);
+  const [printers, setPrinters] = useState<PrinterResponse[]>([]);
   const [layout, setLayout] = useState<CanvasLayout>({ nodes: [], edges: [] });
 
   const load = useCallback(async () => {
@@ -32,7 +31,7 @@ export default function WorkshopCanvasScreen() {
       setLoading(true);
       setError(null);
       const [fetchedPrinters, fetchedLayout] = await Promise.all([
-        printerService.getAll(),
+        printerService.getAllPrinters(),
         canvasService.getCanvasLayout(),
       ]);
       setPrinters(fetchedPrinters);
