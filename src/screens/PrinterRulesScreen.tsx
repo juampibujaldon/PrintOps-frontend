@@ -18,6 +18,7 @@ import { MaintenanceRuleDTO } from '../types/rules';
 import { ruleService } from '../services/ruleService';
 import RuleProgressCard from '../components/RuleProgressCard';
 import CreateRuleBottomSheet from '../components/CreateRuleBottomSheet';
+import { Wrench } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'PrinterRules'>;
 
@@ -128,10 +129,10 @@ export default function PrinterRulesScreen({ route }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🛠️</Text>
+            <Wrench color={Colors.textTertiary} size={40} strokeWidth={1.5} style={{ marginBottom: Spacing.md }} />
             <Text style={styles.emptyTitle}>Sin reglas configuradas</Text>
             <Text style={styles.emptySub}>
-              Esta impresora no tiene reglas configuradas — creá la primera
+              Creá la primera regla para automatizar el mantenimiento de esta impresora.
             </Text>
           </View>
         }

@@ -6,6 +6,7 @@ import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
 import { ORDER_TYPE } from '../../constants/orders';
 import { OrderType } from '../../services/orderService';
 import PressableScale from '../ui/PressableScale';
+import { X } from 'lucide-react-native';
 
 interface HistoryFiltersProps {
   type: OrderType | null;
@@ -90,7 +91,7 @@ export default function HistoryFilters({
           <View style={styles.rangeLabel}>
             <Text style={styles.rangeText}>{fromShort} – {toShort}</Text>
             <PressableScale onPress={() => onDateRangeChange(null, null)} hitSlop={8}>
-              <Text style={styles.clearText}>✕</Text>
+              <X color={Colors.textSecondary} size={16} />
             </PressableScale>
           </View>
         ) : (
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
   },
   chipsRow: {
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
     borderRadius: Radius.full,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     backgroundColor: Colors.surface,
   },
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
     borderRadius: Radius.sm,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     backgroundColor: Colors.background,
   },

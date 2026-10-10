@@ -98,7 +98,7 @@ export function HistoryItem({ order, isLast, onPress }: HistoryItemProps) {
 
         <View style={styles.itemFooter}>
           <Text style={styles.orderNumber}>{order.orderNumber}</Text>
-          <Text style={styles.detailLink}>Ver detalle →</Text>
+          <Text style={styles.detailLink}>Ver detalle</Text>
         </View>
       </PressableScale>
     </View>
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   itemHeader: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   partsSection: {
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.separator,
     paddingTop: Spacing.sm,
     marginTop: Spacing.xs,

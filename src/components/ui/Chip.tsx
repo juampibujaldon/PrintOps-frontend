@@ -18,15 +18,13 @@ export default function Chip({ label, selected, onPress }: { label: string, sele
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 44,
+    height: 34,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md + 2,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: Colors.fill,
   },
-  selectedBg: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
-  text: { ...Typography.footnote, fontWeight: '600', color: Colors.textSecondary },
+  selectedBg: { backgroundColor: Colors.textPrimary },
+  text: { ...Typography.subheadline, fontWeight: '500', color: Colors.textPrimary },
   selectedText: { color: Colors.surface },
 });

@@ -12,7 +12,7 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; color: string }>
 
 // Colores semánticos para los tipos de orden (US-historial).
 export const ORDER_TYPE: Record<OrderType, { label: string; color: string }> = {
-  PREVENTIVE: { label: 'Preventivo', color: '#606c38' },   // olive
-  CORRECTIVE: { label: 'Correctivo', color: '#bc6c25' },   // copperwood
-  CALIBRATION: { label: 'Calibración', color: '#dda15e' }, // sunlit_clay
+  PREVENTIVE: { label: 'Preventivo', color: Colors.green },
+  CORRECTIVE: { label: 'Correctivo', color: Colors.orange },
+  CALIBRATION: { label: 'Calibración', color: '#5856D6' }, // systemIndigo
 };

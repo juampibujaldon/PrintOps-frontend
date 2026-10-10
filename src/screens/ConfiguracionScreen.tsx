@@ -1,65 +1,110 @@
-// src/screens/ConfiguracionScreen.tsx
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Spacing, Typography } from '../constants/theme';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  User,
+  Briefcase,
+  Bell,
+  Calculator,
+  Settings2,
+  Users,
+  Info,
+  LucideIcon,
+} from 'lucide-react-native';
+import { Colors, Spacing } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
+import { SettingsStackParamList } from '../navigation/SettingsStack';
+import SettingsSection from '../components/ui/SettingsSection';
+import SettingsRow from '../components/ui/SettingsRow';
 
-export default function ConfiguracionScreen() {
-  const { user, logout } = useAuth();
+type SettingsScreenNavigationProp = NativeStackNavigationProp<SettingsStackParamList, 'SettingsMenu'>;
 
+type MenuItem = {
+  id: string;
+  title: string;
+  Icon: LucideIcon;
+  tint: string;
+  screen: keyof SettingsStackParamList;
+  managerOnly?: boolean;
+};
+
+const SECTIONS: { title?: string; items: MenuItem[] }[] = [
+  {
+    items: [
+      { id: 'profile', title: 'Perfil', Icon: User, tint: Colors.gray, screen: 'Perfil' },
+    ],
+  },
+  {
+    title: 'Taller',
+    items: [
+      { id: 'workspace', title: 'Datos del taller', Icon: Briefcase, tint: Colors.primary, screen: 'SettingsWorkspace' },
+      { id: 'users', title: 'Usuarios', Icon: Users, tint: Colors.primary, screen: 'SettingsUsers', managerOnly: true },
+      { id: 'printers', title: 'Impresoras y mantenimiento', Icon: Settings2, tint: Colors.gray, screen: 'SettingsPrinters' },
+      { id: 'quote', title: 'Valores de presupuesto', Icon: Calculator, tint: Colors.green, screen: 'SettingsQuoteDefaults' },
+    ],
+  },
+  {
+    title: 'General',
+    items: [
+      { id: 'notifications', title: 'Notificaciones', Icon: Bell, tint: Colors.red, screen: 'SettingsNotifications' },
+      { id: 'about', title: 'Acerca de', Icon: Info, tint: Colors.gray, screen: 'SettingsAbout' },
+    ],
+  },
+];
+
+// Ícono sobre un cuadrado redondeado de color, como en Ajustes de iOS.
+function RowIcon({ Icon, tint }: { Icon: LucideIcon; tint: string }) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Configuración</Text>
-
-      <Card style={styles.infoCard}>
-        <Row label="Email" value={user?.email ?? '-'} />
-        <Row label="Rol" value={user?.role ?? '-'} />
-      </Card>
-
-      <Button title="Cerrar sesión" variant="danger" onPress={logout} style={styles.logoutButton} />
+    <View style={[styles.iconBox, { backgroundColor: tint }]}>
+      <Icon color="#FFFFFF" size={17} strokeWidth={2} />
     </View>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+export default function ConfiguracionScreen() {
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const { user } = useAuth();
+
   return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
-    </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic">
+      {SECTIONS.map((section, sIdx) => {
+        // La gestión de usuarios es solo para el manager (antes se comparaba con
+        // un rol 'ADMIN' inexistente y el ítem nunca aparecía).
+        const items = section.items.filter(i => !i.managerOnly || user?.role === 'MANAGER');
+        if (items.length === 0) return null;
+        return (
+          <SettingsSection key={section.title ?? sIdx} title={section.title}>
+            {items.map((item, index) => (
+              <SettingsRow
+                key={item.id}
+                label={item.title}
+                icon={<RowIcon Icon={item.Icon} tint={item.tint} />}
+                onPress={() => navigation.navigate(item.screen)}
+                isLast={index === items.length - 1}
+              />
+            ))}
+          </SettingsSection>
+        );
+      })}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: Spacing.lg,
     backgroundColor: Colors.background,
+  },
+  content: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+  iconBox: {
+    width: 29,
+    height: 29,
+    borderRadius: 7,
     justifyContent: 'center',
-  },
-  title: {
-    ...Typography.title2,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
-  },
-  infoCard: {
-    marginBottom: Spacing.xl,
-    gap: Spacing.md,
-  },
-  row: {},
-  label: {
-    ...Typography.footnote,
-    color: Colors.textTertiary,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  value: {
-    ...Typography.title3,
-    color: Colors.textPrimary,
-  },
-  logoutButton: {
-    width: '100%',
+    alignItems: 'center',
   },
 });

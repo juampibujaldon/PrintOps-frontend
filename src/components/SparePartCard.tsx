@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { SparePartDTO } from '../types/parts';
+import { MoreHorizontal } from 'lucide-react-native';
 
 // Tarjeta de repuesto en el inventario (US-10).
 // Props: { part, onMenuPress, onPress }
@@ -37,7 +38,7 @@ export default function SparePartCard({
         ) : null}
 
         <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress} hitSlop={8}>
-          <Text style={styles.menuText}>···</Text>
+          <MoreHorizontal color={Colors.textSecondary} size={20} />
         </TouchableOpacity>
       </View>
 
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,

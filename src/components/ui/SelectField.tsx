@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
-import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
+import { Colors, Radius, Spacing, Typography, Icons } from '../../constants/theme';
 
 interface Props {
   label: string;
@@ -14,28 +14,33 @@ export default function SelectField({ label, value, onPress, disabled = false }:
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <TouchableOpacity style={styles.select} onPress={onPress} disabled={disabled} activeOpacity={0.6}>
-        <Text style={[styles.value, disabled && styles.disabled]}>{value}</Text>
-        <ChevronDown color={disabled ? Colors.textDisabled : Colors.textTertiary} size={20} />
-      </TouchableOpacity>
+      <Pressable
+        style={({ pressed }) => [styles.select, pressed && styles.pressed]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}`}
+      >
+        <Text style={[styles.value, disabled && styles.disabled]} numberOfLines={1}>{value}</Text>
+        <ChevronDown color={disabled ? Colors.textDisabled : Colors.textTertiary} size={18} strokeWidth={Icons.strokeWidth} />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  label: { ...Typography.footnote, fontWeight: '600', color: Colors.textSecondary, marginBottom: Spacing.xs },
+  label: { ...Typography.footnote, color: Colors.textSecondary, marginBottom: 6, marginLeft: 4 },
   select: {
-    height: 48,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    minHeight: 46,
+    backgroundColor: Colors.fill,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  value: { ...Typography.body, color: Colors.textPrimary },
+  pressed: { backgroundColor: Colors.fillPressed },
+  value: { ...Typography.body, color: Colors.textPrimary, flex: 1, marginRight: Spacing.sm },
   disabled: { color: Colors.textDisabled },
 });

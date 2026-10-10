@@ -11,6 +11,7 @@ import {
   Platform,
   UIManager,
   Animated,
+  DimensionValue,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +19,7 @@ import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
 import BarChart from '../components/BarChart';
 import { DashboardMetricsDTO, Period, PeriodPreset } from '../types/dashboard';
+import { AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -35,8 +37,12 @@ function availabilityColor(v: number): string {
   if (v >= 70) return Colors.statusMantenim;
   return Colors.statusFuera;
 }
+// Fecha local YYYY-MM-DD. toISOString() usa UTC y, en Argentina después de las
+// 21 h, devolvía el día siguiente.
 function iso(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 function computePeriod(p: PeriodPreset): Period {
   const now = new Date();
@@ -56,27 +62,31 @@ function computePeriod(p: PeriodPreset): Period {
 function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const toggle = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    LayoutAnimation.configureNext(LayoutAnimation.create(260, 'easeInEaseOut', 'opacity'));
     setOpen(o => !o);
   };
   return (
     <View style={styles.section}>
       <TouchableOpacity style={styles.sectionHeader} onPress={toggle} activeOpacity={0.8}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionChevron}>{open ? '▾' : '▸'}</Text>
+        <ChevronDown
+          color={Colors.textTertiary}
+          size={18}
+          style={{ transform: [{ rotate: open ? '0deg' : '-90deg' }] }}
+        />
       </TouchableOpacity>
       {open ? children : null}
     </View>
   );
 }
 
-function SkeletonBlock({ height = 16, width = '100%' }: { height?: number; width?: number | string }) {
+function SkeletonBlock({ height = 16, width = '100%' }: { height?: number; width?: DimensionValue }) {
   const opacity = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 900, useNativeDriver: true }),
       ]),
     );
     loop.start();
@@ -225,7 +235,9 @@ function DashboardContent({
               <View style={[styles.availFill, { width: `${Math.min(100, p.availabilityPercent)}%`, backgroundColor: availabilityColor(p.availabilityPercent) }]} />
             </View>
             <Text style={styles.availPct}>{p.availabilityPercent.toFixed(0)}%</Text>
-            <Text style={styles.availIcon}>{p.availabilityPercent >= 70 ? '✓' : '⚠️'}</Text>
+            {p.availabilityPercent >= 70
+              ? <CheckCircle2 color={Colors.green} size={16} />
+              : <AlertTriangle color={Colors.orange} size={16} />}
           </View>
         ))}
       </Section>
@@ -262,10 +274,10 @@ function DashboardContent({
           <Text style={styles.emptyText}>Sin fallas correctivas en el período</Text>
         ) : (
           metrics.top3FailingPrinters.map((f, i) => {
-            const dots = ['🔴', '🟡', '🟢'];
+            const dots = [Colors.red, Colors.orange, Colors.gray];
             return (
               <TouchableOpacity key={f.id} style={styles.failingRow} onPress={() => onPressPrinter(f.id)}>
-                <Text style={styles.failingDot}>{dots[i] ?? '⚪'}</Text>
+                <View style={[styles.failingDotView, { backgroundColor: dots[i] ?? Colors.gray }]} />
                 <Text style={styles.failingName} numberOfLines={1}>{f.name}</Text>
                 <Text style={styles.failingCount}>{f.correctiveCount} fallas</Text>
                 <Text style={styles.failingCost}>{moneyInt(f.totalCost)}</Text>
@@ -278,10 +290,10 @@ function DashboardContent({
       {/* Sección 5 — Stock bajo */}
       <Section title="Stock bajo">
         {metrics.lowStockParts.length === 0 ? (
-          <Text style={styles.stockOk}>✓ Todos los repuestos en nivel normal</Text>
+          <Text style={styles.stockOk}>Todos los repuestos en nivel normal</Text>
         ) : (
           <>
-            <Text style={styles.stockWarn}>⚠️ {metrics.lowStockParts.length} repuestos con stock bajo</Text>
+            <Text style={styles.stockWarn}>{metrics.lowStockParts.length} repuestos con stock bajo</Text>
             {metrics.lowStockParts.map(p => (
               <View key={p.id} style={styles.stockRow}>
                 <Text style={styles.stockName} numberOfLines={1}>{p.name}</Text>
@@ -312,30 +324,33 @@ const styles = StyleSheet.create({
   periodBar: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
     backgroundColor: Colors.background,
   },
-  chipRow: { flexDirection: 'row', gap: Spacing.sm },
+  // Control segmentado estilo iOS.
+  chipRow: { flexDirection: 'row', backgroundColor: Colors.fill, borderRadius: 9, padding: 2 },
   chip: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.separator,
+    paddingVertical: 6,
+    borderRadius: 7,
     alignItems: 'center',
   },
-  chipSelected: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  chipText: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' },
-  chipTextSelected: { color: Colors.onAccent },
+  chipSelected: {
+    backgroundColor: Colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  chipText: { color: Colors.textPrimary, fontSize: 13, fontWeight: '500' },
+  chipTextSelected: { color: Colors.textPrimary, fontWeight: '600' },
   customRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
   dateBtn: {
     flex: 1,
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.separator,
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
   },
@@ -345,38 +360,34 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.lg, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.lg },
   errorText: { color: Colors.textSecondary, fontSize: 15, marginBottom: Spacing.md, textAlign: 'center' },
-  primaryBtn: { backgroundColor: Colors.accent, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.md },
-  primaryBtnText: { color: Colors.onAccent, fontWeight: '700' },
-  noData: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.separator },
+  primaryBtn: { backgroundColor: Colors.primaryTint, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.md },
+  primaryBtnText: { color: Colors.primary, fontWeight: '600', fontSize: 17 },
+  noData: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md },
   noDataText: { color: Colors.textSecondary, textAlign: 'center', fontSize: 13 },
 
   section: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
   },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  sectionChevron: { fontSize: 18, color: Colors.textSecondary },
+  sectionTitle: { fontSize: 17, fontWeight: '600', letterSpacing: -0.41, color: Colors.textPrimary },
 
-  bigNumber: { fontSize: 34, fontWeight: '800', color: Colors.textPrimary, marginTop: Spacing.md },
-  globalTrack: { height: 10, borderRadius: 5, backgroundColor: Colors.background, marginTop: Spacing.md, overflow: 'hidden' },
-  globalFill: { height: '100%', borderRadius: 5 },
+  bigNumber: { fontSize: 34, fontWeight: '700', letterSpacing: 0.37, fontVariant: ['tabular-nums'], color: Colors.textPrimary, marginTop: Spacing.md },
+  globalTrack: { height: 6, borderRadius: 3, backgroundColor: Colors.fill, marginTop: Spacing.md, overflow: 'hidden' },
+  globalFill: { height: '100%', borderRadius: 3 },
   availRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: Spacing.sm },
   availName: { flex: 1, fontSize: 13, color: Colors.textPrimary },
-  availTrack: { width: 90, height: 8, borderRadius: 4, backgroundColor: Colors.background, overflow: 'hidden' },
-  availFill: { height: '100%', borderRadius: 4 },
+  availTrack: { width: 90, height: 6, borderRadius: 3, backgroundColor: Colors.fill, overflow: 'hidden' },
+  availFill: { height: '100%', borderRadius: 3 },
   availPct: { width: 34, fontSize: 12, color: Colors.textSecondary, textAlign: 'right' },
-  availIcon: { fontSize: 13, width: 20 },
 
   costSplit: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.sm },
   costSplitText: { fontSize: 13, color: Colors.textSecondary },
 
   ordersSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md },
-  ordersCount: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
+  ordersCount: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
   ordersAvg: { fontSize: 13, color: Colors.textSecondary },
   statRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
   statCard: {
@@ -385,11 +396,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: 'center',
     paddingVertical: Spacing.md,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
-  statCardDanger: { borderColor: Colors.statusFuera, backgroundColor: '#FCE8E7' },
-  statValue: { fontSize: 22, fontWeight: '800' },
+  statCardDanger: { backgroundColor: Colors.errorBg },
+  statValue: { fontSize: 22, fontWeight: '700' },
   statLabel: { fontSize: 11, color: Colors.textTertiary, marginTop: 2 },
   typeBreakdown: { fontSize: 13, color: Colors.textSecondary, marginTop: Spacing.md },
 
@@ -398,21 +407,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
     gap: Spacing.sm,
   },
-  failingDot: { fontSize: 14 },
+  failingDotView: { width: 8, height: 8, borderRadius: 4 },
   failingName: { flex: 1, fontSize: 14, color: Colors.textPrimary },
   failingCount: { fontSize: 13, color: Colors.textSecondary },
   failingCost: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, width: 60, textAlign: 'right' },
 
-  stockOk: { fontSize: 13, color: Colors.statusOperativa, marginTop: Spacing.sm },
-  stockWarn: { fontSize: 13, fontWeight: '700', color: Colors.statusFuera, marginTop: Spacing.sm, marginBottom: Spacing.xs },
+  stockOk: { fontSize: 13, color: Colors.textSecondary, marginTop: Spacing.sm },
+  stockWarn: { fontSize: 13, fontWeight: '600', color: Colors.errorText, marginTop: Spacing.sm, marginBottom: Spacing.xs },
   stockRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.xs },
   stockName: { flex: 1, fontSize: 13, color: Colors.textPrimary },
   stockValue: { fontSize: 13, color: Colors.textSecondary },
   stockZero: { color: Colors.statusFuera, fontWeight: '700' },
 
-  skeleton: { backgroundColor: Colors.surface, borderRadius: Radius.md, marginBottom: Spacing.md },
+  skeleton: { backgroundColor: Colors.fill, borderRadius: Radius.lg, marginBottom: Spacing.md },
 });

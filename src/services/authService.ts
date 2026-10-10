@@ -45,15 +45,18 @@ async function login(email: string, password: string, rememberMe: boolean): Prom
   return data;
 }
 
-async function logout(deviceId: string, token: string): Promise<void> {
+async function logout(deviceId: string, fallbackToken: string): Promise<void> {
   const biometricsEnabled = await AsyncStorage.getItem('BIOMETRICS_ENABLED');
   const keepSession = biometricsEnabled === 'true';
+  // El interceptor de axios renueva el access token en AsyncStorage sin pasar por
+  // el estado de React: usamos el más reciente para que /logout no responda 401.
+  const token = (await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)) ?? fallbackToken;
 
   try {
     // keepSession=true → backend solo invalida el access token, no el refresh token.
     // Esto permite que Face ID renueve la sesión la próxima vez.
     await axios.post(
-      `${API_BASE_URL}/api/auth/logout?deviceId=${deviceId}&keepSession=${keepSession}`,
+      `${API_BASE_URL}/api/auth/logout?deviceId=${encodeURIComponent(deviceId)}&keepSession=${keepSession}`,
       {},
       { headers: { Authorization: `Bearer ${token}` } },
     );
@@ -175,7 +178,7 @@ async function register(
     inviteToken: inviteToken || undefined,
     workspaceName: workspaceName || undefined,
   });
-  return data.message ?? 'Usuario registrado. Verificá tu email para activar tu cuenta.';
+  return data.message ?? 'Usuario registrado. Ya podés iniciar sesión.';
 }
 
 async function resendVerification(email: string): Promise<string> {
@@ -215,4 +218,11 @@ async function enableBiometrics(): Promise<boolean> {
   return false;
 }
 
-export const authService = { login, logout, register, resendVerification, restoreSession, getOrCreateDeviceId, enableBiometrics, forgotPassword, resetPassword };
+async function verifyEmail(token: string): Promise<string> {
+  const { data } = await axios.post<{ message?: string }>(`${API_BASE_URL}/api/auth/verify-email`, {
+    token,
+  });
+  return data.message ?? 'Email verificado correctamente.';
+}
+
+export const authService = { login, logout, register, resendVerification, verifyEmail, restoreSession, getOrCreateDeviceId, enableBiometrics, forgotPassword, resetPassword };

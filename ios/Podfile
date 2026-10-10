@@ -1,40 +1,19 @@
-# Resolve scripts with node to allow for hoisting (incluye react-native-permissions)
-def node_require(script)
-  # Resolve script with node to allow for hoisting
-  require Pod::Executable.execute_command('node', ['-p',
-    "require.resolve(
-      '#{script}',
-      {paths: [process.argv[1]]},
-    )", __dir__]).strip
-end
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
 
-# Requerir tanto el script de react-native como el de react-native-permissions
-node_require('react-native/scripts/react_native_pods.rb')
-node_require('react-native-permissions/scripts/setup.rb')
-
+$RNFirebaseDisableSPM = true
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-# ERR-02: registrar los handlers de permisos que usa la app.
-# Debe re-ejecutarse `pod install` cada vez que se modifica esta lista.
-setup_permissions([
-  'Camera',
-  'PhotoLibrary',
-  'PhotoLibraryAddOnly',
-])
-
-# ── react-native-firebase (v26) + Firebase 12.x ──────────────────────────────
-# Firebase 12.x incluye pods Swift que no pueden integrarse como static libraries
-# puras. Usamos static frameworks, que es el camino soportado por RN Firebase:
-#   - $RNFirebaseDisableSPM: Firebase vía CocoaPods en lugar de SPM (SPM no
-#     soporta static linkage).
-#   - $RNFirebaseAsStaticFramework: vincula los xcframeworks de Firebase como
-#     estáticos (requerido con use_frameworks! :linkage => :static).
-# Además, con use_frameworks! React Native asigna un module_name propio a
-# React-RuntimeApple, evitando el conflicto "Redefinition of module ReactCommon".
-$RNFirebaseDisableSPM = true
-$RNFirebaseAsStaticFramework = true
-use_frameworks! :linkage => :static
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
 
 target 'PrintOpsTemp' do
   config = use_native_modules!
@@ -44,6 +23,10 @@ target 'PrintOpsTemp' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+
+  pod 'FirebaseCoreInternal', :modular_headers => true
+  pod 'GoogleUtilities', :modular_headers => true
+
 
   target 'PrintOpsTempTests' do
     inherit! :complete
@@ -58,11 +41,8 @@ target 'PrintOpsTemp' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
-
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
-        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-        # Fuerza el deployment target a 15.0 para evitar errores de compilación con Xcode 15/16
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
       end
     end

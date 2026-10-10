@@ -1,12 +1,13 @@
 // src/components/home/PrinterCard.tsx
 import React, { useEffect, useRef } from 'react';
-import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { PrinterResponse } from '../../services/printerService';
 import { PRINTER_STATUS, getMaintenanceBadge } from '../../constants/printers';
 import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import PressableScale from '../ui/PressableScale';
+import { ChevronRight, MapPin, Printer } from 'lucide-react-native';
 
 type Props = {
   printer: PrinterResponse;
@@ -15,13 +16,13 @@ type Props = {
 };
 
 export default function PrinterCard({ printer, index, onPress }: Props) {
-  const translateY = useRef(new Animated.Value(30)).current;
+  const translateY = useRef(new Animated.Value(12)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(translateY, { toValue: 0, duration: 350, delay: index * 80, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 350, delay: index * 80, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 420, delay: Math.min(index, 8) * 50, easing: Easing.bezier(0.32, 0.72, 0, 1), useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 320, delay: Math.min(index, 8) * 50, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start();
   }, [index, translateY, opacity]);
 
@@ -32,13 +33,12 @@ export default function PrinterCard({ printer, index, onPress }: Props) {
     <Animated.View style={{ transform: [{ translateY }], opacity }}>
       <PressableScale onPress={onPress}>
         <Card padded={false} style={styles.card}>
-          <View style={[styles.accentBar, { backgroundColor: status.color }]} />
           <View style={styles.thumbnailWrapper}>
             {printer.photoUrl ? (
               <Image source={{ uri: printer.photoUrl }} style={styles.thumbnail} />
             ) : (
               <View style={styles.thumbnailPlaceholder}>
-                <Text style={styles.printerIcon}>🖨️</Text>
+                <Printer color={Colors.textTertiary} size={26} strokeWidth={1.5} />
               </View>
             )}
           </View>
@@ -50,12 +50,13 @@ export default function PrinterCard({ printer, index, onPress }: Props) {
               {printer.brand}
             </Text>
             <Text style={styles.cardSerial} numberOfLines={1}>
-              S/N: {printer.serialNumber}
+              {printer.serialNumber}
             </Text>
             {!!printer.location && (
-              <Text style={styles.cardLocation} numberOfLines={1}>
-                📍 {printer.location}
-              </Text>
+              <View style={styles.locationRow}>
+                <MapPin color={Colors.textTertiary} size={12} />
+                <Text style={styles.cardLocation} numberOfLines={1}>{printer.location}</Text>
+              </View>
             )}
             {!!printer.nextMaintenanceDate && (
               <Text style={styles.cardMaintenance} numberOfLines={1}>
@@ -67,7 +68,7 @@ export default function PrinterCard({ printer, index, onPress }: Props) {
               {maintenanceBadge && <Badge label={maintenanceBadge.label} color={maintenanceBadge.color} />}
             </View>
           </View>
-          <Text style={styles.chevron}>›</Text>
+          <ChevronRight color={Colors.textTertiary} size={18} style={styles.chevron} />
         </Card>
       </PressableScale>
     </Animated.View>
@@ -79,74 +80,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.md,
-    overflow: 'hidden',
-  },
-  accentBar: {
-    width: 3,
-    alignSelf: 'stretch',
   },
   thumbnailWrapper: {
     margin: Spacing.md,
-    marginLeft: 12,
   },
   thumbnail: {
-    width: 68,
-    height: 68,
+    width: 64,
+    height: 64,
     borderRadius: Radius.md,
   },
   thumbnailPlaceholder: {
-    width: 68,
-    height: 68,
+    width: 64,
+    height: 64,
     borderRadius: Radius.md,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.separator,
+    backgroundColor: Colors.fill,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  printerIcon: {
-    fontSize: 30,
   },
   cardInfo: {
     flex: 1,
     paddingVertical: Spacing.md,
     paddingRight: Spacing.sm,
-    gap: 3,
+    gap: 2,
   },
   cardModel: {
     ...Typography.headline,
     color: Colors.textPrimary,
   },
   cardBrand: {
-    ...Typography.caption1,
+    ...Typography.subheadline,
     color: Colors.textSecondary,
-    fontWeight: '500',
   },
   cardSerial: {
-    ...Typography.caption2,
-    color: Colors.textSecondary,
-    fontFamily: 'Courier New',
+    ...Typography.footnote,
+    ...Typography.tabular,
+    color: Colors.textTertiary,
   },
-  cardLocation: {
-    ...Typography.caption2,
-    color: Colors.textSecondary,
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 2,
   },
+  cardLocation: {
+    ...Typography.footnote,
+    color: Colors.textSecondary,
+    flexShrink: 1,
+  },
   cardMaintenance: {
-    ...Typography.caption2,
+    ...Typography.footnote,
     color: Colors.textSecondary,
   },
   cardBadges: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 6,
+    marginTop: Spacing.sm,
     flexWrap: 'wrap',
   },
   chevron: {
-    fontSize: 22,
-    color: Colors.separator,
-    marginRight: 14,
-    fontWeight: '300',
+    marginRight: Spacing.md,
   },
 });

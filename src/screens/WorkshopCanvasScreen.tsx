@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, LayoutChangeEvent, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, LayoutChangeEvent, TouchableOpacity, Alert, AlertButton } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Colors, Typography, Spacing, Radius } from '../constants/theme';
@@ -119,19 +119,18 @@ export default function WorkshopCanvasScreen() {
       return;
     }
 
-    Alert.alert(
-      'Agregar Impresora',
-      'Elegí la impresora a ubicar en el plano',
-      unplaced.map(p => ({
-        text: `${p.brand} ${p.model}`,
-        onPress: () => {
-          setLayout(prev => ({
-            ...prev,
-            nodes: [...prev.nodes, { printerId: p.id, x: 0.5, y: 0.5 }]
-          }));
-        }
-      })).concat([{ text: 'Cancelar', style: 'cancel', onPress: () => {} }])
-    );
+    const buttons: AlertButton[] = unplaced.map(p => ({
+      text: p.name || `${p.brand} ${p.model}`,
+      onPress: () => {
+        setLayout(prev => ({
+          ...prev,
+          nodes: [...prev.nodes, { printerId: p.id, x: 0.5, y: 0.5 }]
+        }));
+      },
+    }));
+    buttons.push({ text: 'Cancelar', style: 'cancel' });
+
+    Alert.alert('Agregar impresora', 'Elegí la impresora a ubicar en el plano', buttons);
   };
 
   if (loading) {
@@ -267,8 +266,8 @@ const styles = StyleSheet.create({
   debugText: { ...Typography.caption, color: Colors.textTertiary, marginBottom: Spacing.md },
   canvasBorder: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
     backgroundColor: Colors.surface,
     position: 'relative',
     overflow: 'hidden',
@@ -306,8 +305,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: Spacing.md,
     padding: 2,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
   },
   toggleBtn: {
     paddingHorizontal: Spacing.lg,
@@ -322,8 +321,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     padding: Spacing.md,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
     marginBottom: Spacing.sm,
   },
   listTitle: { ...Typography.body, fontWeight: '600', color: Colors.textPrimary },

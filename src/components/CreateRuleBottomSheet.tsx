@@ -16,6 +16,7 @@ import {
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { TriggerType, MaintenanceType, CreateRuleInput, MaintenanceRuleDTO } from '../types/rules';
 import { ruleService } from '../services/ruleService';
+import { X } from 'lucide-react-native';
 
 // Opciones de tipo de disparo (chips) con su unidad de umbral.
 const TRIGGERS: { value: TriggerType; label: string; unit: string }[] = [
@@ -169,7 +170,7 @@ export default function CreateRuleBottomSheet({ visible, printerId, onClose, onC
               <View key={index} style={styles.checklistItem}>
                 <Text style={styles.checklistText}>{item}</Text>
                 <TouchableOpacity onPress={() => removeItem(index)} hitSlop={8}>
-                  <Text style={styles.removeText}>✕</Text>
+                  <X color={Colors.textTertiary} size={18} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
   },
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: Radius.md,
     backgroundColor: Colors.background,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     alignItems: 'center',
   },
@@ -295,5 +296,5 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
   disabled: { opacity: 0.7 },
-  submitText: { color: Colors.onAccent, fontSize: 16, fontWeight: '800' },
+  submitText: { color: Colors.onAccent, fontSize: 16, fontWeight: '700' },
 });

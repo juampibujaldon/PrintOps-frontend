@@ -1,8 +1,10 @@
 // src/screens/LoginScreen.tsx
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Alert, Switch, Image,
+  View, Text, StyleSheet, Alert, Switch, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Printer, ScanFace } from 'lucide-react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -13,7 +15,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
 import { LoginFormData } from '../types/auth';
-import { Colors, Spacing, Typography } from '../constants/theme';
+import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import TextField from '../components/ui/TextField';
 import Button from '../components/ui/Button';
 import PressableScale from '../components/ui/PressableScale';
@@ -77,7 +79,9 @@ export default function LoginScreen({ navigation }: Props) {
           text: 'Ahora no',
           style: 'cancel',
           onPress: async () => {
-            await AsyncStorage.setItem('BIOMETRICS_DECLINED', 'true');
+            // También BIOMETRICS_ENABLED=false: si no, RoleNavigator volvía a
+            // preguntar lo mismo apenas se completaba el login.
+            await AsyncStorage.multiSet([['BIOMETRICS_DECLINED', 'true'], ['BIOMETRICS_ENABLED', 'false']]);
             resolve(false);
           },
         },
@@ -104,35 +108,14 @@ export default function LoginScreen({ navigation }: Props) {
 
       await login(data.email, data.password, data.rememberMe);
     } catch (error: any) {
-      const status = error?.response?.status;
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         'Error al iniciar sesión';
 
-      if (status === 403 && /verific/i.test(message)) {
-        Alert.alert('Email no verificado', message, [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Reenviar email', onPress: () => handleResendVerification(data.email) },
-        ]);
-      } else {
-        Alert.alert('Error', message);
-      }
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResendVerification = async (email: string) => {
-    try {
-      const message = await authService.resendVerification(email);
-      Alert.alert('Email reenviado', message);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        'No se pudo reenviar el email';
-      Alert.alert('Error', message);
     }
   };
 
@@ -157,138 +140,165 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Iniciar sesión</Text>
-      <Text style={styles.subtitle}>Ingresá a tu taller para gestionar tus impresoras.</Text>
-
-      <Controller
-        control={control}
-        name="email"
-        render={({ field: { onChange, value } }) => (
-          <TextField
-            label="Email"
-            placeholder="taller@ejemplo.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={value}
-            onChangeText={onChange}
-            error={errors.email?.message}
-          />
-        )}
-      />
-
-      <Controller
-        control={control}
-        name="password"
-        render={({ field: { onChange, value } }) => (
-          <TextField
-            label="Contraseña"
-            placeholder="Mínimo 8 caracteres"
-            secureTextEntry
-            value={value}
-            onChangeText={onChange}
-            error={errors.password?.message}
-          />
-        )}
-      />
-
-      <Controller
-        control={control}
-        name="rememberMe"
-        render={({ field: { onChange, value } }) => (
-          <View style={styles.rememberContainer}>
-            <Text style={styles.rememberText}>Recordar sesión (30 días)</Text>
-            <Switch value={value} onValueChange={onChange} />
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View entering={FadeInDown.duration(500).springify().damping(22)} style={styles.header}>
+          <View style={styles.logo}>
+            <Printer color={Colors.onPrimary} size={30} strokeWidth={1.75} />
           </View>
-        )}
-      />
+          <Text style={styles.title}>PrintOps</Text>
+          <Text style={styles.subtitle}>Ingresá a tu taller para gestionar tus impresoras.</Text>
+        </Animated.View>
 
-      <Button title="Ingresar" onPress={handleSubmit(onSubmit)} loading={loading} />
-
-      {biometricEnabled && (
-        <PressableScale style={styles.biometricButton} onPress={onBiometricLogin}>
-          <Image
-            source={{ uri: 'https://img.icons8.com/ios/100/000000/face-id.png' }}
-            style={[styles.faceIdIcon, { tintColor: Colors.textPrimary }]}
+        <Animated.View entering={FadeInDown.duration(500).delay(80).springify().damping(22)}>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, value } }) => (
+              <TextField
+                label="Email"
+                placeholder="taller@ejemplo.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+                value={value}
+                onChangeText={onChange}
+                error={errors.email?.message}
+              />
+            )}
           />
-          <Text style={styles.biometricText}>Iniciar con Face ID</Text>
-        </PressableScale>
-      )}
 
-      <PressableScale style={styles.linkButton} onPress={() => navigation.navigate('ResetPassword')}>
-        <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
-      </PressableScale>
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, value } }) => (
+              <TextField
+                label="Contraseña"
+                placeholder="Mínimo 8 caracteres"
+                secureTextEntry
+                autoComplete="password"
+                textContentType="password"
+                returnKeyType="go"
+                onSubmitEditing={handleSubmit(onSubmit)}
+                value={value}
+                onChangeText={onChange}
+                error={errors.password?.message}
+              />
+            )}
+          />
 
-      <View style={styles.registerContainer}>
-        <Text style={styles.registerText}>¿No tienes cuenta? </Text>
-        <PressableScale onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.registerLink}>Regístrate</Text>
-        </PressableScale>
-      </View>
-    </View>
+          <Controller
+            control={control}
+            name="rememberMe"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.rememberContainer}>
+                <Text style={styles.rememberText}>Recordar sesión por 30 días</Text>
+                <Switch
+                  value={value}
+                  onValueChange={onChange}
+                  trackColor={{ false: Colors.fillPressed, true: Colors.green }}
+                  ios_backgroundColor={Colors.fillPressed}
+                />
+              </View>
+            )}
+          />
+
+          <Button title="Ingresar" onPress={handleSubmit(onSubmit)} loading={loading} />
+
+          {biometricEnabled && (
+            <Button
+              title="Ingresar con Face ID"
+              variant="tinted"
+              icon={<ScanFace color={Colors.primary} size={20} strokeWidth={1.75} />}
+              onPress={onBiometricLogin}
+              style={styles.biometricButton}
+            />
+          )}
+
+          <PressableScale style={styles.linkButton} onPress={() => navigation.navigate('ResetPassword')}>
+            <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
+          </PressableScale>
+        </Animated.View>
+
+        <View style={styles.registerContainer}>
+          <Text style={styles.registerText}>¿No tenés cuenta? </Text>
+          <PressableScale onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.registerLink}>Registrate</Text>
+          </PressableScale>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: Colors.background },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xxl,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: Spacing.xxl,
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: Colors.textPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   title: {
-    ...Typography.title1,
+    ...Typography.largeTitle,
     color: Colors.textPrimary,
     textAlign: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
     ...Typography.subheadline,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
   },
   rememberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
     paddingHorizontal: Spacing.xs,
   },
   rememberText: {
     ...Typography.subheadline,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
   },
   biometricButton: {
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  faceIdIcon: {
-    width: 45,
-    height: 45,
-    marginBottom: Spacing.sm,
-  },
-  biometricText: {
-    ...Typography.subheadline,
-    color: Colors.accent,
-    fontWeight: '600',
+    marginTop: Spacing.md,
+    borderRadius: Radius.md,
   },
   linkButton: {
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.lg,
     paddingVertical: Spacing.sm,
   },
   linkText: {
     ...Typography.subheadline,
-    color: Colors.textSecondary,
-    fontWeight: '600',
+    color: Colors.primary,
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: Spacing.lg,
+    marginTop: Spacing.xxl,
   },
   registerText: {
     ...Typography.subheadline,
@@ -296,7 +306,7 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     ...Typography.subheadline,
-    color: Colors.accent,
+    color: Colors.primary,
     fontWeight: '600',
   },
 });

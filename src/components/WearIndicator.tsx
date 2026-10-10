@@ -12,9 +12,9 @@ type Props = {
 
 // Color de la barra según el % usado (US-11).
 function barColor(percent: number): string {
-  if (percent >= 90) return '#E24B4A';
-  if (percent >= 50) return '#dda15e';
-  return '#606c38';
+  if (percent >= 90) return '#FF3B30';
+  if (percent >= 50) return '#FF9500';
+  return '#34C759';
 }
 
 export default function WearIndicator({ label, percent, hoursRemaining, critical }: Props) {
@@ -48,7 +48,7 @@ export default function WearIndicator({ label, percent, hoursRemaining, critical
       {critical && (
         <View style={styles.criticalBanner}>
           <Text style={styles.criticalText}>
-            ⚠️ Cerca del límite — considerá reemplazarla antes del próximo trabajo
+            Cerca del límite. Considerá reemplazarla antes del próximo trabajo.
           </Text>
         </View>
       )}
@@ -87,15 +87,15 @@ const styles = StyleSheet.create({
   },
   criticalBanner: {
     marginTop: Spacing.sm,
-    backgroundColor: '#E24B4A18',
+    backgroundColor: Colors.errorBg,
     borderWidth: 1,
-    borderColor: '#E24B4A',
+    borderColor: 'transparent',
     borderRadius: Radius.sm,
     padding: Spacing.sm,
   },
   criticalText: {
     ...Typography.footnote,
-    color: '#E24B4A',
+    color: Colors.errorText,
     fontWeight: '600',
   },
 });

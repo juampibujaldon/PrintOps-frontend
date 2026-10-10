@@ -53,6 +53,7 @@ export interface StatusHistory {
   comment: string | null;
   changedById: number | null;
   changedByName: string | null;
+  changedByRole: string | null;
   changedAt: string;
 }
 

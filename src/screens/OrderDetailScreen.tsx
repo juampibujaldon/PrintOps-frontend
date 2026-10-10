@@ -8,7 +8,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
-import { ORDER_STATUS } from '../constants/orders';
+import { ORDER_STATUS, ORDER_TYPE } from '../constants/orders';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderResponse, OrderStatus, StatusHistory } from '../services/orderService';
 import { useAuth } from '../hooks/useAuth';
@@ -19,6 +19,7 @@ import Button from '../components/ui/Button';
 import TextField from '../components/ui/TextField';
 import PressableScale from '../components/ui/PressableScale';
 import StatusTimeline from '../components/StatusTimeline';
+import { Check, Circle } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'OrderDetail'>;
 
@@ -109,7 +110,8 @@ export default function OrderDetailScreen({ route }: Props) {
     <BottomSheetModalProvider>
       <ScrollView contentContainerStyle={styles.container}>
         <Card style={styles.card}>
-          <Text style={styles.type}>Orden #{order.id} · {order.type}</Text>
+          <Text style={styles.type}>Orden #{order.id}</Text>
+          <Text style={styles.typeLabel}>{ORDER_TYPE[order.type]?.label ?? order.type}</Text>
           <View style={styles.statusWrap}>
             <Badge label={status.label} color={status.color} pulse={order.status === 'IN_REVIEW'} />
           </View>
@@ -130,12 +132,12 @@ export default function OrderDetailScreen({ route }: Props) {
               {order.status === 'IN_REVIEW' && (
                 <>
                   <Button
-                    title="Aprobar ✓"
+                    title="Aprobar"
                     onPress={() => confirmAction('Aprobar orden', '¿Confirmás la aprobación y cierre de esta orden?', 'COMPLETED', 'Orden aprobada')}
                     style={styles.actionButton}
                   />
                   <Button
-                    title="Rechazar ✗"
+                    title="Rechazar"
                     variant="danger"
                     onPress={() => rejectSheetRef.current?.present()}
                     style={styles.actionButton}
@@ -191,9 +193,15 @@ export default function OrderDetailScreen({ route }: Props) {
           )}
           {order.checklistItems.map(item => (
             <View key={item.id} style={styles.checklistRow}>
-              <Text style={[styles.checkbox, item.done && styles.checkboxDone]}>
-                {item.done ? '✓' : item.na ? 'N/A' : '○'}
-              </Text>
+              <View style={styles.checkIcon}>
+                {item.done ? (
+                  <Check color={Colors.green} size={18} strokeWidth={2.5} />
+                ) : item.na ? (
+                  <Text style={styles.checkbox}>N/A</Text>
+                ) : (
+                  <Circle color={Colors.textTertiary} size={18} />
+                )}
+              </View>
               <Text style={[styles.checklistText, (item.done || item.na) && styles.checklistTextMuted]}>
                 {item.text}
               </Text>
@@ -273,9 +281,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   type: {
-    ...Typography.title3,
+    ...Typography.title2,
     color: Colors.textPrimary,
-    textTransform: 'capitalize',
+  },
+  typeLabel: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   statusWrap: {
     marginTop: Spacing.sm,
@@ -306,8 +318,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...Typography.labelUppercase,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.sm,
+    color: Colors.textSecondary,
+    marginBottom: 6,
+    marginLeft: Spacing.lg,
   },
   checklistRow: {
     flexDirection: 'row',
@@ -315,10 +328,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingVertical: 6,
   },
-  checkbox: {
-    ...Typography.body,
-    color: Colors.accent,
+  checkIcon: {
     width: 24,
+    alignItems: 'center',
+  },
+  checkbox: {
+    ...Typography.caption2,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   checkboxDone: {
     color: Colors.statusOperativa,

@@ -2,9 +2,14 @@ import React from 'react';
 import { View, StyleSheet, ViewProps } from 'react-native';
 import { Colors, Radius, Shadows, Spacing } from '../../constants/theme';
 
-export default function Card({ style, children, ...props }: ViewProps) {
+interface CardProps extends ViewProps {
+  // false = sin padding interno (para listas o contenido a sangre).
+  padded?: boolean;
+}
+
+export default function Card({ style, children, padded = true, ...props }: CardProps) {
   return (
-    <View style={[styles.card, style]} {...props}>
+    <View style={[styles.card, padded && styles.padded, style]} {...props}>
       {children}
     </View>
   );
@@ -14,9 +19,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    padding: Spacing.lg,
     ...Shadows.cardLight,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  }
+  },
+  padded: { padding: Spacing.lg },
 });

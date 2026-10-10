@@ -19,22 +19,25 @@ export default function SummaryBar({ printers }: Props) {
 
   return (
     <Card padded={false} style={styles.bar}>
-      <Stat label="Total" value={counts.total} color={Colors.textPrimary} />
+      <Stat label="Total" value={counts.total} />
       <View style={styles.divider} />
-      <Stat label="Operativas" value={counts.operativas} color={Colors.statusOperativa} />
+      <Stat label="Operativas" value={counts.operativas} dot={Colors.green} />
       <View style={styles.divider} />
-      <Stat label="Mant." value={counts.mantenimiento} color={Colors.statusMantenim} />
+      <Stat label="Mantenim." value={counts.mantenimiento} dot={Colors.orange} />
       <View style={styles.divider} />
-      <Stat label="Fuera" value={counts.fuera} color={Colors.statusFuera} />
+      <Stat label="Fuera" value={counts.fuera} dot={Colors.red} />
     </Card>
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+function Stat({ label, value, dot }: { label: string; value: number; dot?: string }) {
   return (
     <View style={styles.stat}>
-      <Text style={[styles.value, { color }]}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
+      <View style={styles.labelRow}>
+        {dot ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
+        <Text style={styles.label} numberOfLines={1}>{label}</Text>
+      </View>
     </View>
   );
 }
@@ -43,25 +46,33 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
   stat: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
   },
   value: {
     ...Typography.title2,
-    fontWeight: '700',
+    ...Typography.tabular,
+    color: Colors.textPrimary,
   },
-  label: {
-    ...Typography.labelUppercase,
-    color: Colors.textTertiary,
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 2,
   },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  label: {
+    ...Typography.caption1,
+    color: Colors.textSecondary,
+  },
   divider: {
-    width: 1,
+    width: StyleSheet.hairlineWidth,
     backgroundColor: Colors.separator,
-    marginVertical: 8,
+    marginVertical: Spacing.md,
   },
 });

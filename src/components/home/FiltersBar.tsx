@@ -1,94 +1,89 @@
 // src/components/home/FiltersBar.tsx
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Search, XCircle } from 'lucide-react-native';
 import { PrinterStatus } from '../../services/printerService';
 import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
-import PressableScale from '../ui/PressableScale';
-import TextField from '../ui/TextField';
+import Chip from '../ui/Chip';
 
 type Props = {
   statusFilter: 'ALL' | PrinterStatus;
   onStatusFilter: (s: 'ALL' | PrinterStatus) => void;
-  brandFilter: string;
-  onBrandFilter: (s: string) => void;
-  locationFilter: string;
-  onLocationFilter: (s: string) => void;
+  search: string;
+  onSearch: (s: string) => void;
 };
 
 const CHIPS: { value: 'ALL' | PrinterStatus; label: string }[] = [
-  { value: 'ALL', label: 'Todos' },
-  { value: 'OPERATIVE', label: 'Operativa' },
-  { value: 'MAINTENANCE', label: 'En mant.' },
-  { value: 'OUT_OF_SERVICE', label: 'Fuera serv.' },
+  { value: 'ALL', label: 'Todas' },
+  { value: 'OPERATIVE', label: 'Operativas' },
+  { value: 'MAINTENANCE', label: 'En mantenimiento' },
+  { value: 'OUT_OF_SERVICE', label: 'Fuera de servicio' },
 ];
 
-export default function FiltersBar({
-  statusFilter,
-  onStatusFilter,
-  brandFilter,
-  onBrandFilter,
-  locationFilter,
-  onLocationFilter,
-}: Props) {
+export default function FiltersBar({ statusFilter, onStatusFilter, search, onSearch }: Props) {
   return (
     <View style={styles.container}>
-      <View style={styles.chipsRow}>
-        {CHIPS.map(chip => {
-          const selected = statusFilter === chip.value;
-          return (
-            <PressableScale key={chip.value} style={[styles.chip, selected && styles.chipSelected]} onPress={() => onStatusFilter(chip.value)}>
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{chip.label}</Text>
-            </PressableScale>
-          );
-        })}
+      <View style={styles.searchBox}>
+        <Search color={Colors.textSecondary} size={16} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar"
+          placeholderTextColor={Colors.textSecondary}
+          selectionColor={Colors.primary}
+          value={search}
+          onChangeText={onSearch}
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="never"
+          returnKeyType="search"
+        />
+        {search ? (
+          <Pressable onPress={() => onSearch('')} hitSlop={8} accessibilityLabel="Borrar búsqueda">
+            <XCircle color={Colors.textTertiary} size={16} />
+          </Pressable>
+        ) : null}
       </View>
-      <TextField
-        containerStyle={styles.input}
-        placeholder="Filtrar por marca"
-        value={brandFilter}
-        onChangeText={onBrandFilter}
-      />
-      <TextField
-        containerStyle={styles.input}
-        placeholder="Filtrar por ubicación"
-        value={locationFilter}
-        onChangeText={onLocationFilter}
-      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsRow}
+      >
+        {CHIPS.map(chip => (
+          <Chip
+            key={chip.value}
+            label={chip.label}
+            selected={statusFilter === chip.value}
+            onPress={() => onStatusFilter(chip.value)}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
-    gap: Spacing.sm,
+    gap: Spacing.md,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: Spacing.lg,
+    height: 36,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.sm + 2,
+    backgroundColor: Colors.fill,
+  },
+  searchInput: {
+    flex: 1,
+    ...Typography.body,
+    color: Colors.textPrimary,
+    paddingVertical: 0,
   },
   chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-  },
-  chipSelected: {
-    backgroundColor: Colors.textPrimary,
-    borderColor: Colors.textPrimary,
-  },
-  chipText: {
-    ...Typography.caption1,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  chipTextSelected: {
-    color: Colors.background,
-  },
-  input: {
-    marginBottom: 0,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
   },
 });

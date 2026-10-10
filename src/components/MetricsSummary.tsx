@@ -68,9 +68,9 @@ export default function MetricsSummary({
           <Metric label="MTBF" value={mtbfText} />
 
           <View style={styles.typeRow}>
-            <TypeCount label="Preventivas" value={metrics?.preventiveCount ?? 0} color="#606c38" />
-            <TypeCount label="Correctivas" value={metrics?.correctiveCount ?? 0} color="#bc6c25" />
-            <TypeCount label="Calibraciones" value={metrics?.calibrationCount ?? 0} color="#dda15e" />
+            <TypeCount label="Preventivas" value={metrics?.preventiveCount ?? 0} color="#34C759" />
+            <TypeCount label="Correctivas" value={metrics?.correctiveCount ?? 0} color="#FF9500" />
+            <TypeCount label="Calibraciones" value={metrics?.calibrationCount ?? 0} color="#5856D6" />
           </View>
 
           <Metric
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.sm,
   },
-  typeCountValue: { fontSize: 18, fontWeight: '800' },
+  typeCountValue: { fontSize: 18, fontWeight: '700' },
   typeCountLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
   skeleton: {
     backgroundColor: Colors.background,

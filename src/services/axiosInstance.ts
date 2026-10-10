@@ -30,6 +30,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+// Callback que registra AuthContext para cerrar la sesión en la UI cuando el
+// refresh token ya no sirve (si no, la app quedaba "logueada" con todo en 401).
+let onSessionExpired: (() => void) | null = null;
+export const setOnSessionExpired = (cb: (() => void) | null) => {
+  onSessionExpired = cb;
+};
+
 // ── Response interceptor: refresca el token ante 401 ──
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: string) => void; reject: (reason?: unknown) => void }> = [];
@@ -106,6 +113,11 @@ api.interceptors.response.use(
       // Solo limpiamos el access token local. BIOMETRICS_ENABLED y el Keychain
       // se limpian en authService si el refresh token está definitivamente inválido.
       await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+      // Error de red: puede ser transitorio, no se cierra la sesión.
+      const isNetworkError = axios.isAxiosError(refreshError) && !refreshError.response;
+      if (!isNetworkError) {
+        onSessionExpired?.();
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

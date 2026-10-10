@@ -18,14 +18,15 @@ import { MovementType, SparePartDTO, StockMovementDTO } from '../types/parts';
 import { partService } from '../services/partService';
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import Button from '../components/ui/Button';
+import { ArrowUpRight } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'SparePartDetail'>;
 
 const MOVEMENT_META: Record<MovementType, { label: string; color: string }> = {
-  PURCHASE: { label: 'Compra', color: '#606c38' },
-  ORDER_USE: { label: 'Uso en orden', color: '#bc6c25' },
-  ADJUSTMENT: { label: 'Ajuste', color: '#dda15e' },
-  RETURN: { label: 'Devolución', color: '#283618' },
+  PURCHASE: { label: 'Compra', color: '#34C759' },
+  ORDER_USE: { label: 'Uso en orden', color: '#FF9500' },
+  ADJUSTMENT: { label: 'Ajuste', color: '#5856D6' },
+  RETURN: { label: 'Devolución', color: '#007AFF' },
 };
 
 export default function SparePartDetailScreen({ route }: Props) {
@@ -106,8 +107,9 @@ export default function SparePartDetailScreen({ route }: Props) {
                 </View>
               ) : null}
               {part.supplierUrl ? (
-                <TouchableOpacity onPress={() => Linking.openURL(part.supplierUrl!)}>
-                  <Text style={styles.supplier}>Ver proveedor ↗</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(part.supplierUrl!)} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                  <Text style={styles.supplier}>Ver proveedor</Text>
+                  <ArrowUpRight color={Colors.primary} size={14} />
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -117,7 +119,7 @@ export default function SparePartDetailScreen({ route }: Props) {
               <Text style={styles.stockLabel}>en stock · mínimo {part.minStock}</Text>
               <Text style={styles.price}>${part.unitPrice.toFixed(2)} / unidad</Text>
               <View style={styles.stockActions}>
-                <Button title="Entrada [+]" variant="secondary" onPress={() => setAdjustType('PURCHASE')} style={styles.stockAction} />
+                <Button title="Entrada" variant="secondary" onPress={() => setAdjustType('PURCHASE')} style={styles.stockAction} />
                 <Button title="Ajuste [~]" variant="secondary" onPress={() => setAdjustType('ADJUSTMENT')} style={styles.stockAction} />
               </View>
             </View>
@@ -181,7 +183,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginTop: Spacing.sm,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   categoryText: { ...Typography.caption1, color: Colors.textSecondary },
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
   stockPanel: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,

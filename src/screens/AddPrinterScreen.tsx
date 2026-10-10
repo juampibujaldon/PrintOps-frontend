@@ -16,6 +16,7 @@ import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import TextField from '../components/ui/TextField';
 import Button from '../components/ui/Button';
 import PressableScale from '../components/ui/PressableScale';
+import { Camera, X } from 'lucide-react-native';
 
 const formatDate = (date: Date): string => {
   const y = date.getFullYear();
@@ -126,13 +127,13 @@ export default function AddPrinterScreen({ navigation }: Props) {
           <View style={styles.photoPreviewWrapper}>
             <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
             <PressableScale style={styles.removePhotoButton} onPress={() => setPhoto(null)}>
-              <Text style={styles.removePhotoText}>✕</Text>
+              <X color="#FFFFFF" size={14} strokeWidth={2.5} />
             </PressableScale>
           </View>
         ) : (
           <View style={styles.photoPlaceholder}>
-            <Text style={styles.photoPlaceholderIcon}>📷</Text>
-            <Text style={styles.photoPlaceholderText}>Sin foto — opcional</Text>
+            <Camera color={Colors.textTertiary} size={28} strokeWidth={1.5} />
+            <Text style={styles.photoPlaceholderText}>Sin foto</Text>
           </View>
         )}
         <View style={styles.photoActions}>
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.error,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -272,13 +273,11 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.separator,
+    backgroundColor: Colors.fill,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
-    gap: 4,
+    gap: 6,
   },
   photoPlaceholderIcon: {
     fontSize: 32,
@@ -293,7 +292,7 @@ const styles = StyleSheet.create({
   },
   photoButton: {
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     borderRadius: Radius.sm,
     paddingHorizontal: 16,
@@ -322,7 +321,7 @@ const styles = StyleSheet.create({
   },
   dateButton: {
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
@@ -351,7 +350,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     borderRadius: Radius.sm,
     alignItems: 'center',

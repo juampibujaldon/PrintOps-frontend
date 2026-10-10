@@ -15,9 +15,9 @@ import { OrderHistoryItemDTO, OrderType } from '../types/history';
 
 // Badge de tipo: olive / copperwood / sunlit_clay.
 const TYPE_BADGE: Record<OrderType, { color: string; label: string }> = {
-  PREVENTIVE: { color: '#606c38', label: 'Preventivo' },
-  CORRECTIVE: { color: '#bc6c25', label: 'Correctivo' },
-  CALIBRATION: { color: '#dda15e', label: 'Calibración' },
+  PREVENTIVE: { color: '#34C759', label: 'Preventivo' },
+  CORRECTIVE: { color: '#FF9500', label: 'Correctivo' },
+  CALIBRATION: { color: '#5856D6', label: 'Calibración' },
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -95,7 +95,7 @@ function TimelineItem({
         ) : null}
 
         <TouchableOpacity style={styles.detailBtn} onPress={() => onPressDetail(order)}>
-          <Text style={styles.detailText}>Ver detalle →</Text>
+          <Text style={styles.detailText}>Ver detalle</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     padding: Spacing.md,
     marginBottom: Spacing.md,

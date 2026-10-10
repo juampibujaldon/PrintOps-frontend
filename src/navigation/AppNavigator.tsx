@@ -6,13 +6,16 @@ import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 import RoleNavigator from './RoleNavigator';
 import { useAuth } from '../hooks/useAuth';
+import { navigationTheme } from './navTheme';
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Register: undefined;
+  VerifyEmail: { email: string };
   ResetPassword: undefined;
   Role: undefined;
 };
@@ -23,8 +26,8 @@ export default function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 280 }}>
         {isLoading ? (
           <Stack.Screen name="Splash" component={SplashScreen} />
         ) : isAuthenticated ? (
@@ -32,8 +35,9 @@ export default function AppNavigator() {
         ) : (
           <Stack.Group>
             <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ animation: 'slide_from_right' }} />
           </Stack.Group>
         )}
       </Stack.Navigator>

@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { HistoryFiltersState, OrderType } from '../types/history';
+import { X } from 'lucide-react-native';
 
 // Chips de tipo: "Todos" (null) o un tipo concreto.
 const TYPE_CHIPS: { value: OrderType | null; label: string }[] = [
@@ -80,7 +81,7 @@ export default function HistoryFilters({
 
         {hasDates ? (
           <TouchableOpacity style={styles.clearBtn} onPress={() => onChange({ ...filters, from: null, to: null })}>
-            <Text style={styles.clearText}>✕</Text>
+            <X color={Colors.textSecondary} size={16} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: Radius.md,
     backgroundColor: Colors.background,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     alignItems: 'center',
   },
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
     borderRadius: Radius.md,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     backgroundColor: Colors.background,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     alignItems: 'center',
     justifyContent: 'center',
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     overflow: 'hidden',
   },

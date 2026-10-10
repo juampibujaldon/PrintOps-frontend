@@ -17,6 +17,7 @@ import Button from '../components/ui/Button';
 import TextField from '../components/ui/TextField';
 import Card from '../components/ui/Card';
 import PressableScale from '../components/ui/PressableScale';
+import { Check, Plus, X } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'CreateOrder'>;
 
@@ -265,7 +266,7 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
                     style={[styles.checkToggle, item.done && styles.checkToggleDone]}
                     onPress={() => updateChecklistItem(index, { done: !item.done, na: false })}
                   >
-                    <Text style={styles.checkToggleText}>{item.done ? '✓' : ''}</Text>
+                    {item.done ? <Check color={Colors.onPrimary} size={16} strokeWidth={2.5} /> : null}
                   </PressableScale>
                   <TextField
                     containerStyle={styles.checklistField}
@@ -280,13 +281,14 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
                   >
                     <Text style={[styles.naToggleText, item.na && styles.naToggleTextActive]}>N/A</Text>
                   </PressableScale>
-                  <PressableScale onPress={() => removeChecklistItem(index)}>
-                    <Text style={styles.removeText}>✕</Text>
+                  <PressableScale onPress={() => removeChecklistItem(index)} hitSlop={8} accessibilityLabel="Quitar ítem">
+                    <X color={Colors.textTertiary} size={18} />
                   </PressableScale>
                 </View>
               ))}
               <PressableScale style={styles.addItemButton} onPress={addChecklistItem}>
-                <Text style={styles.addItemText}>+ Agregar ítem</Text>
+                <Plus color={Colors.primary} size={18} />
+                <Text style={styles.addItemText}>Agregar ítem</Text>
               </PressableScale>
             </View>
           )}
@@ -299,13 +301,14 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
                   <Text style={styles.partRowText}>
                     {p.partId ? `Pieza #${p.partId}` : (p.externalPartName || p.externalPartNumber || 'Pieza externa')} × {p.quantity}
                   </Text>
-                  <PressableScale onPress={() => removePart(index)}>
-                    <Text style={styles.removeText}>✕</Text>
+                  <PressableScale onPress={() => removePart(index)} hitSlop={8} accessibilityLabel="Quitar pieza">
+                    <X color={Colors.textTertiary} size={18} />
                   </PressableScale>
                 </View>
               ))}
               <PressableScale style={styles.addItemButton} onPress={() => setPartsModalVisible(true)}>
-                <Text style={styles.addItemText}>+ Agregar pieza del catálogo / externa</Text>
+                <Plus color={Colors.primary} size={18} />
+                <Text style={styles.addItemText}>Agregar pieza</Text>
               </PressableScale>
 
               <Text style={styles.stepTitle}>Fotos ({photos.length}/{MAX_PHOTOS})</Text>
@@ -314,7 +317,7 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
                   <View key={index} style={styles.photoTile}>
                     <Image source={{ uri: p.uri! }} style={styles.photo} />
                     <PressableScale style={styles.photoRemove} onPress={() => removePhoto(index)}>
-                      <Text style={styles.photoRemoveText}>✕</Text>
+                      <X color="#FFFFFF" size={14} strokeWidth={2.5} />
                     </PressableScale>
                   </View>
                 ))}
@@ -409,7 +412,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     justifyContent: 'center',
     alignItems: 'center',
@@ -460,7 +463,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     borderRadius: Radius.md,
     alignItems: 'center',
@@ -491,17 +494,17 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   checkToggle: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.accent,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.textTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkToggleDone: {
-    backgroundColor: Colors.statusOperativa,
-    borderColor: Colors.statusOperativa,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   checkToggleText: {
     color: Colors.onAccent,
@@ -522,7 +525,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: Radius.sm,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   naToggleActive: {
@@ -543,10 +546,12 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   addItemButton: {
-    borderWidth: 1,
-    borderColor: Colors.accent,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.primaryTint,
     borderRadius: Radius.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
     marginTop: Spacing.xs,
   },
@@ -560,7 +565,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
   },
   partRowText: {
@@ -588,7 +593,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: Colors.error,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -601,7 +606,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: Radius.sm,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     backgroundColor: Colors.surface,
     justifyContent: 'center',
@@ -619,7 +624,7 @@ const styles = StyleSheet.create({
   photoButton: {
     flex: 1,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     paddingVertical: 10,
     borderRadius: Radius.sm,
@@ -634,7 +639,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     padding: Spacing.md,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.separator,
     alignItems: 'center',
   },
@@ -697,7 +702,7 @@ const styles = StyleSheet.create({
   },
   catalogRow: {
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
   },
   catalogName: {

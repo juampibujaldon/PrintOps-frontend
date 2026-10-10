@@ -1,15 +1,21 @@
 // src/screens/SplashScreen.tsx
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { Colors } from '../constants/theme';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { Printer } from 'lucide-react-native';
+import { Colors, Spacing, Typography } from '../constants/theme';
 
 export default function SplashScreen() {
   // El enrutador (AppNavigator) desmonta esta pantalla automáticamente cuando isLoading pasa a false.
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>PrintOps</Text>
-      <Text style={styles.subtitle}>Gestión de impresoras 3D</Text>
-      <ActivityIndicator size="large" color={Colors.accent} style={styles.spinner} />
+      <Animated.View entering={FadeIn.duration(500)} style={styles.center}>
+        <View style={styles.logo}>
+          <Printer color={Colors.onPrimary} size={34} strokeWidth={1.75} />
+        </View>
+        <Text style={styles.title}>PrintOps</Text>
+      </Animated.View>
+      <ActivityIndicator color={Colors.textTertiary} style={styles.spinner} />
     </View>
   );
 }
@@ -21,18 +27,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.background,
   },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    marginBottom: 8,
+  center: { alignItems: 'center' },
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    backgroundColor: Colors.textPrimary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 40,
+  title: {
+    ...Typography.title1,
+    color: Colors.textPrimary,
   },
   spinner: {
-    marginTop: 20,
+    position: 'absolute',
+    bottom: 80,
   },
 });

@@ -23,6 +23,7 @@ import PressableScale from '../components/ui/PressableScale';
 import PrinterSelector from '../components/PrinterSelector';
 import WearIndicator from '../components/WearIndicator';
 import QuotePdfPreview from '../components/QuotePdfPreview';
+import { AlertTriangle } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'QuoteCalculator'>;
 
@@ -283,15 +284,16 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {/* Precio final */}
           <Card style={styles.priceCard}>
-            <Text style={styles.priceLabel}>PRECIO FINAL AL CLIENTE</Text>
+            <Text style={styles.priceLabel}>Precio final</Text>
             <Text style={styles.priceValue}>{money(results.totalPrice)}</Text>
             <Text style={styles.priceHint}>{inputs.units} unidad{inputs.units !== 1 ? 'es' : ''} · margen {Math.round(inputs.marginPercent)}%</Text>
           </Card>
 
           {critical && (
             <PressableScale style={styles.criticalBanner} onPress={() => setTab('wear')}>
-              <Text style={styles.criticalText}>
-                ⚠️ {critical.name} llegará al {Math.round(critical.percent)}% tras este trabajo — revisá el Tab Desgaste
+              <AlertTriangle color={Colors.errorText} size={16} />
+              <Text style={[styles.criticalText, { flex: 1 }]}>
+                {critical.name} llegará al {Math.round(critical.percent)}% de su vida útil. Ver desgaste.
               </Text>
             </PressableScale>
           )}
@@ -405,21 +407,21 @@ function BreakdownRow({ label, value, bold }: { label: string; value: string; bo
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   tabBar: { flexDirection: 'row', marginHorizontal: Spacing.lg, marginTop: Spacing.md, gap: Spacing.sm },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: Radius.md, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.separator, alignItems: 'center' },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: Radius.md, backgroundColor: Colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator, alignItems: 'center' },
   tabActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
   tabText: { ...Typography.subheadline, color: Colors.textSecondary, fontWeight: '600' },
   tabTextActive: { color: Colors.background },
   scroll: { padding: Spacing.lg, paddingBottom: 40 },
   priceCard: { alignItems: 'center', paddingVertical: Spacing.lg },
   priceLabel: { ...Typography.labelUppercase, color: Colors.textSecondary },
-  priceValue: { ...Typography.largeTitle, color: Colors.textPrimary, fontWeight: '800', marginVertical: Spacing.xs },
+  priceValue: { ...Typography.largeTitle, ...Typography.tabular, color: Colors.textPrimary, marginVertical: Spacing.xs },
   priceHint: { ...Typography.footnote, color: Colors.textSecondary },
-  criticalBanner: { backgroundColor: '#E24B4A18', borderWidth: 1, borderColor: '#E24B4A', borderRadius: Radius.md, padding: Spacing.sm, marginBottom: Spacing.md },
-  criticalText: { ...Typography.footnote, color: '#E24B4A', fontWeight: '600' },
+  criticalBanner: { backgroundColor: Colors.errorBg, borderRadius: Radius.md, padding: Spacing.sm, marginBottom: Spacing.md },
+  criticalText: { ...Typography.footnote, color: Colors.errorText, fontWeight: '600' },
   section: { ...Typography.labelUppercase, color: Colors.textSecondary, marginTop: Spacing.md, marginBottom: Spacing.sm },
   sectionCard: { padding: Spacing.md },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.sm },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.surface },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator, backgroundColor: Colors.surface },
   chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { ...Typography.subheadline, color: Colors.textSecondary, fontWeight: '600' },
   chipTextActive: { color: Colors.onAccent },
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
   breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
   breakdownLabel: { ...Typography.subheadline, color: Colors.textSecondary },
   breakdownValue: { ...Typography.subheadline, color: Colors.textPrimary },
-  breakdownBold: { fontWeight: '800', color: Colors.textPrimary },
+  breakdownBold: { fontWeight: '700', color: Colors.textPrimary },
   empty: { paddingVertical: Spacing.xl, alignItems: 'center' },
   emptyText: { ...Typography.subheadline, color: Colors.textSecondary, textAlign: 'center' },
   wearSummary: { ...Typography.footnote, color: Colors.textSecondary, marginBottom: Spacing.md },

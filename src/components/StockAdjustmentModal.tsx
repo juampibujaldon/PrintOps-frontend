@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: Radius.md,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     alignItems: 'center',
   },

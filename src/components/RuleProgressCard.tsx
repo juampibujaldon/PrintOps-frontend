@@ -3,12 +3,13 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { MaintenanceRuleDTO, TriggerType } from '../types/rules';
+import { Clock, Cog, LucideIcon, MoreHorizontal, Spool } from 'lucide-react-native';
 
 // Metadatos por tipo de disparo: ícono y título dinámico.
-const TRIGGER_META: Record<TriggerType, { icon: string; title: (v: number) => string }> = {
-  TIME_BASED: { icon: '🕐', title: v => `Cada ${v} días` },
-  USAGE_HOURS: { icon: '⚙️', title: v => `Cada ${v} hs de uso` },
-  FILAMENT_GRAMS: { icon: '🧵', title: v => `Cada ${v}g de filamento` },
+const TRIGGER_META: Record<TriggerType, { Icon: LucideIcon; title: (v: number) => string }> = {
+  TIME_BASED: { Icon: Clock, title: v => `Cada ${v} días` },
+  USAGE_HOURS: { Icon: Cog, title: v => `Cada ${v} hs de uso` },
+  FILAMENT_GRAMS: { Icon: Spool, title: v => `Cada ${v}g de filamento` },
 };
 
 const MAINTENANCE_LABEL: Record<string, string> = {
@@ -19,9 +20,9 @@ const MAINTENANCE_LABEL: Record<string, string> = {
 
 // Color de la barra según el % de progreso.
 function barColor(progress: number): string {
-  if (progress >= 90) return '#bc6c25'; // rojo (copperwood)
-  if (progress >= 70) return '#dda15e'; // amarillo (sunlit_clay)
-  return '#606c38'; // verde (olive)
+  if (progress >= 90) return '#FF3B30';
+  if (progress >= 70) return '#FF9500';
+  return '#34C759';
 }
 
 function formatDate(iso: string | null): string {
@@ -89,7 +90,9 @@ export default function RuleProgressCard({
       ]}
     >
       <View style={styles.row}>
-        <Text style={styles.icon}>{meta.icon}</Text>
+        <View style={styles.iconBox}>
+          <meta.Icon color={Colors.primary} size={18} />
+        </View>
         <View style={styles.info}>
           <Text style={styles.title}>{meta.title(rule.triggerValue)}</Text>
           <Text style={styles.progressText}>{progressText}</Text>
@@ -98,7 +101,7 @@ export default function RuleProgressCard({
           </Text>
         </View>
         <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress} hitSlop={8}>
-          <Text style={styles.menuText}>···</Text>
+          <MoreHorizontal color={Colors.textSecondary} size={20} />
         </TouchableOpacity>
       </View>
 
@@ -107,13 +110,13 @@ export default function RuleProgressCard({
       </View>
 
       <View style={styles.metaRow}>
-        {showAlert ? <Text style={styles.alert}>⚠️ Próximo mantenimiento</Text> : <View />}
+        {showAlert ? <Text style={styles.alert}>Próximo mantenimiento</Text> : <View />}
         {!rule.active ? <Text style={styles.paused}>Pausada</Text> : null}
         <Text style={styles.percent}>{Math.round(progress)}%</Text>
       </View>
 
       {triggered && (
-        <Text style={styles.triggeredText}>⚠️ Condición alcanzada — generando orden...</Text>
+        <Text style={styles.triggeredText}>Condición alcanzada. Generando orden…</Text>
       )}
     </Animated.View>
   );
@@ -123,14 +126,12 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    padding: Spacing.md,
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
   },
   cardTriggered: {
-    backgroundColor: '#fbe9e7',
-    borderColor: '#bc6c25',
+    backgroundColor: Colors.errorBg,
+    borderColor: 'transparent',
   },
   cardPaused: {
     opacity: 0.5,
@@ -139,8 +140,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  icon: {
-    fontSize: 26,
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.primaryTint,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: Spacing.md,
   },
   info: {
@@ -148,8 +154,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.41,
     color: Colors.textPrimary,
   },
   progressText: {
@@ -164,22 +171,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
   },
-  menuText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    letterSpacing: 1,
-  },
   track: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.background,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.fill,
     marginTop: Spacing.md,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 3,
   },
   metaRow: {
     flexDirection: 'row',
@@ -188,26 +189,25 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   alert: {
-    fontSize: 12,
-    color: '#bc6c25',
-    fontWeight: '700',
+    fontSize: 13,
+    color: Colors.warningText,
+    fontWeight: '600',
   },
   paused: {
-    fontSize: 11,
+    fontSize: 13,
     color: Colors.textSecondary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontWeight: '500',
   },
   percent: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
     color: Colors.textPrimary,
   },
   triggeredText: {
     marginTop: Spacing.sm,
     fontSize: 13,
-    fontWeight: '700',
-    color: '#bc6c25',
+    fontWeight: '600',
+    color: Colors.errorText,
   },
 });

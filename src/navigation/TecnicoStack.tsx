@@ -1,9 +1,8 @@
 import React from 'react';
-import { TouchableOpacity, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import { PrinterResponse } from '../services/printerService';
-import { Colors } from '../constants/theme';
+import { stackScreenOptions, DrawerToggle } from './navTheme';
 
 export type TecnicoStackParamList = {
   TecnicoHome: undefined;
@@ -25,23 +24,14 @@ const Stack = createNativeStackNavigator<TecnicoStackParamList>();
 export default function TecnicoStack() {
   return (
     <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.surface },
-        headerShadowVisible: false,
-        headerTintColor: Colors.textPrimary,
-        headerTitleStyle: { fontWeight: '700' },
-      }}
+      screenOptions={stackScreenOptions}
     >
       <Stack.Screen
         name="TecnicoHome"
         component={HomeScreen}
         options={({ navigation }: any) => ({
-          title: 'Panel Técnico',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.toggleDrawer()} style={{ marginLeft: 10, marginRight: 15 }}>
-              <Text style={{ fontSize: 24, color: Colors.textPrimary }}>☰</Text>
-            </TouchableOpacity>
-          ),
+          title: 'Impresoras',
+          headerLeft: () => <DrawerToggle onPress={() => navigation.toggleDrawer()} />,
         })}
       />
       <Stack.Screen
@@ -84,11 +74,7 @@ export default function TecnicoStack() {
         component={require('../screens/PrinterRulesScreen').default}
         options={{ title: 'Reglas de mantenimiento' }}
       />
-      <Stack.Screen
-        name="PrinterHistory"
-        component={require('../screens/PrinterHistoryScreen').default}
-        options={{ title: 'Historial de mantenimiento' }}
-      />
+
       <Stack.Screen
         name="SparePartDetail"
         component={require('../screens/SparePartDetailScreen').default}

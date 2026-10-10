@@ -1,8 +1,9 @@
 // src/screens/RegisterScreen.tsx
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, Alert, Switch,
+  View, Text, StyleSheet, Alert, Pressable, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -63,7 +64,7 @@ export default function RegisterScreen({ navigation }: Props) {
         isTecnico ? data.inviteToken?.trim() : undefined,
         isTecnico ? undefined : data.workspaceName?.trim(),
       );
-      Alert.alert('Verificá tu email', message, [
+      Alert.alert('¡Éxito!', message, [
         { text: 'Entendido', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
@@ -78,12 +79,27 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ScrollView style={styles.flex} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <Animated.View entering={FadeInDown.duration(450).springify().damping(22)}>
       <Text style={styles.title}>Crear cuenta</Text>
+      <Text style={styles.subtitle}>Creá tu taller o unite a uno existente con una invitación.</Text>
 
-      <View style={styles.modeRow}>
-        <Text style={styles.modeText}>Soy técnico (tengo invitación)</Text>
-        <Switch value={isTecnico} onValueChange={setIsTecnico} />
+      <View style={styles.segment}>
+        {[{ label: 'Crear taller', value: false }, { label: 'Tengo invitación', value: true }].map(opt => {
+          const active = isTecnico === opt.value;
+          return (
+            <Pressable
+              key={opt.label}
+              onPress={() => setIsTecnico(opt.value)}
+              style={[styles.segmentItem, active && styles.segmentItemActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <Controller
@@ -141,7 +157,7 @@ export default function RegisterScreen({ navigation }: Props) {
             <TextField
               label="Código de invitación"
               placeholder="Código enviado por el manager"
-              autoCapitalize="characters"
+              autoCapitalize="none"
               autoCorrect={false}
               value={value}
               onChangeText={onChange}
@@ -177,38 +193,58 @@ export default function RegisterScreen({ navigation }: Props) {
           <Text style={styles.loginLink}>Iniciar sesión</Text>
         </PressableScale>
       </View>
-    </View>
+    </Animated.View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: Colors.background },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.xxl,
   },
   title: {
-    ...Typography.title1,
+    ...Typography.largeTitle,
     color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xs,
   },
-  modeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.xs,
-  },
-  modeText: {
+  subtitle: {
     ...Typography.subheadline,
     color: Colors.textSecondary,
+    marginBottom: Spacing.xl,
   },
+  // Control segmentado estilo iOS.
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: Colors.fill,
+    borderRadius: 9,
+    padding: 2,
+    marginBottom: Spacing.xl,
+  },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 7,
+    alignItems: 'center',
+  },
+  segmentItemActive: {
+    backgroundColor: Colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentText: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary },
+  segmentTextActive: { fontWeight: '600' },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: Spacing.md,
+    marginTop: Spacing.xl,
   },
   loginText: {
     ...Typography.subheadline,
@@ -216,7 +252,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     ...Typography.subheadline,
-    color: Colors.accent,
+    color: Colors.primary,
     fontWeight: '600',
   },
 });

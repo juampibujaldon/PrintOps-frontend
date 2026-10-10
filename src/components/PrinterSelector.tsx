@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { printerService, PrinterResponse, PrinterStatus } from '../services/printerService';
+import { Check, X } from 'lucide-react-native';
 
 type Props = {
   selected: PrinterResponse | null;
@@ -79,9 +80,9 @@ export default function PrinterSelector({ selected, onSelect }: Props) {
                           {item.totalPrintingHours != null ? `${item.totalPrintingHours} hs` : '0 hs'}
                         </Text>
                       </View>
-                      <Text style={[styles.rowState, { color: item.status === 'OPERATIVE' ? Colors.statusOperativa : Colors.statusMantenim }]}>
-                        {selectable ? '✓' : '✕'}
-                      </Text>
+                      {selectable
+                        ? <Check color={Colors.green} size={20} />
+                        : <X color={Colors.textTertiary} size={20} />}
                     </TouchableOpacity>
                   );
                 }}
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.separator,
   },
   rowDisabled: {

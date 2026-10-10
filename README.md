@@ -166,3 +166,15 @@ npx react-native log-ios
 - El **access token** (JWT) se almacena en `AsyncStorage`. El **refresh token** se guarda en el **Keychain** del dispositivo para mayor seguridad.
 - El interceptor de Axios (`axiosInstance.ts`) renueva el access token automáticamente ante un 401, sin necesidad de intervención del usuario.
 - La autenticación biométrica (Face ID) está disponible mediante `react-native-biometrics` pero su activación depende del usuario en la pantalla de configuración.
+
+
+# 1. Instala las nuevas dependencias de npm
+npm install
+
+# 2. (Solo si usas iOS o Mac) Instala los pods actualizados
+cd ios
+pod install
+cd ..
+
+
+npm run start

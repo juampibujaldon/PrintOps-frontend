@@ -1,7 +1,8 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import { authService } from '../services/authService';
-import { fcmService } from '../services/fcmService';
+import { webSocketService } from '../services/webSocketService';
+import { setOnSessionExpired } from '../services/axiosInstance';
 import { AuthAction, AuthState, UserInfo } from '../types/auth';
 
 const initialState: AuthState = {
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'RESTORE_TOKEN', payload: session
             ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
             : null });
-          if (session) fcmService.registerDeviceToken().catch(() => {});
+          if (session) webSocketService.connect(session.user.id);
         }, 1000); // Pequeño delay para que se aprecie el SplashScreen
       })
       .catch(() => {
@@ -77,6 +78,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // en lugar de quedarse colgado en el Splash.
         dispatch({ type: 'RESTORE_TOKEN', payload: null });
       });
+  }, []);
+
+  // Si el interceptor no puede renovar el token, se vuelve al login.
+  useEffect(() => {
+    setOnSessionExpired(() => {
+      webSocketService.disconnect();
+      dispatch({ type: 'LOGOUT' });
+    });
+    return () => setOnSessionExpired(null);
   }, []);
 
   const login = async (email: string, password: string, rememberMe: boolean) => {
@@ -87,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type: 'LOGIN_SUCCESS',
         payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
       });
-      fcmService.registerDeviceToken().catch(() => {});
+      webSocketService.connect(data.user.id);
     } catch (error) {
       // Si el login falla, no dejamos la app clavada en el Splash.
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -111,7 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (state.token) {
         await authService.logout(deviceId, state.token);
       }
+    } catch {
+      // Falla remota (red/401): igual cerramos la sesión local.
     } finally {
+      webSocketService.disconnect();
       // Siempre limpiamos el estado local, aunque la llamada remota falle.
       dispatch({ type: 'LOGOUT' });
     }
@@ -123,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const session = await authService.restoreSession(skipBiometrics);
       if (session) {
         dispatch({ type: 'RESTORE_TOKEN', payload: { user: session.user, token: session.accessToken, refreshToken: session.refreshToken } });
-        fcmService.registerDeviceToken().catch(() => {});
+        webSocketService.connect(session.user.id);
         return true;
       } else {
         dispatch({ type: 'SET_LOADING', payload: false });

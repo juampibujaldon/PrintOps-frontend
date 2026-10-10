@@ -143,7 +143,7 @@ export default function StockScreen() {
       </View>
 
       <TouchableOpacity style={[styles.lowChip, lowStock && styles.lowChipActive]} onPress={() => setLowStock(v => !v)}>
-        <Text style={[styles.lowChipText, lowStock && styles.lowChipTextActive]}>⚠️ Solo stock bajo</Text>
+        <Text style={[styles.lowChipText, lowStock && styles.lowChipTextActive]}>Solo stock bajo</Text>
       </TouchableOpacity>
 
       <FlatList
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: Radius.full,
     backgroundColor: Colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     height: 110,
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,

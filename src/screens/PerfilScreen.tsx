@@ -1,67 +1,99 @@
-// src/screens/PerfilScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Colors, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
+import SettingsSection from '../components/ui/SettingsSection';
+import SettingsRow from '../components/ui/SettingsRow';
+
+const ROLE_LABEL: Record<string, string> = {
+  MANAGER: 'Manager',
+  TECNICO: 'Técnico',
+};
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const confirmLogout = () => {
+    Alert.alert('Cerrar sesión', '¿Querés cerrar la sesión en este dispositivo?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Cerrar sesión',
+        style: 'destructive',
+        onPress: async () => {
+          setLoggingOut(true);
+          await logout();
+        },
+      },
+    ]);
+  };
+
+  const initial = user?.email?.charAt(0).toUpperCase() ?? '?';
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Mi Perfil</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+        <Text style={styles.email} numberOfLines={1}>{user?.email ?? '-'}</Text>
+        <Text style={styles.role}>{ROLE_LABEL[user?.role ?? ''] ?? user?.role ?? '-'}</Text>
+      </Animated.View>
 
-      <Card style={styles.infoCard}>
-        <Row label="Email" value={user?.email ?? '-'} />
-        <Row label="Rol" value={user?.role ?? '-'} />
-      </Card>
+      <SettingsSection title="Cuenta">
+        <SettingsRow label="Email" value={user?.email ?? '-'} />
+        <SettingsRow label="Rol" value={ROLE_LABEL[user?.role ?? ''] ?? '-'} isLast />
+      </SettingsSection>
 
-      <Button title="Cerrar sesión" variant="danger" onPress={logout} style={styles.logoutButton} />
-    </View>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
-    </View>
+      <SettingsSection>
+        <SettingsRow
+          label={loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
+          onPress={loggingOut ? undefined : confirmLogout}
+          showChevron={false}
+          destructive
+          isLast
+        />
+      </SettingsSection>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: Spacing.lg,
     backgroundColor: Colors.background,
+  },
+  content: {
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xxl,
+  },
+  header: {
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    ...Typography.title2,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
-  },
-  infoCard: {
-    width: '100%',
     marginBottom: Spacing.xl,
-    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
   },
-  row: {},
-  label: {
-    ...Typography.footnote,
-    color: Colors.textTertiary,
-    fontWeight: '600',
-    marginBottom: 2,
+  avatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: Colors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
   },
-  value: {
+  avatarText: {
+    fontSize: 36,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  email: {
     ...Typography.title3,
     color: Colors.textPrimary,
   },
-  logoutButton: {
-    width: '100%',
+  role: {
+    ...Typography.subheadline,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });
