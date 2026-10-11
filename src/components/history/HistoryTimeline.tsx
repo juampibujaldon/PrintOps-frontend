@@ -135,7 +135,7 @@ export default function HistoryTimeline({
           onPress={onPressOrder}
         />
       )}
-      onEndReached={onEndReached}
+      onEndReached={hasMore ? onEndReached : undefined}
       onEndReachedThreshold={0.4}
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={

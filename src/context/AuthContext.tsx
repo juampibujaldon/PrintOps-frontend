@@ -148,6 +148,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Las funciones solo leen `state` (logout usa state.token): recalcular con cada
+  // cambio de estado alcanza y evita re-renderizar a todos los consumidores siempre.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const value = useMemo(() => ({ state, login, register, logout, restore }), [state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -60,6 +60,8 @@ export function isValid(inputs: QuoteInputs): boolean {
 // volver de ajustar la calidad o los reemplazos de los repuestos).
 export function useQuoteCalculator(inputs: QuoteInputs, refreshKey = 0) {
   const key = JSON.stringify(inputs);
+  // `key` (JSON de inputs) reemplaza a `inputs`: el objeto llega nuevo en cada render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const results = useMemo(() => computeResults(inputs), [key]);
 
   const [wear, setWear] = useState<WearResults | null>(null);
@@ -85,6 +87,7 @@ export function useQuoteCalculator(inputs: QuoteInputs, refreshKey = 0) {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` cubre a `inputs` (ver arriba)
   }, [key, refreshKey]);
 
   return { results, wear, isValid: isValid(inputs) };

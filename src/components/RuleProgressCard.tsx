@@ -57,7 +57,7 @@ export default function RuleProgressCard({
       duration: 700,
       useNativeDriver: false,
     }).start();
-  }, [progress]);
+  }, [animated, progress]);
 
   const remaining = rule.triggerType === 'TIME_BASED' ? daysUntil(rule.nextTriggerEstimate) : null;
   const showAlert =

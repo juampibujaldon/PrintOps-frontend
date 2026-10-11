@@ -27,6 +27,7 @@ export default function ScanPrinterScreen() {
       setHasPermission(ok);
       setChecking(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pide el permiso una sola vez al montar
   }, []);
 
   // Se ejecuta en el thread JS cuando el escáner nativo detecta códigos.
