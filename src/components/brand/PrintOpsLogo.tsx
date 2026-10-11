@@ -5,6 +5,7 @@ import Svg, { G, Path } from 'react-native-svg';
 import Animated, {
   Easing,
   useAnimatedProps,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -40,6 +41,8 @@ interface Props {
   showSubtitle?: boolean;
   subtitleColor?: string;
   style?: StyleProp<ViewStyle>;
+  /** Solo con animated: se llama cuando la animación completa terminó. */
+  onAnimationEnd?: () => void;
 }
 
 export default function PrintOpsLogo({
@@ -48,6 +51,7 @@ export default function PrintOpsLogo({
   showSubtitle = true,
   subtitleColor = BRAND.grey,
   style,
+  onAnimationEnd,
 }: Props) {
   const [vbX, vbY, vbW, vbH] = LOGO_VIEWBOX;
   const height = (width * vbH) / vbW;
@@ -64,8 +68,11 @@ export default function PrintOpsLogo({
     const lastCharAt = START_DELAY + (LOGO_CHARS.length - 1) * TYPING_SPEED + CHAR_FADE;
     subtitleProgress.value = withDelay(
       lastCharAt + SUBTITLE_PAUSE,
-      withTiming(1, { duration: SUBTITLE_FADE, easing: Easing.out(Easing.cubic) }),
+      withTiming(1, { duration: SUBTITLE_FADE, easing: Easing.out(Easing.cubic) }, finished => {
+        if (finished && onAnimationEnd) runOnJS(onAnimationEnd)();
+      }),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- arranca una sola vez al montar
   }, [animated, subtitleProgress]);
 
   const subtitleStyle = useAnimatedStyle(() => ({

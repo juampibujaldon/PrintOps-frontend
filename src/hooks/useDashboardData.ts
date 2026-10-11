@@ -21,7 +21,7 @@ export function isoDate(d: Date): string {
 
 const parse = (s: string) => new Date(`${s}T00:00:00`);
 
-export function computePeriod(p: PeriodPreset, custom?: Period): Period {
+export function computePeriod(p: PeriodPreset): Period {
   const now = new Date();
   switch (p) {
     case 'THIS_MONTH':
@@ -30,8 +30,6 @@ export function computePeriod(p: PeriodPreset, custom?: Period): Period {
       return { from: isoDate(new Date(now.getFullYear(), now.getMonth() - 2, 1)), to: isoDate(now) };
     case 'THIS_YEAR':
       return { from: isoDate(new Date(now.getFullYear(), 0, 1)), to: isoDate(now) };
-    case 'CUSTOM':
-      return custom ?? { from: isoDate(now), to: isoDate(now) };
   }
 }
 
@@ -51,12 +49,6 @@ export function previousPeriod(p: PeriodPreset, current: Period): Period {
       return { from: shiftMonths(current.from, -3), to: shiftMonths(current.to, -3) };
     case 'THIS_YEAR':
       return { from: shiftMonths(current.from, -12), to: shiftMonths(current.to, -12) };
-    case 'CUSTOM': {
-      const days = Math.round((parse(current.to).getTime() - parse(current.from).getTime()) / 86400000) + 1;
-      const to = new Date(parse(current.from).getTime() - 86400000);
-      const from = new Date(to.getTime() - (days - 1) * 86400000);
-      return { from: isoDate(from), to: isoDate(to) };
-    }
   }
 }
 

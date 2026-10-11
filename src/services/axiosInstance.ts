@@ -77,20 +77,56 @@ export const setOnSessionExpired = (cb: (() => void) | null) => {
   onSessionExpired = cb;
 };
 
-// ── Response interceptor: refresca el token ante 401 ──
-let isRefreshing = false;
-let failedQueue: Array<{ resolve: (value: string) => void; reject: (reason?: unknown) => void }> = [];
+// ── Refresh del access token (compartido por axios y el WebSocket) ──
+// Si varias requests (o el WebSocket) lo piden a la vez, se hace un solo refresh
+// y todas esperan la misma promesa.
+let refreshPromise: Promise<string> | null = null;
 
-const processQueue = (error: unknown, token: string | null) => {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(token as string);
+export function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = doRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function doRefresh(): Promise<string> {
+  try {
+    const credentials = await Keychain.getGenericPassword({ service: 'refreshTokenService' });
+    const refreshToken = credentials ? credentials.password : null;
+    const deviceId = await AsyncStorage.getItem(STORAGE_KEYS.DEVICE_ID);
+
+    if (!refreshToken || !deviceId) {
+      throw new Error('No hay refresh token');
     }
-  });
-  failedQueue = [];
-};
+
+    const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+      refreshToken,
+      deviceId,
+    });
+
+    await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+    if (data.refreshToken) {
+      await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
+        service: 'refreshTokenService',
+      });
+    }
+    return data.accessToken;
+  } catch (refreshError) {
+    // Solo limpiamos el access token local. BIOMETRICS_ENABLED y el Keychain
+    // se limpian en authService si el refresh token está definitivamente inválido.
+    await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    // Error de red: puede ser transitorio, no se cierra la sesión.
+    const isNetworkError = axios.isAxiosError(refreshError) && !refreshError.response;
+    if (!isNetworkError) {
+      onSessionExpired?.();
+    }
+    throw refreshError;
+  }
+}
+
+// ── Response interceptor: refresca el token ante 401 ──
 
 api.interceptors.response.use(
   (response) => response,
@@ -118,56 +154,10 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      }).then((token) => {
-        originalRequest.headers.Authorization = `Bearer ${token}`;
-        return api(originalRequest);
-      });
-    }
-
     originalRequest._retry = true;
-    isRefreshing = true;
-
-    try {
-      const credentials = await Keychain.getGenericPassword({ service: 'refreshTokenService' });
-      const refreshToken = credentials ? credentials.password : null;
-      const deviceId = await AsyncStorage.getItem(STORAGE_KEYS.DEVICE_ID);
-
-      if (!refreshToken || !deviceId) {
-        throw new Error('No hay refresh token');
-      }
-
-      const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-        refreshToken,
-        deviceId,
-      });
-
-      await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
-      if (data.refreshToken) {
-        await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
-          service: 'refreshTokenService',
-        });
-      }
-
-      processQueue(null, data.accessToken);
-      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-      return api(originalRequest);
-    } catch (refreshError) {
-      processQueue(refreshError, null);
-      // Solo limpiamos el access token local. BIOMETRICS_ENABLED y el Keychain
-      // se limpian en authService si el refresh token está definitivamente inválido.
-      await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-      // Error de red: puede ser transitorio, no se cierra la sesión.
-      const isNetworkError = axios.isAxiosError(refreshError) && !refreshError.response;
-      if (!isNetworkError) {
-        onSessionExpired?.();
-      }
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
+    const token = await refreshAccessToken();
+    originalRequest.headers.Authorization = `Bearer ${token}`;
+    return api(originalRequest);
   },
 );
 

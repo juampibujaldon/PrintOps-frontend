@@ -56,7 +56,9 @@ export function isValid(inputs: QuoteInputs): boolean {
 }
 
 // Hook: resultados locales (useMemo) + desgaste remoto con debounce de 300ms.
-export function useQuoteCalculator(inputs: QuoteInputs) {
+// `refreshKey` fuerza recalcular el desgaste sin cambiar los inputs (p. ej. al
+// volver de ajustar la calidad o los reemplazos de los repuestos).
+export function useQuoteCalculator(inputs: QuoteInputs, refreshKey = 0) {
   const key = JSON.stringify(inputs);
   const results = useMemo(() => computeResults(inputs), [key]);
 
@@ -83,7 +85,7 @@ export function useQuoteCalculator(inputs: QuoteInputs) {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [key]);
+  }, [key, refreshKey]);
 
   return { results, wear, isValid: isValid(inputs) };
 }

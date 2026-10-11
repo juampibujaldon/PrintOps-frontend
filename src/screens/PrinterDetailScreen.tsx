@@ -12,6 +12,7 @@ import {
   History,
   MapPin,
   Printer,
+  SlidersHorizontal,
   Wrench,
   Zap,
 } from 'lucide-react-native';
@@ -276,6 +277,17 @@ export default function PrinterDetailScreen({ route, navigation }: Props) {
             onPress={() => navigation.navigate('PrinterHistory', { printer })}
           />
         </View>
+        <View style={[styles.actionsRow, styles.actionsRowStacked]}>
+          <ActionTile
+            icon={<SlidersHorizontal color={Colors.primary} size={Icons.md} strokeWidth={Icons.strokeWidth} />}
+            label="Vida útil de repuestos"
+            caption="Calidad, desgaste y reemplazos"
+            onPress={() => navigation.navigate('PrinterComponents', {
+              printerId: printer.id,
+              printerName: printer.name || printer.model,
+            })}
+          />
+        </View>
       </Animated.View>
 
       {/* Información */}
@@ -423,6 +435,8 @@ const styles = StyleSheet.create({
 
   primaryAction: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
   actionsRow: { flexDirection: 'row', gap: Spacing.sm, marginHorizontal: Spacing.lg, marginBottom: Spacing.xl },
+  // Segunda fila de accesos: pegada a la primera.
+  actionsRowStacked: { marginTop: -Spacing.xl + Spacing.sm },
   actionTile: {
     flex: 1,
     flexDirection: 'row',

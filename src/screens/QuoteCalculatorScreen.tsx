@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Share from 'react-native-share';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { quoteService } from '../services/quoteService';
@@ -27,7 +28,7 @@ import PressableScale from '../components/ui/PressableScale';
 import PrinterSelector from '../components/PrinterSelector';
 import WearIndicator from '../components/WearIndicator';
 import QuotePdfPreview from '../components/QuotePdfPreview';
-import { AlertTriangle } from 'lucide-react-native';
+import { AlertTriangle, SlidersHorizontal } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'QuoteCalculator'>;
 
@@ -220,7 +221,15 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
     [state],
   );
 
-  const { results, wear, isValid: valid } = useQuoteCalculator(inputs);
+  // Al volver de "Vida útil de repuestos" se recalcula el desgaste con la nueva configuración.
+  const [wearRefresh, setWearRefresh] = useState(0);
+  const focusCount = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (focusCount.current++ > 0) setWearRefresh(n => n + 1);
+    }, []),
+  );
+  const { results, wear, isValid: valid } = useQuoteCalculator(inputs, wearRefresh);
   const missing = useMemo(() => missingFields(inputs), [inputs]);
 
   // Antes devolvía null en silencio si el formulario era inválido: guardar y
@@ -475,6 +484,7 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
               <Text style={styles.emptyText}>Seleccioná una impresora para ver el desgaste de sus componentes</Text>
             </View>
           ) : wear ? (
+            <>
             <Card style={styles.sectionCard}>
               <Text style={styles.wearSummary}>
                 Este trabajo consume un total de {(inputs.printingHours * inputs.units).toFixed(2)} horas sobre los componentes.
@@ -485,6 +495,17 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
               <WearIndicator label="Rodamientos (Bearings)" percent={wear.bearings.percent} hoursRemaining={wear.bearings.hoursRemaining} critical={wear.bearings.critical} />
               <WearIndicator label="Cama caliente (Heatbed)" percent={wear.heatbed.percent} hoursRemaining={wear.heatbed.hoursRemaining} critical={wear.heatbed.critical} />
             </Card>
+            <Button
+              title="Ajustar calidad y reemplazos"
+              variant="tinted"
+              icon={<SlidersHorizontal color={Colors.primary} size={18} strokeWidth={2} />}
+              onPress={() => navigation.navigate('PrinterComponents', {
+                printerId: (selectedPrinter?.id ?? state.printerId)!,
+                printerName: selectedPrinter ? selectedPrinter.name || selectedPrinter.model : undefined,
+              })}
+              style={styles.actionBtn}
+            />
+            </>
           ) : (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>

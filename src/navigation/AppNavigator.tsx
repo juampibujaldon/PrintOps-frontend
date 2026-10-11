@@ -1,5 +1,5 @@
 // src/navigation/AppNavigator.tsx
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/SplashScreen';
@@ -27,12 +27,24 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
+  // La animación del logo se ve completa solo en el arranque de la app. Después
+  // (p. ej. durante el login) el splash dura únicamente lo que dura la carga.
+  const [introDone, setIntroDone] = useState(false);
+  const finishIntro = useCallback(() => setIntroDone(true), []);
+  // Red de seguridad: si por algún motivo la animación no avisa, no quedarse en el splash.
+  useEffect(() => {
+    const t = setTimeout(finishIntro, 6000);
+    return () => clearTimeout(t);
+  }, [finishIntro]);
+  const showSplash = isLoading || !introDone;
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 280 }}>
-        {isLoading ? (
-          <Stack.Screen name="Splash" component={SplashScreen} />
+        {showSplash ? (
+          <Stack.Screen name="Splash">
+            {() => <SplashScreen onFinish={introDone ? undefined : finishIntro} />}
+          </Stack.Screen>
         ) : isAuthenticated ? (
           <Stack.Screen name="Role" component={RoleNavigator} />
         ) : (

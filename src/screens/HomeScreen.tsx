@@ -119,7 +119,7 @@ export default function HomeScreen() {
     try {
       const res = await workspaceService.invite(email);
       setInviteVisible(false);
-      Alert.alert('Invitación enviada', res.message + (res.inviteToken ? `\nCódigo: ${res.inviteToken}` : ''));
+      Alert.alert(res.emailSent ? 'Invitación enviada' : 'No se pudo enviar el email', res.message);
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.message || 'No se pudo invitar');
     } finally {

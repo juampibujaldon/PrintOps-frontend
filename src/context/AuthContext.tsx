@@ -66,12 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     authService.restoreSession()
       .then((session) => {
-        setTimeout(() => {
-          dispatch({ type: 'RESTORE_TOKEN', payload: session
-            ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
-            : null });
-          if (session) webSocketService.connect(session.user.id);
-        }, 1000); // Pequeño delay para que se aprecie el SplashScreen
+        // Sin espera artificial: el AppNavigator mantiene el splash hasta que
+        // termina la animación del logo, solo en este arranque.
+        dispatch({ type: 'RESTORE_TOKEN', payload: session
+          ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
+          : null });
+        if (session) webSocketService.connect(session.user.id);
       })
       .catch(() => {
         // Si la restauración falla (ej. refresh token expirado), ir al login

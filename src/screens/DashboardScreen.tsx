@@ -7,9 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Platform,
 } from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import {
   AlertTriangle,
@@ -24,7 +22,7 @@ import {
 } from 'lucide-react-native';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
-import { computePeriod, isoDate, previousPeriod, useDashboardData } from '../hooks/useDashboardData';
+import { computePeriod, previousPeriod, useDashboardData } from '../hooks/useDashboardData';
 import { Period, PeriodPreset } from '../types/dashboard';
 import BarChart from '../components/BarChart';
 import Skeleton from '../components/ui/Skeleton';
@@ -45,7 +43,6 @@ const PRESET_LABELS: Record<PeriodPreset, string> = {
   THIS_MONTH: 'Este mes',
   LAST_3_MONTHS: '3 meses',
   THIS_YEAR: 'Este año',
-  CUSTOM: 'Personalizado',
 };
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -55,14 +52,9 @@ export default function DashboardScreen() {
   const isManager = user?.role === 'MANAGER';
 
   const [preset, setPreset] = useState<PeriodPreset>('THIS_MONTH');
-  const [customPeriod, setCustomPeriod] = useState<Period>(() => computePeriod('THIS_MONTH'));
-  const [picker, setPicker] = useState<'from' | 'to' | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const period = useMemo(
-    () => (preset === 'CUSTOM' ? customPeriod : computePeriod(preset)),
-    [preset, customPeriod],
-  );
+  const period = useMemo(() => computePeriod(preset), [preset]);
   const prevPeriod = useMemo(() => previousPeriod(preset, period), [preset, period]);
 
   const { data, isLoading, refetch } = useDashboardData({ preset, period, isManager, userId: user?.id });
@@ -71,17 +63,6 @@ export default function DashboardScreen() {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
-  };
-
-  const handlePickerChange = (_event: DateTimePickerEvent, date?: Date) => {
-    if (date && picker) {
-      setCustomPeriod(prev => {
-        const next = { ...prev, [picker]: isoDate(date) };
-        // Mantener desde <= hasta.
-        return next.from > next.to ? { from: next.to, to: next.from } : next;
-      });
-    }
-    if (Platform.OS === 'android') setPicker(null);
   };
 
   // ── Navegación a donde se resuelve cada cosa ──
@@ -217,31 +198,6 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-        {preset === 'CUSTOM' && (
-          <View style={styles.customRow}>
-            {(['from', 'to'] as const).map(field => (
-              <TouchableOpacity
-                key={field}
-                style={[styles.dateBtn, picker === field && styles.dateBtnActive]}
-                onPress={() => setPicker(pk => (pk === field ? null : field))}
-              >
-                <Text style={styles.dateLabel}>{field === 'from' ? 'Desde' : 'Hasta'}</Text>
-                <Text style={styles.dateValue}>{shortDate(customPeriod[field])}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {picker && (
-          <DateTimePicker
-            value={new Date(`${customPeriod[picker]}T00:00:00`)}
-            mode="date"
-            maximumDate={new Date()}
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            onChange={handlePickerChange}
-          />
-        )}
 
         <Text style={styles.periodCaption}>
           {periodLabel(period)} · comparado con {periodLabel(prevPeriod)}
@@ -579,11 +535,6 @@ const styles = StyleSheet.create({
   },
   segmentText: { ...Typography.footnote, color: Colors.textPrimary, fontWeight: '500' },
   segmentTextSelected: { fontWeight: '600' },
-  customRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
-  dateBtn: { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 8, borderWidth: 1.5, borderColor: 'transparent' },
-  dateBtnActive: { borderColor: Colors.primary },
-  dateLabel: { ...Typography.caption2, color: Colors.textTertiary, textTransform: 'uppercase' },
-  dateValue: { ...Typography.subheadline, fontWeight: '600', color: Colors.textPrimary },
   periodCaption: { ...Typography.caption, color: Colors.textTertiary, marginTop: Spacing.sm, textAlign: 'center' },
 
   content: { padding: Spacing.lg, paddingBottom: 48 },

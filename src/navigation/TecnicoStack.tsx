@@ -11,6 +11,7 @@ export type TecnicoStackParamList = {
   PrinterDetail: { printer?: PrinterResponse; printerId?: number };
   PrinterRules: { printer: PrinterResponse };
   PrinterHistory: { printer: PrinterResponse };
+  PrinterComponents: { printerId: number; printerName?: string };
   CreateOrder: { printer: PrinterResponse };
   OrderDetail: { orderId: number };
   OrdersList: undefined;
@@ -69,6 +70,11 @@ export default function TecnicoStack() {
         name="ScanPrinter"
         component={require('../screens/ScanPrinterScreen').default}
         options={{ title: 'Escanear QR', headerShown: true }}
+      />
+      <Stack.Screen
+        name="PrinterComponents"
+        component={require('../screens/PrinterComponentsScreen').default}
+        options={{ title: 'Vida útil de repuestos' }}
       />
       <Stack.Screen
         name="PrinterRules"

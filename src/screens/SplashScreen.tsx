@@ -1,24 +1,25 @@
 // src/screens/SplashScreen.tsx
 import React from 'react';
 import { StatusBar, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Colors } from '../constants/theme';
 import PrintOpsLogo from '../components/brand/PrintOpsLogo';
 
-// Se muestra solo mientras la app realmente está cargando (restaurar sesión,
-// login): el AppNavigator la desmonta cuando isLoading pasa a false, aunque la
-// animación no haya terminado. No se agrega ninguna espera artificial.
-export default function SplashScreen() {
+// Se muestra solo mientras la app está cargando. En el arranque, el AppNavigator
+// la mantiene hasta que termina la animación (onFinish); en el login, solo
+// mientras dura la request.
+export default function SplashScreen({ onFinish }: { onFinish?: () => void }) {
   const { width } = useWindowDimensions();
   const logoWidth = Math.min(width * 0.82, 440);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      <PrintOpsLogo width={logoWidth} animated />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+      <PrintOpsLogo width={logoWidth} animated onAnimationEnd={onFinish} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Negro, igual que el launch screen nativo: la transición no parpadea.
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000000' },
+  // Mismo fondo que el resto de la app y que el launch screen nativo: sin saltos de color.
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
 });

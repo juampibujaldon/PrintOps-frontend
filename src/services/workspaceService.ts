@@ -40,8 +40,9 @@ const updateQuoteDefaults = async (data: QuoteDefaults): Promise<QuoteDefaults> 
   return response.data;
 };
 
-const invite = async (email: string): Promise<{ message: string; inviteToken?: string }> => {
-  const response = await api.post<{ message: string; inviteToken?: string }>(
+// El código de invitación no vuelve a la app: le llega al técnico por email.
+const invite = async (email: string): Promise<{ message: string; emailSent: boolean }> => {
+  const response = await api.post<{ message: string; emailSent: boolean }>(
     `${API_BASE_URL}/api/workspaces/invites`,
     { email },
   );

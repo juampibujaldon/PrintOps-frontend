@@ -63,4 +63,4 @@ export interface Period {
   to: string; // YYYY-MM-DD
 }
 
-export type PeriodPreset = 'THIS_MONTH' | 'LAST_3_MONTHS' | 'THIS_YEAR' | 'CUSTOM';
+export type PeriodPreset = 'THIS_MONTH' | 'LAST_3_MONTHS' | 'THIS_YEAR';
