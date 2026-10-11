@@ -1,7 +1,7 @@
 import React from 'react';
 import Animated, { useAnimatedProps, SharedValue } from 'react-native-reanimated';
 import { Path } from 'react-native-svg';
-import { Colors } from '../../constants/theme';
+
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 

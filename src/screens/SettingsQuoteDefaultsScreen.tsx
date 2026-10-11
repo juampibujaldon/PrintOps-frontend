@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Spacing, Typography } from '../constants/theme';
+import { Colors, Spacing } from '../constants/theme';
 import { workspaceService, QuoteDefaults } from '../services/workspaceService';
 import { useAuth } from '../hooks/useAuth';
 import ScreenHeader from '../components/ui/ScreenHeader';

@@ -7,7 +7,8 @@ import { stackScreenOptions, DrawerToggle } from './navTheme';
 export type TecnicoStackParamList = {
   TecnicoHome: undefined;
   AddPrinter: undefined;
-  PrinterDetail: { printer: PrinterResponse };
+  // `printer` muestra datos al instante; `printerId` alcanza si solo se tiene el id.
+  PrinterDetail: { printer?: PrinterResponse; printerId?: number };
   PrinterRules: { printer: PrinterResponse };
   PrinterHistory: { printer: PrinterResponse };
   CreateOrder: { printer: PrinterResponse };

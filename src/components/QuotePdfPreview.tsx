@@ -1,19 +1,42 @@
 // src/components/QuotePdfPreview.tsx
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../constants/theme';
-import { QuoteInputs, QuoteResults } from '../types/quote';
+import { Radius, Spacing, Typography } from '../constants/theme';
+import { QuoteInputs, QuoteResults, QuoteStatus, QUOTE_STATUS_LABELS } from '../types/quote';
 
 type Props = {
   inputs: QuoteInputs;
   results: QuoteResults;
   quoteNumber?: string;
+  status?: QuoteStatus;
 };
 
-const money = (v: number) => `$${v.toFixed(2)}`;
+// Misma paleta que QuotePdfService en el backend: la vista previa tiene que
+// parecerse al PDF que recibe el cliente.
+const PDF = {
+  celeste: '#29A8E0',
+  celesteDark: '#0E6F9E',
+  celesteLight: '#EAF6FC',
+  celesteBorder: '#C7E6F5',
+  ink: '#1F2D3A',
+  muted: '#6B7C8A',
+  white: '#FFFFFF',
+};
+
+const STATUS_COLOR: Record<QuoteStatus, string> = {
+  DRAFT: '#8A97A3',
+  SENT: PDF.celeste,
+  ACCEPTED: '#2E9E5B',
+  PAID: '#2E9E5B',
+  REJECTED: '#D9483B',
+};
+
+const money = (v: number) =>
+  `$ ${v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const num = (v: number, decimals: number) => v.toLocaleString('es-AR', { maximumFractionDigits: decimals });
 
 // Vista previa del presupuesto renderizada con componentes RN (sin WebView).
-export default function QuotePdfPreview({ inputs, results, quoteNumber }: Props) {
+export default function QuotePdfPreview({ inputs, results, quoteNumber, status = 'DRAFT' }: Props) {
   const totalGrams = inputs.filamentGrams * inputs.units;
   const totalHours = inputs.printingHours * inputs.units;
   const subtotal = results.unitPrice * inputs.units;
@@ -21,163 +44,193 @@ export default function QuotePdfPreview({ inputs, results, quoteNumber }: Props)
 
   return (
     <View style={styles.paper}>
-      {/* Encabezado */}
-      <Text style={styles.appName}>PrintOps</Text>
-      <Text style={styles.quoteNumber}>Presupuesto {quoteNumber ?? '-'}</Text>
-      <View style={styles.separator} />
+      <View style={styles.topBand} />
+      {status === 'DRAFT' && (
+        <Text style={styles.watermark}>BORRADOR</Text>
+      )}
 
-      {/* Datos del cliente */}
-      <Text style={styles.section}>Datos del cliente</Text>
-      <Row label="Cliente" value={inputs.clientName || '-'} />
-      <Row label="Trabajo" value={inputs.jobDescription || '-'} />
-      <Row label="Material" value={inputs.filamentType} />
-      <Row label="Filamento total" value={`${totalGrams.toFixed(2)} g`} />
-      <Row label="Tiempo estimado" value={`${totalHours.toFixed(2)} horas`} />
+      <View style={styles.body}>
+        {/* Encabezado */}
+        <View style={styles.header}>
+          <View style={styles.brand}>
+            <Text style={styles.brandName}>PrintOps</Text>
+            <Text style={styles.tagline}>Impresión 3D a medida</Text>
+          </View>
+          <View style={styles.numberBox}>
+            <Text style={styles.overline}>PRESUPUESTO</Text>
+            <Text style={styles.number} numberOfLines={1}>{quoteNumber ?? 'Sin número'}</Text>
+            <View style={[styles.statusPill, { backgroundColor: STATUS_COLOR[status] }]}>
+              <Text style={styles.statusText}>{QUOTE_STATUS_LABELS[status].toUpperCase()}</Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Tabla de precios */}
-      <Text style={styles.section}>Detalle de precios</Text>
-      <View style={styles.table}>
+        {/* Cliente + especificaciones */}
+        <View style={styles.cards}>
+          <View style={styles.card}>
+            <Text style={styles.overline}>CLIENTE</Text>
+            <Text style={styles.client} numberOfLines={2}>{inputs.clientName || '-'}</Text>
+            <Text style={styles.muted} numberOfLines={2}>{inputs.jobDescription || '-'}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.overline}>ESPECIFICACIONES</Text>
+            <Spec label="Material" value={inputs.filamentType} />
+            <Spec label="Cantidad" value={`${inputs.units} u.`} />
+            <Spec label="Filamento" value={`${num(totalGrams, 0)} g`} />
+            <Spec label="Impresión" value={`${num(totalHours, 1)} h`} />
+          </View>
+        </View>
+
+        {/* Detalle */}
+        <Text style={[styles.overline, styles.sectionTitle]}>DETALLE</Text>
         <View style={styles.tableHeader}>
           <Text style={[styles.th, styles.flex]}>Concepto</Text>
-          <Text style={[styles.th, styles.num]}>Cant.</Text>
-          <Text style={[styles.th, styles.num]}>Unitario</Text>
-          <Text style={[styles.th, styles.num]}>Descuento</Text>
+          <Text style={[styles.th, styles.qty]}>Cant.</Text>
+          <Text style={[styles.th, styles.amount]}>Importe</Text>
         </View>
         <View style={styles.tableRow}>
-          <Text style={[styles.td, styles.flex]}>Impresión 3D</Text>
-          <Text style={[styles.td, styles.num]}>{inputs.units}</Text>
-          <Text style={[styles.td, styles.num]}>{money(results.unitPrice)}</Text>
-          <Text style={[styles.td, styles.num]}>{money(discount)}</Text>
+          <View style={styles.flex}>
+            <Text style={styles.concept} numberOfLines={2}>
+              Impresión 3D{inputs.jobDescription ? ` — ${inputs.jobDescription}` : ''}
+            </Text>
+            <Text style={styles.muted}>{money(results.unitPrice)} c/u</Text>
+          </View>
+          <Text style={[styles.td, styles.qty]}>{inputs.units}</Text>
+          <Text style={[styles.td, styles.amount]}>{money(subtotal)}</Text>
         </View>
-      </View>
 
-      <View style={styles.totalRow}>
-        <Text style={styles.totalLabel}>TOTAL</Text>
-        <Text style={styles.totalValue}>{money(results.totalPrice)}</Text>
-      </View>
+        {/* Totales */}
+        <View style={styles.totals}>
+          <SummaryRow label="Subtotal" value={money(subtotal)} />
+          {discount > 0.004 && (
+            <SummaryRow
+              label={`Descuento${inputs.discountPercent ? ` (${num(inputs.discountPercent, 0)}%)` : ''}`}
+              value={`− ${money(discount)}`}
+            />
+          )}
+          <View style={styles.totalBox}>
+            <Text style={styles.totalLabel}>TOTAL</Text>
+            <Text style={styles.totalValue} adjustsFontSizeToFit numberOfLines={1}>{money(results.totalPrice)}</Text>
+          </View>
+        </View>
 
-      {/* Pie */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Validez del presupuesto: 15 días</Text>
-        <Text style={styles.footerText}>PrintOps — Gestión de Impresión 3D</Text>
+        {/* Pie */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Validez según configuración del taller · Generado con PrintOps</Text>
+        </View>
       </View>
     </View>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Spec({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}:</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+    <Text style={styles.spec}>
+      <Text style={styles.muted}>{label}: </Text>
+      <Text style={styles.specValue}>{value}</Text>
+    </Text>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={styles.summaryValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   paper: {
-    backgroundColor: '#ffffff',
+    backgroundColor: PDF.white,
     borderRadius: Radius.md,
-    padding: Spacing.lg,
+    overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.separator,
+    borderColor: PDF.celesteBorder,
+    shadowColor: '#0E6F9E',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  appName: {
-    ...Typography.title1,
-    color: '#1C1C1E',
-    fontWeight: '700',
+  topBand: { height: 6, backgroundColor: PDF.celeste },
+  watermark: {
+    position: 'absolute',
+    top: '42%',
+    alignSelf: 'center',
+    fontSize: 56,
+    fontWeight: '800',
+    color: PDF.celesteLight,
+    transform: [{ rotate: '-35deg' }],
   },
-  quoteNumber: {
-    ...Typography.subheadline,
-    color: '#007AFF',
-    fontWeight: '700',
-    marginBottom: Spacing.sm,
+  body: { padding: Spacing.lg },
+
+  header: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg },
+  brand: { flex: 1 },
+  brandName: { fontSize: 22, fontWeight: '700', color: PDF.ink },
+  tagline: { ...Typography.caption, color: PDF.celesteDark, marginTop: 2 },
+  numberBox: {
+    backgroundColor: PDF.celesteLight,
+    borderWidth: 1,
+    borderColor: PDF.celesteBorder,
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    minWidth: 120,
   },
-  separator: {
-    height: 1,
-    backgroundColor: '#1C1C1E',
-    marginBottom: Spacing.md,
-  },
-  section: {
-    ...Typography.labelUppercase,
-    color: '#007AFF',
-    marginBottom: Spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  rowLabel: {
-    ...Typography.subheadline,
-    color: Colors.textSecondary,
-    width: 120,
-  },
-  rowValue: {
-    ...Typography.subheadline,
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  table: {
-    marginTop: Spacing.xs,
-  },
+  overline: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, color: PDF.celesteDark },
+  number: { fontSize: 16, fontWeight: '700', color: PDF.ink, marginTop: 2 },
+  statusPill: { alignSelf: 'flex-start', borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2, marginTop: 6 },
+  statusText: { fontSize: 9, fontWeight: '700', color: PDF.white, letterSpacing: 0.4 },
+
+  cards: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+  card: { flex: 1, backgroundColor: PDF.celesteLight, borderRadius: Radius.sm, padding: Spacing.sm, gap: 3 },
+  client: { fontSize: 14, fontWeight: '700', color: PDF.ink },
+  muted: { ...Typography.caption, color: PDF.muted },
+  spec: { ...Typography.caption },
+  specValue: { fontWeight: '700', color: PDF.ink },
+
+  sectionTitle: { marginBottom: Spacing.xs },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#007AFF',
-    borderTopLeftRadius: Radius.sm,
-    borderTopRightRadius: Radius.sm,
+    backgroundColor: PDF.celesteLight,
+    borderBottomWidth: 1.5,
+    borderBottomColor: PDF.celeste,
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
-  th: {
-    ...Typography.caption1,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
+  th: { fontSize: 10, fontWeight: '700', color: PDF.celesteDark },
   tableRow: {
     flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderTopWidth: 0,
-    paddingVertical: 8,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: PDF.celesteBorder,
+    paddingVertical: 10,
     paddingHorizontal: 8,
   },
-  td: {
-    ...Typography.subheadline,
-    color: Colors.textPrimary,
-  },
-  flex: {
-    flex: 1,
-  },
-  num: {
-    width: 72,
-    textAlign: 'right',
-  },
-  totalRow: {
+  concept: { fontSize: 12, fontWeight: '700', color: PDF.ink },
+  td: { fontSize: 12, color: PDF.ink },
+  qty: { width: 40, textAlign: 'center' },
+  amount: { width: 96, textAlign: 'right' },
+
+  totals: { alignSelf: 'flex-end', width: '62%', marginTop: Spacing.md },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 8 },
+  summaryLabel: { fontSize: 12, color: PDF.muted },
+  summaryValue: { fontSize: 12, color: PDF.ink },
+  totalBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
+    backgroundColor: PDF.celeste,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginTop: 6,
+    gap: Spacing.sm,
   },
-  totalLabel: {
-    ...Typography.title3,
-    color: Colors.textPrimary,
-    fontWeight: '700',
-  },
-  totalValue: {
-    ...Typography.title2,
-    color: '#1C1C1E',
-    fontWeight: '700',
-  },
-  footer: {
-    marginTop: Spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    paddingTop: Spacing.sm,
-    gap: 2,
-  },
-  footerText: {
-    ...Typography.caption2,
-    color: Colors.textTertiary,
-  },
+  totalLabel: { fontSize: 12, fontWeight: '700', color: PDF.white },
+  totalValue: { fontSize: 17, fontWeight: '800', color: PDF.white, flexShrink: 1 },
+
+  footer: { marginTop: Spacing.lg, borderTopWidth: 1, borderTopColor: PDF.celesteBorder, paddingTop: Spacing.sm },
+  footerText: { fontSize: 9, color: PDF.muted, textAlign: 'center' },
 });

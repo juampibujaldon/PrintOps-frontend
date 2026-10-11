@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing } from '../constants/theme';
 import { notificationPreferenceService, NotificationPreference } from '../services/notificationPreferenceService';

@@ -69,11 +69,21 @@ const getAllPrinters = async (location?: string): Promise<PrinterResponse[]> => 
   return response.data;
 };
 
+const getById = async (id: number): Promise<PrinterResponse> => {
+  const response = await api.get<PrinterResponse>(`${API_BASE_URL}/api/printers/${id}`);
+  return response.data;
+};
+
 // Lookup por número de serie (usado por el lector de QR).
 const getBySerialNumber = async (serialNumber: string): Promise<PrinterResponse> => {
   const response = await api.get<PrinterResponse>(
     `${API_BASE_URL}/api/printers/by-serial/${encodeURIComponent(serialNumber)}`
   );
+  return response.data;
+};
+
+const updateStatus = async (id: number, status: PrinterStatus): Promise<PrinterResponse> => {
+  const response = await api.patch<PrinterResponse>(`${API_BASE_URL}/api/printers/${id}/status`, { status });
   return response.data;
 };
 
@@ -92,6 +102,8 @@ const updateNextMaintenanceDate = async (
 export const printerService = {
   createPrinter,
   getAllPrinters,
+  getById,
   getBySerialNumber,
+  updateStatus,
   updateNextMaintenanceDate,
 };

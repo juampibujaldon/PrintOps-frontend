@@ -1,7 +1,7 @@
 // src/components/history/MetricsSummary.tsx
 import React, { useState } from 'react';
 import { LayoutAnimation, Platform, StyleSheet, Text, UIManager, View } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
+import { Colors, Spacing, Typography } from '../../constants/theme';
 import { PrinterMetrics } from '../../types/printerHistory';
 import Card from '../ui/Card';
 import PressableScale from '../ui/PressableScale';

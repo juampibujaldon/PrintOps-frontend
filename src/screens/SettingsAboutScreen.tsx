@@ -1,28 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Linking, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors, Spacing } from '../constants/theme';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import SettingsSection from '../components/ui/SettingsSection';
 import SettingsRow from '../components/ui/SettingsRow';
-import { ExternalLink, ShieldCheck, FileText, Info } from 'lucide-react-native';
+import { ShieldCheck, FileText, Info } from 'lucide-react-native';
+import { SettingsStackParamList } from '../navigation/SettingsStack';
 
 const packageJson = require('../../package.json');
 
-export default function SettingsAboutScreen() {
-  const version = packageJson.version || '1.0.0';
+type Props = NativeStackScreenProps<SettingsStackParamList, 'SettingsAbout'>;
 
-  const openLink = async (url: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'No se puede abrir el enlace en este dispositivo.');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Ocurrió un problema al abrir el enlace.');
-    }
-  };
+export default function SettingsAboutScreen({ navigation }: Props) {
+  const version = packageJson.version || '1.0.0';
 
   return (
     <View style={styles.container}>
@@ -38,21 +29,16 @@ export default function SettingsAboutScreen() {
           />
         </SettingsSection>
 
-        <SettingsSection title="Legal y Soporte">
+        <SettingsSection title="Legal">
           <SettingsRow
             label="Términos y Condiciones"
             icon={<FileText color={Colors.textSecondary} size={24} />}
-            onPress={() => openLink('https://printops.app/terms')}
+            onPress={() => navigation.navigate('TermsAndConditions')}
           />
           <SettingsRow
             label="Política de Privacidad"
             icon={<ShieldCheck color={Colors.textSecondary} size={24} />}
-            onPress={() => openLink('https://printops.app/privacy')}
-          />
-          <SettingsRow
-            label="Soporte Técnico"
-            icon={<ExternalLink color={Colors.textSecondary} size={24} />}
-            onPress={() => openLink('https://printops.app/support')}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
             isLast
           />
         </SettingsSection>

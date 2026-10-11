@@ -70,7 +70,7 @@ export default function SettingsPrintersScreen() {
               value={p.serialNumber}
               icon={<PrinterIcon color={Colors.textSecondary} size={24} />}
               isLast={idx === printers.length - 1}
-              onPress={() => navigation.navigate('PrinterDetail', { printerId: p.id })}
+              onPress={() => navigation.navigate('InicioStack', { screen: 'PrinterDetail', params: { printer: p } })}
             />
           ))}
         </SettingsSection>

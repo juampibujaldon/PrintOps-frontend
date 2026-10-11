@@ -1,9 +1,9 @@
 // src/components/RuleProgressCard.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Colors, Radius, Spacing } from '../constants/theme';
 import { MaintenanceRuleDTO, TriggerType } from '../types/rules';
-import { Clock, Cog, LucideIcon, MoreHorizontal, Spool } from 'lucide-react-native';
+import { CheckSquare, ChevronDown, ChevronUp, Clock, Cog, LucideIcon, MoreHorizontal, Spool } from 'lucide-react-native';
 
 // Metadatos por tipo de disparo: ícono y título dinámico.
 const TRIGGER_META: Record<TriggerType, { Icon: LucideIcon; title: (v: number) => string }> = {
@@ -118,11 +118,51 @@ export default function RuleProgressCard({
       {triggered && (
         <Text style={styles.triggeredText}>Condición alcanzada. Generando orden…</Text>
       )}
+
+      <ChecklistPreview items={rule.checklistItems ?? []} />
     </Animated.View>
   );
 }
 
+// Checklist que se copia a la orden generada por la regla; colapsable.
+function ChecklistPreview({ items }: { items: string[] }) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) {
+    return <Text style={styles.checklistEmpty}>Sin checklist</Text>;
+  }
+  const Chevron = open ? ChevronUp : ChevronDown;
+  return (
+    <View style={styles.checklist}>
+      <TouchableOpacity style={styles.checklistHeader} onPress={() => setOpen(o => !o)} hitSlop={6}>
+        <CheckSquare color={Colors.textSecondary} size={14} />
+        <Text style={styles.checklistTitle}>
+          Checklist · {items.length} {items.length === 1 ? 'ítem' : 'ítems'}
+        </Text>
+        <Chevron color={Colors.textSecondary} size={16} />
+      </TouchableOpacity>
+      {open && items.map((item, i) => (
+        <View key={i} style={styles.checklistRow}>
+          <View style={styles.checklistBullet} />
+          <Text style={styles.checklistItem}>{item}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  checklist: {
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.separator,
+  },
+  checklistHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  checklistTitle: { flex: 1, fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  checklistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginTop: 6, paddingLeft: 2 },
+  checklistBullet: { width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.primary, marginTop: 7 },
+  checklistItem: { flex: 1, fontSize: 14, color: Colors.textPrimary, lineHeight: 19 },
+  checklistEmpty: { marginTop: Spacing.sm, fontSize: 12, color: Colors.textTertiary },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,

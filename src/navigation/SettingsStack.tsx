@@ -8,6 +8,8 @@ import SettingsQuoteDefaultsScreen from '../screens/SettingsQuoteDefaultsScreen'
 import SettingsPrintersScreen from '../screens/SettingsPrintersScreen';
 import SettingsUsersScreen from '../screens/SettingsUsersScreen';
 import SettingsAboutScreen from '../screens/SettingsAboutScreen';
+import TermsAndConditionsScreen from '../screens/TermsAndConditionsScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import { stackScreenOptions, DrawerToggle } from './navTheme';
 
 export type SettingsStackParamList = {
@@ -19,6 +21,8 @@ export type SettingsStackParamList = {
   SettingsPrinters: undefined;
   SettingsUsers: undefined;
   SettingsAbout: undefined;
+  TermsAndConditions: undefined;
+  PrivacyPolicy: undefined;
 };
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
@@ -70,6 +74,16 @@ export default function SettingsStack() {
         name="SettingsAbout"
         component={SettingsAboutScreen}
         options={{ title: 'Acerca de' }}
+      />
+      <Stack.Screen
+        name="TermsAndConditions"
+        component={TermsAndConditionsScreen}
+        options={{ title: 'Términos' }}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: 'Privacidad' }}
       />
     </Stack.Navigator>
   );

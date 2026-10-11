@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Share from 'react-native-share';
@@ -14,8 +13,13 @@ import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { quoteService } from '../services/quoteService';
 import { printerService, PrinterResponse } from '../services/printerService';
-import { useQuoteCalculator, isValid } from '../hooks/useQuoteCalculator';
-import { FILAMENT_TYPES, FilamentType, Quote, QuoteInputs, WearResults, ComponentWear } from '../types/quote';
+import { useQuoteCalculator, missingFields } from '../hooks/useQuoteCalculator';
+import { workspaceService } from '../services/workspaceService';
+import {
+  FILAMENT_TYPES, FilamentType, Quote, QuoteInputs, QuoteStatus, WearResults, ComponentWear,
+  QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, QUOTE_TRANSITIONS,
+} from '../types/quote';
+import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import TextField from '../components/ui/TextField';
 import Card from '../components/ui/Card';
@@ -50,6 +54,8 @@ interface FormState {
 type Action =
   | { type: 'SET'; field: keyof FormState; value: string }
   | { type: 'SET_PRINTER'; printerId: number | null }
+  // Completa un campo solo si el usuario todavía no lo tocó (o tiene el valor inicial).
+  | { type: 'PREFILL'; field: keyof FormState; value: string }
   | { type: 'LOAD'; quote: Quote };
 
 const initialState: FormState = {
@@ -76,6 +82,10 @@ function reducer(state: FormState, action: Action): FormState {
       return { ...state, [action.field]: action.value };
     case 'SET_PRINTER':
       return { ...state, printerId: action.printerId };
+    case 'PREFILL':
+      return state[action.field] === initialState[action.field]
+        ? { ...state, [action.field]: action.value }
+        : state;
     case 'LOAD':
       return {
         filamentGrams: String(action.quote.filamentGrams),
@@ -104,6 +114,10 @@ const num = (v: string) => {
 
 const money = (v: number) => `$${v.toFixed(2)}`;
 
+// Prioriza el mensaje del backend; si no, el del error (validación local, red).
+const errorMessage = (error: any, fallback: string) =>
+  error?.response?.data?.message || error?.message || fallback;
+
 function criticalComponent(wear: WearResults | null): { name: string; percent: number } | null {
   if (!wear) return null;
   const entries: Array<[string, ComponentWear]> = [
@@ -126,6 +140,10 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [status, setStatus] = useState<QuoteStatus>('DRAFT');
+  const [changingStatus, setChangingStatus] = useState(false);
+  // El backend solo permite editar borradores: el resto se muestra en solo lectura.
+  const locked = status !== 'DRAFT';
 
   const dirtyRef = useRef(false);
 
@@ -134,9 +152,31 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
   }, [navigation, route.params?.title]);
 
   const updateField = (field: keyof FormState, value: string) => {
+    if (locked) return;
     dirtyRef.current = true;
     dispatch({ type: 'SET', field, value });
   };
+
+  // ── Presupuesto nuevo: precargar los valores por defecto del taller ──
+  // (sin esto "Precio de energía" quedaba vacío y el formulario nunca era válido:
+  // no se calculaba el desgaste y guardar/PDF no hacían nada).
+  useEffect(() => {
+    if (route.params?.quoteId) return;
+    workspaceService
+      .getQuoteDefaults()
+      .then(d => {
+        const prefill: Array<[keyof FormState, number | null | undefined]> = [
+          ['energyPriceKwh', d.defaultEnergyPriceKwh],
+          ['operatorHourlyRate', d.defaultOperatorHourlyRate],
+          ['designHourlyRate', d.defaultDesignHourlyRate],
+          ['marginPercent', d.defaultMarginPercent],
+        ];
+        prefill.forEach(([field, value]) => {
+          if (value != null && value > 0) dispatch({ type: 'PREFILL', field, value: String(value) });
+        });
+      })
+      .catch(() => {});
+  }, [route.params?.quoteId]);
 
   // ── Carga en modo edición ──
   useEffect(() => {
@@ -147,6 +187,7 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
       .get(id)
       .then(q => {
         setQuoteNumber(q.quoteNumber);
+        setStatus(q.status);
         dispatch({ type: 'LOAD', quote: q });
         if (q.printerId) {
           printerService
@@ -180,17 +221,54 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
   );
 
   const { results, wear, isValid: valid } = useQuoteCalculator(inputs);
+  const missing = useMemo(() => missingFields(inputs), [inputs]);
 
-  const persistDraft = useCallback(async (): Promise<Quote | null> => {
-    if (!valid) return null;
-    if (quoteId) {
-      return await quoteService.update(quoteId, inputs);
+  // Antes devolvía null en silencio si el formulario era inválido: guardar y
+  // generar PDF "no hacían nada". Ahora se avisa qué falta.
+  const persistDraft = useCallback(async (): Promise<Quote> => {
+    if (!valid) {
+      throw new Error(`Revisá estos campos en la pestaña Calculadora:\n• ${missing.join('\n• ')}`);
     }
-    const q = await quoteService.create(inputs);
+    // Un presupuesto que ya no es borrador no se puede editar (PUT → 400):
+    // se usa tal como está, p. ej. para generar el PDF.
+    if (quoteId && locked) {
+      return await quoteService.get(quoteId);
+    }
+    const q = quoteId ? await quoteService.update(quoteId, inputs) : await quoteService.create(inputs);
     setQuoteId(q.id);
     setQuoteNumber(q.quoteNumber);
+    setStatus(q.status);
     return q;
-  }, [valid, quoteId, inputs]);
+  }, [valid, missing, quoteId, locked, inputs]);
+
+  // Cambio de estado: si es un borrador con cambios (o nuevo) se guarda antes.
+  const changeQuoteStatus = (to: QuoteStatus) => {
+    const run = async () => {
+      setChangingStatus(true);
+      try {
+        const current = !quoteId || (!locked && dirtyRef.current) ? await persistDraft() : null;
+        const id = current?.id ?? quoteId!;
+        const updated = await quoteService.updateStatus(id, to);
+        dirtyRef.current = false;
+        setStatus(updated.status);
+      } catch (error: any) {
+        Alert.alert('No se pudo cambiar el estado', errorMessage(error, 'No se pudo cambiar el estado'));
+      } finally {
+        setChangingStatus(false);
+      }
+    };
+    // Estados finales: pedir confirmación porque no se pueden revertir.
+    if (to === 'PAID' || to === 'REJECTED' || status === 'DRAFT') {
+      const extra = status === 'DRAFT' ? ' El presupuesto ya no se podrá editar.' : '';
+      Alert.alert(
+        `Marcar como ${QUOTE_STATUS_LABELS[to].toLowerCase()}`,
+        `¿Confirmás el cambio de estado?${extra}`,
+        [{ text: 'Cancelar', style: 'cancel' }, { text: 'Confirmar', onPress: run }],
+      );
+    } else {
+      run();
+    }
+  };
 
   // ── Interceptar salida con datos sin guardar ──
   useEffect(() => {
@@ -210,8 +288,12 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
         {
           text: 'Guardar borrador',
           onPress: async () => {
-            await persistDraft();
-            navigation.dispatch(e.data.action);
+            try {
+              await persistDraft();
+              navigation.dispatch(e.data.action);
+            } catch (error: any) {
+              Alert.alert('No se pudo guardar', errorMessage(error, 'No se pudo guardar'));
+            }
           },
         },
       ]);
@@ -221,13 +303,11 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
   const saveDraft = async () => {
     setSaving(true);
     try {
-      const q = await persistDraft();
-      if (q) {
-        dirtyRef.current = false;
-        Alert.alert('Guardado', 'Presupuesto guardado como borrador.');
-      }
+      await persistDraft();
+      dirtyRef.current = false;
+      Alert.alert('Guardado', 'Presupuesto guardado como borrador.');
     } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo guardar');
+      Alert.alert('No se pudo guardar', errorMessage(error, 'No se pudo guardar'));
     } finally {
       setSaving(false);
     }
@@ -237,7 +317,6 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
     setGenerating(true);
     try {
       const q = await persistDraft();
-      if (!q) return;
       const path = await quoteService.downloadPdf(q.id, q.quoteNumber);
       dirtyRef.current = false;
       await Share.open({
@@ -246,13 +325,16 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
         type: 'application/pdf',
       });
     } catch (error: any) {
-      Alert.alert('Error', error?.message || 'No se pudo generar el PDF');
+      // Cerrar la hoja de compartir sin elegir destino no es un error.
+      if (String(error?.message ?? '').includes('User did not share')) return;
+      Alert.alert('No se pudo generar el PDF', errorMessage(error, 'No se pudo generar el PDF'));
     } finally {
       setGenerating(false);
     }
   };
 
   const onSelectPrinter = (p: PrinterResponse | null) => {
+    if (locked) return;
     setSelectedPrinter(p);
     dispatch({ type: 'SET_PRINTER', printerId: p?.id ?? null });
     if (p?.watts != null) {
@@ -278,6 +360,33 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
             <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
           </PressableScale>
         ))}
+      </View>
+
+      {/* Estado del presupuesto y próximos pasos */}
+      <View style={styles.statusBar}>
+        <View style={styles.statusInfo}>
+          <Badge
+            label={QUOTE_STATUS_LABELS[status]}
+            color={QUOTE_STATUS_COLORS[status]}
+          />
+          <Text style={styles.statusHint} numberOfLines={1}>
+            {quoteId ? (quoteNumber || 'Guardado') : 'Sin guardar'}
+            {locked ? ' · solo lectura' : ''}
+          </Text>
+        </View>
+        <View style={styles.statusActions}>
+          {QUOTE_TRANSITIONS[status].map(t => (
+            <PressableScale
+              key={t.to}
+              style={[styles.statusBtn, { backgroundColor: QUOTE_STATUS_COLORS[t.to] }, changingStatus && styles.disabledBtn]}
+              onPress={() => changeQuoteStatus(t.to)}
+              disabled={changingStatus}
+              accessibilityRole="button"
+            >
+              <Text style={styles.statusBtnText}>{t.label}</Text>
+            </PressableScale>
+          ))}
+        </View>
       </View>
 
       {tab === 'calc' && (
@@ -311,31 +420,31 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
                 </PressableScale>
               ))}
             </View>
-            <TextField label="Filamento (gramos)" keyboardType="decimal-pad" value={state.filamentGrams} onChangeText={v => updateField('filamentGrams', v)} placeholder="Ej: 45" />
-            <TextField label="Precio por gramo" keyboardType="decimal-pad" value={state.filamentPricePerGram} onChangeText={v => updateField('filamentPricePerGram', v)} placeholder="Ej: 0.03" />
-            <TextField label="Potencia (watts)" keyboardType="decimal-pad" value={state.printerWatts} onChangeText={v => updateField('printerWatts', v)} placeholder="Ej: 60" />
-            <TextField label="Precio de energía (kWh)" keyboardType="decimal-pad" value={state.energyPriceKwh} onChangeText={v => updateField('energyPriceKwh', v)} placeholder="Ej: 0.12" />
+            <TextField editable={!locked} label="Filamento (gramos)" keyboardType="decimal-pad" value={state.filamentGrams} onChangeText={v => updateField('filamentGrams', v)} placeholder="Ej: 45" />
+            <TextField editable={!locked} label="Precio por gramo" keyboardType="decimal-pad" value={state.filamentPricePerGram} onChangeText={v => updateField('filamentPricePerGram', v)} placeholder="Ej: 0.03" />
+            <TextField editable={!locked} label="Potencia (watts)" keyboardType="decimal-pad" value={state.printerWatts} onChangeText={v => updateField('printerWatts', v)} placeholder="Ej: 60" />
+            <TextField editable={!locked} label="Precio de energía (kWh)" keyboardType="decimal-pad" value={state.energyPriceKwh} onChangeText={v => updateField('energyPriceKwh', v)} placeholder="Ej: 0.12" />
           </Card>
 
           <Text style={styles.section}>Tiempo</Text>
           <Card style={styles.sectionCard}>
-            <TextField label="Horas de impresión" keyboardType="decimal-pad" value={state.printingHours} onChangeText={v => updateField('printingHours', v)} placeholder="Ej: 3.5" />
-            <TextField label="Horas de diseño (opcional)" keyboardType="decimal-pad" value={state.designHours} onChangeText={v => updateField('designHours', v)} placeholder="Ej: 1" />
-            <TextField label="Tarifa de diseño por hora (opcional)" keyboardType="decimal-pad" value={state.designHourlyRate} onChangeText={v => updateField('designHourlyRate', v)} placeholder="Ej: 15" />
-            <TextField label="Tarifa de operador por hora (opcional)" keyboardType="decimal-pad" value={state.operatorHourlyRate} onChangeText={v => updateField('operatorHourlyRate', v)} placeholder="Ej: 8" />
+            <TextField editable={!locked} label="Horas de impresión" keyboardType="decimal-pad" value={state.printingHours} onChangeText={v => updateField('printingHours', v)} placeholder="Ej: 3.5" />
+            <TextField editable={!locked} label="Horas de diseño (opcional)" keyboardType="decimal-pad" value={state.designHours} onChangeText={v => updateField('designHours', v)} placeholder="Ej: 1" />
+            <TextField editable={!locked} label="Tarifa de diseño por hora (opcional)" keyboardType="decimal-pad" value={state.designHourlyRate} onChangeText={v => updateField('designHourlyRate', v)} placeholder="Ej: 15" />
+            <TextField editable={!locked} label="Tarifa de operador por hora (opcional)" keyboardType="decimal-pad" value={state.operatorHourlyRate} onChangeText={v => updateField('operatorHourlyRate', v)} placeholder="Ej: 8" />
           </Card>
 
           <Text style={styles.section}>Negocio</Text>
           <Card style={styles.sectionCard}>
-            <TextField label="Margen (%)" keyboardType="number-pad" value={state.marginPercent} onChangeText={v => updateField('marginPercent', v)} placeholder="30" />
-            <TextField label="Descuento (%)" keyboardType="number-pad" value={state.discountPercent} onChangeText={v => updateField('discountPercent', v)} placeholder="0" />
-            <TextField label="Unidades" keyboardType="number-pad" value={state.units} onChangeText={v => updateField('units', v)} placeholder="1" />
+            <TextField editable={!locked} label="Margen (%)" keyboardType="number-pad" value={state.marginPercent} onChangeText={v => updateField('marginPercent', v)} placeholder="30" error={inputs.marginPercent > 1000 ? 'Máximo 1000%' : undefined} />
+            <TextField editable={!locked} label="Descuento (%)" keyboardType="number-pad" value={state.discountPercent} onChangeText={v => updateField('discountPercent', v)} placeholder="0" error={(inputs.discountPercent ?? 0) > 50 ? 'Máximo 50%' : undefined} />
+            <TextField editable={!locked} label="Unidades" keyboardType="number-pad" value={state.units} onChangeText={v => updateField('units', v)} placeholder="1" />
           </Card>
 
           <Text style={styles.section}>Cliente</Text>
           <Card style={styles.sectionCard}>
-            <TextField label="Nombre del cliente (opcional)" value={state.clientName} onChangeText={v => updateField('clientName', v)} />
-            <TextField label="Descripción del trabajo (opcional)" multiline value={state.jobDescription} onChangeText={v => updateField('jobDescription', v)} style={styles.multiline} />
+            <TextField editable={!locked} label="Nombre del cliente (opcional)" value={state.clientName} onChangeText={v => updateField('clientName', v)} />
+            <TextField editable={!locked} label="Descripción del trabajo (opcional)" multiline value={state.jobDescription} onChangeText={v => updateField('jobDescription', v)} style={styles.multiline} />
             <PrinterSelector selected={selectedPrinter} onSelect={onSelectPrinter} />
           </Card>
 
@@ -355,7 +464,7 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
             </Card>
           )}
 
-          <Button title="Guardar borrador" variant="secondary" onPress={saveDraft} loading={saving} style={styles.actionBtn} />
+          {!locked && <Button title="Guardar borrador" variant="secondary" onPress={saveDraft} loading={saving} style={styles.actionBtn} />}
         </ScrollView>
       )}
 
@@ -378,7 +487,11 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
             </Card>
           ) : (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>Completá los campos de la calculadora para estimar el desgaste.</Text>
+              <Text style={styles.emptyText}>
+                {missing.length > 0
+                  ? `Para estimar el desgaste revisá: ${missing.join(', ')}.`
+                  : 'Calculando desgaste…'}
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -386,9 +499,9 @@ export default function QuoteCalculatorScreen({ route, navigation }: Props) {
 
       {tab === 'pdf' && (
         <ScrollView contentContainerStyle={styles.scroll}>
-          <QuotePdfPreview inputs={inputs} results={results} quoteNumber={quoteNumber || undefined} />
+          <QuotePdfPreview inputs={inputs} results={results} quoteNumber={quoteNumber || undefined} status={status} />
           <Button title="Generar y compartir PDF" onPress={generateAndShare} loading={generating} style={styles.actionBtn} />
-          <Button title="Guardar borrador" variant="secondary" onPress={saveDraft} loading={saving} style={styles.actionBtn} />
+          {!locked && <Button title="Guardar borrador" variant="secondary" onPress={saveDraft} loading={saving} style={styles.actionBtn} />}
         </ScrollView>
       )}
     </View>
@@ -407,6 +520,20 @@ function BreakdownRow({ label, value, bold }: { label: string; value: string; bo
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   tabBar: { flexDirection: 'row', marginHorizontal: Spacing.lg, marginTop: Spacing.md, gap: Spacing.sm },
+  statusBar: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    gap: Spacing.sm,
+  },
+  statusInfo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  statusHint: { ...Typography.footnote, color: Colors.textSecondary, flexShrink: 1 },
+  statusActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  statusBtn: { paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: Radius.full },
+  statusBtnText: { ...Typography.footnote, fontWeight: '600', color: '#FFFFFF' },
+  disabledBtn: { opacity: 0.5 },
   tab: { flex: 1, paddingVertical: 10, borderRadius: Radius.md, backgroundColor: Colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator, alignItems: 'center' },
   tabActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
   tabText: { ...Typography.subheadline, color: Colors.textSecondary, fontWeight: '600' },

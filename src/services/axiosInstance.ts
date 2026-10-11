@@ -21,7 +21,7 @@ api.interceptors.request.use(
 
     if (__DEV__) {
       console.log(
-        `[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+        `[API] ${config.method?.toUpperCase()} ${fullUrl(config)}`,
         '| auth:', config.headers.Authorization ? 'Bearer ***' : 'NONE',
       );
     }
@@ -29,6 +29,46 @@ api.interceptors.request.use(
   },
   (error) => Promise.reject(error),
 );
+
+// Los services pasan URLs absolutas (`${API_BASE_URL}/api/...`); en ese caso
+// axios ignora baseURL, así que el log no debe concatenarlo (salía duplicado).
+function fullUrl(config?: InternalAxiosRequestConfig): string {
+  const url = config?.url ?? '';
+  return /^https?:\/\//.test(url) ? url : `${config?.baseURL ?? ''}${url}`;
+}
+
+// El backend responde los errores de validación (@Valid) como una lista
+// [{ field, message }] en vez de { message }. Las pantallas leen
+// `error.response.data.message`, así que la armamos acá para todas.
+const FIELD_LABELS: Record<string, string> = {
+  filamentGrams: 'Filamento (gramos)',
+  filamentPricePerGram: 'Precio por gramo',
+  filamentType: 'Tipo de filamento',
+  printerWatts: 'Potencia (watts)',
+  energyPriceKwh: 'Precio de energía (kWh)',
+  printingHours: 'Horas de impresión',
+  designHours: 'Horas de diseño',
+  designHourlyRate: 'Tarifa de diseño',
+  operatorHourlyRate: 'Tarifa de operador',
+  marginPercent: 'Margen (%)',
+  discountPercent: 'Descuento (%)',
+  units: 'Unidades',
+};
+
+function normalizeValidationErrors(error: AxiosError) {
+  const data = error.response?.data as unknown;
+  if (!Array.isArray(data) || data.length === 0) return;
+  const lines = data
+    .filter((e: any) => e && typeof e.message === 'string')
+    .map((e: any) => {
+      const label = FIELD_LABELS[e.field];
+      // "marginPercent no puede superar 100" → "Margen (%): no puede superar 100"
+      return label ? `${label}: ${e.message.replace(new RegExp(`^${e.field}\\s*`), '')}` : e.message;
+    });
+  if (lines.length > 0) {
+    (error.response as any).data = { error: 'Datos inválidos', message: lines.join('\n'), fields: data };
+  }
+}
 
 // Callback que registra AuthContext para cerrar la sesión en la UI cuando el
 // refresh token ya no sirve (si no, la app quedaba "logueada" con todo en 401).
@@ -58,8 +98,14 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;
 
+    normalizeValidationErrors(error);
+
     if (__DEV__) {
-      console.log(`[API] response ${status} ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`);
+      console.log(`[API] response ${status} ${originalRequest?.method?.toUpperCase()} ${fullUrl(originalRequest)}`);
+      // En 4xx el body dice qué falló: sin esto un 400 no daba ninguna pista.
+      if (status && status >= 400 && status < 500 && status !== 401) {
+        console.log('[API] body:', JSON.stringify(error.response?.data));
+      }
     }
 
     // 403 = autenticado pero sin permiso: no sirve refrescar, rechazamos directo.

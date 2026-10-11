@@ -3,7 +3,7 @@ import React, { createContext, useContext, useReducer, useEffect, useMemo } from
 import { authService } from '../services/authService';
 import { webSocketService } from '../services/webSocketService';
 import { setOnSessionExpired } from '../services/axiosInstance';
-import { AuthAction, AuthState, UserInfo } from '../types/auth';
+import { AuthAction, AuthState } from '../types/auth';
 
 const initialState: AuthState = {
   user: null,

@@ -35,16 +35,24 @@ export function computeResults(inputs: QuoteInputs): QuoteResults {
   };
 }
 
+// Problemas del formulario, con la etiqueta que ve el usuario. Replica las
+// validaciones de CreateQuoteRequest en el backend: si algo pasa acá pero no
+// allá, el POST responde 400.
+export function missingFields(inputs: QuoteInputs): string[] {
+  const problems: string[] = [];
+  if (!(inputs.filamentGrams > 0)) problems.push('Filamento (gramos)');
+  if (!(inputs.filamentPricePerGram > 0)) problems.push('Precio por gramo');
+  if (!(inputs.printerWatts > 0)) problems.push('Potencia (watts)');
+  if (!(inputs.energyPriceKwh > 0)) problems.push('Precio de energía (kWh)');
+  if (!(inputs.printingHours > 0)) problems.push('Horas de impresión');
+  if (!(inputs.marginPercent >= 1 && inputs.marginPercent <= 1000)) problems.push('Margen (%) entre 1 y 1000');
+  if ((inputs.discountPercent ?? 0) < 0 || (inputs.discountPercent ?? 0) > 50) problems.push('Descuento (%) entre 0 y 50');
+  if (!(inputs.units >= 1)) problems.push('Unidades');
+  return problems;
+}
+
 export function isValid(inputs: QuoteInputs): boolean {
-  return (
-    inputs.filamentGrams > 0 &&
-    inputs.filamentPricePerGram > 0 &&
-    inputs.printerWatts > 0 &&
-    inputs.energyPriceKwh > 0 &&
-    inputs.printingHours > 0 &&
-    inputs.marginPercent >= 1 &&
-    inputs.units >= 1
-  );
+  return missingFields(inputs).length === 0;
 }
 
 // Hook: resultados locales (useMemo) + desgaste remoto con debounce de 300ms.

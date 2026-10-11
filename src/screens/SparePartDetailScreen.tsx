@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Linking,
-  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';

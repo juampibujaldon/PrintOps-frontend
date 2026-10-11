@@ -1,7 +1,7 @@
 // src/types/quote.ts
 
 export type FilamentType = 'PLA' | 'ABS' | 'PETG' | 'TPU' | 'ASA' | 'OTHER';
-export type QuoteStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED';
+export type QuoteStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'PAID';
 
 export const FILAMENT_TYPES: FilamentType[] = ['PLA', 'ABS', 'PETG', 'TPU', 'ASA', 'OTHER'];
 
@@ -91,6 +91,7 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   SENT: 'Enviado',
   ACCEPTED: 'Aceptado',
   REJECTED: 'Rechazado',
+  PAID: 'Pagado',
 };
 
 export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
@@ -98,4 +99,21 @@ export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
   SENT: '#0A84FF',
   ACCEPTED: '#34C759',
   REJECTED: '#FF3B30',
+  PAID: '#1E7B34',
+};
+
+// Cambios de estado permitidos (mismas reglas que QuoteService.validateTransition
+// en el backend), con el texto del botón para cada uno.
+export const QUOTE_TRANSITIONS: Record<QuoteStatus, Array<{ to: QuoteStatus; label: string }>> = {
+  DRAFT: [
+    { to: 'SENT', label: 'Marcar enviado' },
+    { to: 'ACCEPTED', label: 'Marcar aceptado' },
+  ],
+  SENT: [
+    { to: 'ACCEPTED', label: 'Aceptado' },
+    { to: 'REJECTED', label: 'Rechazado' },
+  ],
+  ACCEPTED: [{ to: 'PAID', label: 'Marcar pagado' }],
+  REJECTED: [],
+  PAID: [],
 };

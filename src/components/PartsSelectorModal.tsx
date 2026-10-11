@@ -48,7 +48,6 @@ export default function PartsSelectorModal({ visible, onClose, onAddCatalog, onA
       doSearch(search);
     }, 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, visible]);
 
   const doSearch = async (term: string) => {

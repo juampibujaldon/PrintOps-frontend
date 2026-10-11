@@ -6,7 +6,6 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
   TouchableOpacity,
   Alert,
 } from 'react-native';
