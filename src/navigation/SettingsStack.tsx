@@ -6,7 +6,6 @@ import SettingsWorkspaceScreen from '../screens/SettingsWorkspaceScreen';
 import SettingsNotificationsScreen from '../screens/SettingsNotificationsScreen';
 import SettingsQuoteDefaultsScreen from '../screens/SettingsQuoteDefaultsScreen';
 import SettingsPrintersScreen from '../screens/SettingsPrintersScreen';
-import SettingsUsersScreen from '../screens/SettingsUsersScreen';
 import SettingsAboutScreen from '../screens/SettingsAboutScreen';
 import TermsAndConditionsScreen from '../screens/TermsAndConditionsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
@@ -19,7 +18,6 @@ export type SettingsStackParamList = {
   SettingsNotifications: undefined;
   SettingsQuoteDefaults: undefined;
   SettingsPrinters: undefined;
-  SettingsUsers: undefined;
   SettingsAbout: undefined;
   TermsAndConditions: undefined;
   PrivacyPolicy: undefined;
@@ -64,11 +62,6 @@ export default function SettingsStack() {
         name="SettingsPrinters"
         component={SettingsPrintersScreen}
         options={{ title: 'Impresoras' }}
-      />
-      <Stack.Screen
-        name="SettingsUsers"
-        component={SettingsUsersScreen}
-        options={{ title: 'Usuarios' }}
       />
       <Stack.Screen
         name="SettingsAbout"

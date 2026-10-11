@@ -4,7 +4,8 @@ import {
   View, Text, StyleSheet, Alert, Switch, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Printer, ScanFace } from 'lucide-react-native';
+import { ScanFace } from 'lucide-react-native';
+import PrintOpsLogo from '../components/brand/PrintOpsLogo';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -148,10 +149,7 @@ export default function LoginScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.duration(500).springify().damping(22)} style={styles.header}>
-          <View style={styles.logo}>
-            <Printer color={Colors.onPrimary} size={30} strokeWidth={1.75} />
-          </View>
-          <Text style={styles.title}>PrintOps</Text>
+          <PrintOpsLogo width={260} style={styles.logo} />
           <Text style={styles.subtitle}>Ingresá a tu taller para gestionar tus impresoras.</Text>
         </Animated.View>
 
@@ -252,19 +250,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl,
   },
   logo: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: Colors.textPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.largeTitle,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.xl,
   },
   subtitle: {
     ...Typography.subheadline,

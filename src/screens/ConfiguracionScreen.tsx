@@ -8,7 +8,6 @@ import {
   Bell,
   Calculator,
   Settings2,
-  Users,
   Info,
   LucideIcon,
 } from 'lucide-react-native';
@@ -39,7 +38,6 @@ const SECTIONS: { title?: string; items: MenuItem[] }[] = [
     title: 'Taller',
     items: [
       { id: 'workspace', title: 'Datos del taller', Icon: Briefcase, tint: Colors.primary, screen: 'SettingsWorkspace' },
-      { id: 'users', title: 'Usuarios', Icon: Users, tint: Colors.primary, screen: 'SettingsUsers', managerOnly: true },
       { id: 'printers', title: 'Impresoras y mantenimiento', Icon: Settings2, tint: Colors.gray, screen: 'SettingsPrinters' },
       { id: 'quote', title: 'Valores de presupuesto', Icon: Calculator, tint: Colors.green, screen: 'SettingsQuoteDefaults' },
     ],

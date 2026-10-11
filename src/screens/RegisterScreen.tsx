@@ -1,5 +1,5 @@
 // src/screens/RegisterScreen.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, Alert, Pressable, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
@@ -8,7 +8,9 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { InviteErrorCode } from './InviteErrorScreen';
 import { useAuth } from '../hooks/useAuth';
 import { RegisterFormData } from '../types/auth';
 import { Colors, Spacing, Typography } from '../constants/theme';
@@ -35,12 +37,18 @@ const schema = yup.object({
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Register'>;
+  route: RouteProp<RootStackParamList, 'Register'>;
 };
 
-export default function RegisterScreen({ navigation }: Props) {
+export default function RegisterScreen({ navigation, route }: Props) {
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isTecnico, setIsTecnico] = useState(false);
+
+  // Desde la pantalla de invitación inválida: "Crear mi propio taller".
+  useEffect(() => {
+    if (route.params?.mode === 'create') setIsTecnico(false);
+  }, [route.params?.mode]);
 
   const {
     control,
@@ -68,11 +76,22 @@ export default function RegisterScreen({ navigation }: Props) {
         { text: 'Entendido', onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
+      const code: string | undefined = error?.response?.data?.code;
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
         'Error al registrarse';
-      Alert.alert('Error', message);
+      if (code?.startsWith('INVITE_')) {
+        // Invitación inválida/usada/vencida: pantalla dedicada con qué hacer en cada caso.
+        navigation.navigate('InviteError', { code: code as InviteErrorCode, email: data.email, message });
+      } else if (code === 'EMAIL_TAKEN') {
+        Alert.alert('Ese email ya tiene cuenta', message, [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Iniciar sesión', onPress: () => navigation.navigate('Login') },
+        ]);
+      } else {
+        Alert.alert('Error', message);
+      }
     } finally {
       setLoading(false);
     }

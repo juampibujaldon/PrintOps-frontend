@@ -7,6 +7,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import VerifyEmailScreen from '../screens/VerifyEmailScreen';
+import InviteErrorScreen, { InviteErrorCode } from '../screens/InviteErrorScreen';
 import RoleNavigator from './RoleNavigator';
 import { useAuth } from '../hooks/useAuth';
 import { navigationTheme } from './navTheme';
@@ -14,9 +15,11 @@ import { navigationTheme } from './navTheme';
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
-  Register: undefined;
+  // mode 'create': abre el registro en "Crear taller" (desde la pantalla de invitación inválida).
+  Register: { mode?: 'create' } | undefined;
   VerifyEmail: { email: string };
   ResetPassword: undefined;
+  InviteError: { code: InviteErrorCode; email?: string; message?: string };
   Role: undefined;
 };
 
@@ -38,6 +41,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="InviteError" component={InviteErrorScreen} options={{ animation: 'slide_from_bottom' }} />
           </Stack.Group>
         )}
       </Stack.Navigator>

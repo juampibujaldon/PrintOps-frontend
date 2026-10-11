@@ -1,6 +1,14 @@
 // src/navigation/TecnicoDrawer.tsx
 import React from 'react';
-import { createDrawerNavigator, DrawerNavigationOptions } from '@react-navigation/drawer';
+import { StyleSheet, View } from 'react-native';
+import {
+  createDrawerNavigator,
+  DrawerContentComponentProps,
+  DrawerContentScrollView,
+  DrawerItemList,
+  DrawerNavigationOptions,
+} from '@react-navigation/drawer';
+import PrintOpsLogo from '../components/brand/PrintOpsLogo';
 import { Bell, Calculator, LayoutGrid, LucideIcon, Package, Printer, Settings, User, BarChart3 } from 'lucide-react-native';
 import TecnicoStack from './TecnicoStack';
 import SettingsStack from './SettingsStack';
@@ -8,7 +16,7 @@ import StockScreen from '../screens/StockScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import DashboardScreen from '../screens/DashboardScreen';
-import { Colors, Icons, Radius, Typography } from '../constants/theme';
+import { Colors, Icons, Radius, Spacing, Typography } from '../constants/theme';
 
 export type TecnicoDrawerParamList = {
   InicioStack: undefined;
@@ -26,9 +34,22 @@ const Drawer = createDrawerNavigator<TecnicoDrawerParamList>();
 const icon = (Icon: LucideIcon): DrawerNavigationOptions['drawerIcon'] =>
   ({ color }) => <Icon color={color} size={20} strokeWidth={Icons.strokeWidth} />;
 
+// Menú lateral con el logo de la marca (estático) arriba de las opciones.
+function DrawerContent(props: DrawerContentComponentProps) {
+  return (
+    <DrawerContentScrollView {...props}>
+      <View style={styles.brand}>
+        <PrintOpsLogo width={190} showSubtitle={false} />
+      </View>
+      <DrawerItemList {...props} />
+    </DrawerContentScrollView>
+  );
+}
+
 export default function TecnicoDrawer() {
   return (
     <Drawer.Navigator
+      drawerContent={props => <DrawerContent {...props} />}
       screenOptions={{
         headerStyle: { backgroundColor: Colors.background },
         headerShadowVisible: false,
@@ -88,3 +109,15 @@ export default function TecnicoDrawer() {
     </Drawer.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  brand: {
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.separator,
+  },
+});
