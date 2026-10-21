@@ -20,6 +20,17 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<!-- TODO(google-signin): reemplazar por el REVERSED_CLIENT_ID del client iOS de Google Cloud
+	     (com.googleusercontent.apps.<IOS_CLIENT_ID_SIN_SUFIJO>). Requiere `cd ios && pod install`. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.REPLACE_WITH_IOS_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>

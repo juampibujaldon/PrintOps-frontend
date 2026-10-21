@@ -17,6 +17,8 @@ import { Colors, Spacing, Typography } from '../constants/theme';
 import TextField from '../components/ui/TextField';
 import Button from '../components/ui/Button';
 import PressableScale from '../components/ui/PressableScale';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
+import GoogleDivider from '../components/auth/GoogleDivider';
 
 const schema = yup.object({
   email: yup
@@ -205,6 +207,9 @@ export default function RegisterScreen({ navigation, route }: Props) {
         onPress={handleSubmit(onSubmit)}
         loading={loading}
       />
+
+      <GoogleDivider />
+      <GoogleSignInButton />
 
       <View style={styles.loginContainer}>
         <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>

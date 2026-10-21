@@ -15,7 +15,7 @@ const LAZY_SCREENS = [
 ];
 const EAGER_AUTH_SCREENS = [
   'SplashScreen', 'LoginScreen', 'RegisterScreen', 'ResetPasswordScreen',
-  'VerifyEmailScreen', 'InviteErrorScreen',
+  'VerifyEmailScreen', 'InviteErrorScreen', 'GoogleOnboardingScreen',
   // Pantalla inicial de la app autenticada: se carga con TecnicoStack.
   'HomeScreen',
 ];

@@ -16,6 +16,7 @@ export type RootStackParamList = {
   VerifyEmail: { email: string };
   ResetPassword: undefined;
   InviteError: { code: InviteErrorCode; email?: string; message?: string };
+  GoogleOnboarding: { onboardingToken: string; email: string; name: string | null; rememberMe: boolean };
   Role: undefined;
 };
 
@@ -49,6 +50,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Register" getComponent={() => require('../screens/RegisterScreen').default} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="VerifyEmail" getComponent={() => require('../screens/VerifyEmailScreen').default} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="ResetPassword" getComponent={() => require('../screens/ResetPasswordScreen').default} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="GoogleOnboarding" getComponent={() => require('../screens/GoogleOnboardingScreen').default} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="InviteError" getComponent={() => require('../screens/InviteErrorScreen').default} options={{ animation: 'slide_from_bottom' }} />
           </Stack.Group>
         )}

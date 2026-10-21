@@ -1,9 +1,9 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
-import { authService } from '../services/authService';
+import { authService, GoogleLoginResult } from '../services/authService';
 import { webSocketService } from '../services/webSocketService';
 import { setOnSessionExpired } from '../services/axiosInstance';
-import { AuthAction, AuthState } from '../types/auth';
+import { AuthAction, AuthResponse, AuthState } from '../types/auth';
 
 const initialState: AuthState = {
   user: null,
@@ -54,6 +54,12 @@ interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   register: (email: string, password: string, inviteToken?: string, workspaceName?: string) => Promise<string>;
+  signInWithGoogle: (rememberMe: boolean) => Promise<GoogleLoginResult>;
+  completeGoogleOnboarding: (
+    onboardingToken: string,
+    rememberMe: boolean,
+    choice: { inviteToken?: string; workspaceName?: string },
+  ) => Promise<void>;
   logout: () => Promise<void>;
   restore: (skipBiometrics?: boolean) => Promise<boolean>;
 }
@@ -106,6 +112,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const applyAuth = (data: AuthResponse) => {
+    dispatch({
+      type: 'LOGIN_SUCCESS',
+      payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
+    });
+    webSocketService.connect(data.user.id);
+  };
+
+  // Sin SET_LOADING: isLoading muestra el Splash y desmontaría Login/onboarding
+  // (perderíamos la pantalla y sus parámetros). Cada pantalla maneja su propio loading.
+  const signInWithGoogle = async (rememberMe: boolean): Promise<GoogleLoginResult> => {
+    const deviceId = await authService.getOrCreateDeviceId();
+    const result = await authService.loginWithGoogle(deviceId, rememberMe);
+    if (result.type === 'authenticated') applyAuth(result.auth);
+    return result;
+  };
+
+  const completeGoogleOnboarding = async (
+    onboardingToken: string,
+    rememberMe: boolean,
+    choice: { inviteToken?: string; workspaceName?: string },
+  ) => {
+    const deviceId = await authService.getOrCreateDeviceId();
+    applyAuth(await authService.completeGoogleOnboarding(onboardingToken, deviceId, rememberMe, choice));
+  };
+
   const register = async (
     email: string,
     password: string,
@@ -152,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Las funciones solo leen `state` (logout usa state.token): recalcular con cada
   // cambio de estado alcanza y evita re-renderizar a todos los consumidores siempre.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const value = useMemo(() => ({ state, login, register, logout, restore }), [state]);
+  const value = useMemo(() => ({ state, login, register, signInWithGoogle, completeGoogleOnboarding, logout, restore }), [state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

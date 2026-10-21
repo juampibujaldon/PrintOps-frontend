@@ -20,6 +20,8 @@ import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 import TextField from '../components/ui/TextField';
 import Button from '../components/ui/Button';
 import PressableScale from '../components/ui/PressableScale';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
+import GoogleDivider from '../components/auth/GoogleDivider';
 
 const schema = yup.object({
   email: yup
@@ -46,6 +48,7 @@ export default function LoginScreen({ navigation }: Props) {
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: yupResolver(schema),
@@ -210,6 +213,9 @@ export default function LoginScreen({ navigation }: Props) {
           />
 
           <Button title="Ingresar" onPress={handleSubmit(onSubmit)} loading={loading} />
+
+          <GoogleDivider />
+          <GoogleSignInButton rememberMe={watch('rememberMe')} />
 
           {biometricEnabled && (
             <Button

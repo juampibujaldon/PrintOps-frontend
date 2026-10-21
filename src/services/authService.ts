@@ -5,6 +5,7 @@ import * as Keychain from 'react-native-keychain';
 import ReactNativeBiometrics from 'react-native-biometrics';
 import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
 import { AuthResponse } from '../types/auth';
+import { getGoogleIdToken, signOutFromGoogle } from './googleAuth';
 
 // Genera un UUID v4 simple sin dependencias externas
 function generateDeviceId(): string {
@@ -24,6 +25,16 @@ async function getOrCreateDeviceId(): Promise<string> {
   return deviceId;
 }
 
+// Persistencia común a todos los logins (contraseña y Google): access token + user en
+// AsyncStorage, refresh token en Keychain.
+async function persistSession(data: AuthResponse): Promise<void> {
+  await AsyncStorage.multiSet([
+    [STORAGE_KEYS.ACCESS_TOKEN, data.accessToken],
+    [STORAGE_KEYS.USER, JSON.stringify(data.user)],
+  ]);
+  await Keychain.setGenericPassword('refreshToken', data.refreshToken, { service: 'refreshTokenService' });
+}
+
 async function login(email: string, password: string, rememberMe: boolean): Promise<AuthResponse> {
   const deviceId = await getOrCreateDeviceId();
 
@@ -34,13 +45,7 @@ async function login(email: string, password: string, rememberMe: boolean): Prom
     rememberMe,
   });
 
-  await AsyncStorage.multiSet([
-    [STORAGE_KEYS.ACCESS_TOKEN, data.accessToken],
-    [STORAGE_KEYS.USER, JSON.stringify(data.user)],
-  ]);
-
-  // Guardar Refresh Token en Keychain de forma segura
-  await Keychain.setGenericPassword('refreshToken', data.refreshToken, { service: 'refreshTokenService' });
+  await persistSession(data);
 
   return data;
 }
@@ -61,6 +66,8 @@ async function logout(deviceId: string, fallbackToken: string): Promise<void> {
       { headers: { Authorization: `Bearer ${token}` } },
     );
   } finally {
+    // Para que la próxima vez aparezca el selector de cuentas de Google.
+    await signOutFromGoogle();
     if (keepSession) {
       // Soft logout: solo se borra el access token local.
       // El refresh token (Keychain) y el user quedan para Face ID.
@@ -225,4 +232,50 @@ async function verifyEmail(token: string): Promise<string> {
   return data.message ?? 'Email verificado correctamente.';
 }
 
-export const authService = { login, logout, register, resendVerification, verifyEmail, restoreSession, getOrCreateDeviceId, enableBiometrics, forgotPassword, resetPassword };
+export type GoogleLoginResult =
+  | { type: 'authenticated'; auth: AuthResponse }
+  | { type: 'onboarding'; onboardingToken: string; email: string; name: string | null }
+  | { type: 'cancelled' };
+
+async function loginWithGoogle(deviceId: string, rememberMe: boolean): Promise<GoogleLoginResult> {
+  const idToken = await getGoogleIdToken();
+  if (!idToken) return { type: 'cancelled' };
+
+  const res = await axios.post(`${API_BASE_URL}/api/auth/google`, { idToken, deviceId, rememberMe });
+  if (res.status === 202) {
+    const { onboardingToken, email, name } = res.data;
+    return { type: 'onboarding', onboardingToken, email, name: name ?? null };
+  }
+  await persistSession(res.data as AuthResponse);
+  return { type: 'authenticated', auth: res.data as AuthResponse };
+}
+
+async function completeGoogleOnboarding(
+  onboardingToken: string,
+  deviceId: string,
+  rememberMe: boolean,
+  choice: { inviteToken?: string; workspaceName?: string },
+): Promise<AuthResponse> {
+  const { data } = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/google/complete`, {
+    onboardingToken,
+    deviceId,
+    rememberMe,
+    inviteToken: choice.inviteToken || null,
+    workspaceName: choice.workspaceName || null,
+  });
+  await persistSession(data);
+  return data;
+}
+
+/** Mensaje en español para los errores HTTP de /api/auth/google. */
+export function googleErrorMessage(error: any): string {
+  switch (error?.response?.status) {
+    case 401: return 'Google rechazó el inicio de sesión. Probá de nuevo.';
+    case 403: return 'Tu cuenta está deshabilitada. Contactá al administrador.';
+    case 503: return 'El inicio de sesión con Google no está disponible en este momento.';
+    default:
+      return error?.response?.data?.message || error?.message || 'No se pudo iniciar sesión con Google';
+  }
+}
+
+export const authService = { loginWithGoogle, completeGoogleOnboarding, login, logout, register, resendVerification, verifyEmail, restoreSession, getOrCreateDeviceId, enableBiometrics, forgotPassword, resetPassword };
