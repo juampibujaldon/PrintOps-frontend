@@ -99,6 +99,8 @@ export default function WorkshopCanvasScreen() {
     openOrders: Object.values(openOrdersByPrinter).reduce((a, b) => a + b, 0),
   }), [printers, openOrdersByPrinter]);
 
+  const printersById = useMemo(() => new Map(printers.map(p => [p.id, p])), [printers]);
+
   const matchesFilter = useCallback((p: PrinterResponse) => {
     switch (filter) {
       case null: return true;
@@ -156,13 +158,14 @@ export default function WorkshopCanvasScreen() {
     savedTranslateY.value = 0;
   };
 
+  // Estable (lee editMode por ref) para que los nodos memoizados no se re-rendericen.
   const handleDragEnd = useCallback((printerId: number, normalizedX: number, normalizedY: number) => {
-    if (!editMode) return;
+    if (!editModeRef.current) return;
     setLayout(prev => ({
       ...prev,
       nodes: prev.nodes.map(n => n.printerId === printerId ? { ...n, x: normalizedX, y: normalizedY } : n)
     }));
-  }, [editMode]);
+  }, []);
 
   const startEditing = () => {
     if (!isManager) return;
@@ -246,7 +249,7 @@ export default function WorkshopCanvasScreen() {
     );
   }
 
-  const placedNodes = layout.nodes.filter(n => printers.some(p => p.id === n.printerId));
+  const placedNodes = layout.nodes.filter(n => printersById.has(n.printerId));
   const listPrinters = printers.filter(matchesFilter);
 
   return (
@@ -298,7 +301,7 @@ export default function WorkshopCanvasScreen() {
                       ))}
                     </Svg>
                     {placedNodes.map(node => {
-                      const p = printers.find(x => x.id === node.printerId)!;
+                      const p = printersById.get(node.printerId)!;
                       return (
                         <CanvasNodeItem
                           key={`${canvasKey}-${node.printerId}`}
@@ -307,8 +310,8 @@ export default function WorkshopCanvasScreen() {
                           initialY={node.y}
                           canvasWidth={canvasSize.width}
                           canvasHeight={canvasSize.height}
-                          onDragEnd={(x, y) => handleDragEnd(p.id, x, y)}
-                          onPress={() => setSelected(p)}
+                          onDragEnd={handleDragEnd}
+                          onPress={setSelected}
                           positions={positions}
                           disabled={!editMode}
                           dimmed={!matchesFilter(p)}

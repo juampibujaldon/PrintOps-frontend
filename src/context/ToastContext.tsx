@@ -1,5 +1,5 @@
 // src/context/ToastContext.tsx
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
 
@@ -29,8 +29,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [opacity],
   );
 
+  const value = useMemo(() => ({ showToast }), [showToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       {message !== null && (
         <Animated.View style={[styles.toast, { opacity }]} pointerEvents="none">

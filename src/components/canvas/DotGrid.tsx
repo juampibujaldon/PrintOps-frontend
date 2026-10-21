@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
 import { Colors } from '../../constants/theme';
 
@@ -11,7 +11,7 @@ interface Props {
 // Fondo de puntos tipo "papel de ingeniería". Se dibuja más grande que el
 // lienzo (3x) para que al hacer pan/zoom-out no se vean los bordes.
 // El espaciado coincide con el snap de los nodos (20px).
-export default function DotGrid({ width, height, spacing = 20 }: Props) {
+function DotGrid({ width, height, spacing = 20 }: Props) {
   // Desfase para que los puntos caigan en múltiplos de `spacing` del lienzo
   // (donde se alinean las esquinas de los nodos), aunque el SVG arranque en -width.
   const offsetX = (width - spacing / 2) % spacing;
@@ -32,3 +32,5 @@ export default function DotGrid({ width, height, spacing = 20 }: Props) {
     </Svg>
   );
 }
+
+export default memo(DotGrid);

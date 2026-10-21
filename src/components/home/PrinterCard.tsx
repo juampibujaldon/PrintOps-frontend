@@ -1,5 +1,5 @@
 // src/components/home/PrinterCard.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { PrinterResponse } from '../../services/printerService';
 import { PRINTER_STATUS, getMaintenanceBadge } from '../../constants/printers';
@@ -12,30 +12,34 @@ import { ChevronRight, MapPin, Printer } from 'lucide-react-native';
 type Props = {
   printer: PrinterResponse;
   index: number;
-  onPress: () => void;
+  onPress: (printer: PrinterResponse) => void;
 };
 
-export default function PrinterCard({ printer, index, onPress }: Props) {
+function PrinterCard({ printer, index, onPress }: Props) {
   const translateY = useRef(new Animated.Value(12)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  // La entrada escalonada depende del índice que tenía la tarjeta al montarse.
+  const entranceDelay = useRef(Math.min(index, 8) * 50).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(translateY, { toValue: 0, duration: 420, delay: Math.min(index, 8) * 50, easing: Easing.bezier(0.32, 0.72, 0, 1), useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 320, delay: Math.min(index, 8) * 50, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 420, delay: entranceDelay, easing: Easing.bezier(0.32, 0.72, 0, 1), useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 320, delay: entranceDelay, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start();
-  }, [index, translateY, opacity]);
+  }, [entranceDelay, translateY, opacity]);
+
+  const handlePress = useCallback(() => onPress(printer), [onPress, printer]);
 
   const status = PRINTER_STATUS[printer.status];
   const maintenanceBadge = getMaintenanceBadge(printer.nextMaintenanceDate);
 
   return (
     <Animated.View style={{ transform: [{ translateY }], opacity }}>
-      <PressableScale onPress={onPress}>
+      <PressableScale onPress={handlePress}>
         <Card padded={false} style={styles.card}>
           <View style={styles.thumbnailWrapper}>
             {printer.photoUrl ? (
-              <Image source={{ uri: printer.photoUrl }} style={styles.thumbnail} />
+              <Image source={{ uri: printer.photoUrl }} style={styles.thumbnail} resizeMode="cover" />
             ) : (
               <View style={styles.thumbnailPlaceholder}>
                 <Printer color={Colors.textTertiary} size={26} strokeWidth={1.5} />
@@ -74,6 +78,8 @@ export default function PrinterCard({ printer, index, onPress }: Props) {
     </Animated.View>
   );
 }
+
+export default memo(PrinterCard);
 
 const styles = StyleSheet.create({
   card: {

@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React, { memo, useCallback, useLayoutEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, SharedValue, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -16,8 +16,9 @@ interface Props {
   initialY: number; // 0 to 1
   canvasWidth: number;
   canvasHeight: number;
-  onDragEnd: (x: number, y: number) => void;
-  onPress?: () => void;
+  // Callbacks estables y compartidos por todos los nodos: reciben el id/impresora para no crear closures por nodo.
+  onDragEnd: (printerId: number, x: number, y: number) => void;
+  onPress?: (printer: PrinterResponse) => void;
   disabled?: boolean;
   // Atenuado cuando hay un filtro activo en el resumen y la impresora no coincide.
   dimmed?: boolean;
@@ -25,7 +26,7 @@ interface Props {
   positions: SharedValue<Record<number, { x: number, y: number }>>;
 }
 
-export default function CanvasNodeItem({
+function CanvasNodeItem({
   printer,
   initialX,
   initialY,
@@ -39,6 +40,12 @@ export default function CanvasNodeItem({
   positions,
 }: Props) {
   const isDragging = useSharedValue(false);
+  const printerId = printer.id;
+  const handleDragEnd = useCallback(
+    (x: number, y: number) => onDragEnd(printerId, x, y),
+    [onDragEnd, printerId],
+  );
+  const handlePress = useCallback(() => onPress?.(printer), [onPress, printer]);
 
   // Initialize position in shared value if not set.
   // En un layout effect (no en el render) para no leer .value mientras React renderiza.
@@ -88,7 +95,7 @@ export default function CanvasNodeItem({
       if (currentPos) {
         const normalizedX = (currentPos.x + NODE_WIDTH / 2) / canvasWidth;
         const normalizedY = (currentPos.y + NODE_HEIGHT / 2) / canvasHeight;
-        runOnJS(onDragEnd)(normalizedX, normalizedY);
+        runOnJS(handleDragEnd)(normalizedX, normalizedY);
       }
     });
 
@@ -96,7 +103,7 @@ export default function CanvasNodeItem({
   const tapGesture = Gesture.Tap()
     .enabled(disabled && !!onPress)
     .onEnd((_e, success) => {
-      if (success && onPress) runOnJS(onPress)();
+      if (success && onPress) runOnJS(handlePress)();
     });
 
   const gesture = Gesture.Exclusive(panGesture, tapGesture);
@@ -149,6 +156,8 @@ export default function CanvasNodeItem({
     </GestureDetector>
   );
 }
+
+export default memo(CanvasNodeItem);
 
 const styles = StyleSheet.create({
   node: {

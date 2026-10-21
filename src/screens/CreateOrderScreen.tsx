@@ -12,6 +12,8 @@ import { TecnicoStackParamList } from '../navigation/TecnicoStack';
 import { orderService, OrderType, ChecklistItemInput, PartInput } from '../services/orderService';
 import { SparePartDTO } from '../types/parts';
 import { useCameraPermission } from '../hooks/useCameraPermission';
+import { useDraftAutosave } from '../hooks/useDraftAutosave';
+import { photoPickerOptions } from '../constants/media';
 import PartsSelectorModal from '../components/PartsSelectorModal';
 import Button from '../components/ui/Button';
 import TextField from '../components/ui/TextField';
@@ -22,6 +24,7 @@ import { Check, Plus, X } from 'lucide-react-native';
 type Props = NativeStackScreenProps<TecnicoStackParamList, 'CreateOrder'>;
 
 const MAX_PHOTOS = 5;
+const DRAFT_AUTOSAVE_MS = 30000;
 
 const TYPE_LABELS: Record<OrderType, string> = {
   PREVENTIVE: 'Preventivo',
@@ -94,12 +97,7 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     });
   }, [draftKey]);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      AsyncStorage.setItem(draftKey, JSON.stringify({ type, description, checklist, parts, estimatedTime }));
-    }, 30000);
-    return () => clearInterval(id);
-  }, [draftKey, type, description, checklist, parts, estimatedTime]);
+  useDraftAutosave(draftKey, { type, description, checklist, parts, estimatedTime }, DRAFT_AUTOSAVE_MS);
 
   const selectType = (t: OrderType) => {
     if (forceCorrective && t !== 'CORRECTIVE') return;
@@ -148,7 +146,7 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     if (photos.length >= MAX_PHOTOS) return;
     const allowed = await requestCameraPermission();
     if (!allowed) return;
-    const result = await launchCamera({ mediaType: 'photo', quality: 0.7 });
+    const result = await launchCamera(photoPickerOptions());
     if (result.assets) setPhotos(prev => [...prev, ...result.assets!].slice(0, MAX_PHOTOS));
   };
 
@@ -156,7 +154,7 @@ export default function CreateOrderScreen({ route, navigation }: Props) {
     if (photos.length >= MAX_PHOTOS) return;
     const allowed = await requestLibraryPermission();
     if (!allowed) return;
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7, selectionLimit: MAX_PHOTOS - photos.length });
+    const result = await launchImageLibrary(photoPickerOptions({ selectionLimit: MAX_PHOTOS - photos.length }));
     if (result.assets) setPhotos(prev => [...prev, ...result.assets!].slice(0, MAX_PHOTOS));
   };
 

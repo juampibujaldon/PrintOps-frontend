@@ -1,14 +1,5 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import ConfiguracionScreen from '../screens/ConfiguracionScreen';
-import PerfilScreen from '../screens/PerfilScreen';
-import SettingsWorkspaceScreen from '../screens/SettingsWorkspaceScreen';
-import SettingsNotificationsScreen from '../screens/SettingsNotificationsScreen';
-import SettingsQuoteDefaultsScreen from '../screens/SettingsQuoteDefaultsScreen';
-import SettingsPrintersScreen from '../screens/SettingsPrintersScreen';
-import SettingsAboutScreen from '../screens/SettingsAboutScreen';
-import TermsAndConditionsScreen from '../screens/TermsAndConditionsScreen';
-import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import { stackScreenOptions, DrawerToggle } from './navTheme';
 
 export type SettingsStackParamList = {
@@ -32,7 +23,7 @@ export default function SettingsStack() {
     >
       <Stack.Screen
         name="SettingsMenu"
-        component={ConfiguracionScreen}
+        getComponent={() => require('../screens/ConfiguracionScreen').default}
         options={({ navigation }: any) => ({
           title: 'Configuración',
           headerLeft: () => <DrawerToggle onPress={() => navigation.toggleDrawer()} />,
@@ -40,42 +31,42 @@ export default function SettingsStack() {
       />
       <Stack.Screen
         name="Perfil"
-        component={PerfilScreen}
+        getComponent={() => require('../screens/PerfilScreen').default}
         options={{ title: 'Perfil' }}
       />
       <Stack.Screen
         name="SettingsWorkspace"
-        component={SettingsWorkspaceScreen}
+        getComponent={() => require('../screens/SettingsWorkspaceScreen').default}
         options={{ title: 'Taller' }}
       />
       <Stack.Screen
         name="SettingsNotifications"
-        component={SettingsNotificationsScreen}
+        getComponent={() => require('../screens/SettingsNotificationsScreen').default}
         options={{ title: 'Notificaciones' }}
       />
       <Stack.Screen
         name="SettingsQuoteDefaults"
-        component={SettingsQuoteDefaultsScreen}
+        getComponent={() => require('../screens/SettingsQuoteDefaultsScreen').default}
         options={{ title: 'Presupuestos' }}
       />
       <Stack.Screen
         name="SettingsPrinters"
-        component={SettingsPrintersScreen}
+        getComponent={() => require('../screens/SettingsPrintersScreen').default}
         options={{ title: 'Impresoras' }}
       />
       <Stack.Screen
         name="SettingsAbout"
-        component={SettingsAboutScreen}
+        getComponent={() => require('../screens/SettingsAboutScreen').default}
         options={{ title: 'Acerca de' }}
       />
       <Stack.Screen
         name="TermsAndConditions"
-        component={TermsAndConditionsScreen}
+        getComponent={() => require('../screens/TermsAndConditionsScreen').default}
         options={{ title: 'Términos' }}
       />
       <Stack.Screen
         name="PrivacyPolicy"
-        component={PrivacyPolicyScreen}
+        getComponent={() => require('../screens/PrivacyPolicyScreen').default}
         options={{ title: 'Privacidad' }}
       />
     </Stack.Navigator>

@@ -11,11 +11,6 @@ import {
 import PrintOpsLogo from '../components/brand/PrintOpsLogo';
 import { Bell, Calculator, LayoutGrid, LucideIcon, Package, Printer, Settings, User, BarChart3 } from 'lucide-react-native';
 import TecnicoStack from './TecnicoStack';
-import SettingsStack from './SettingsStack';
-import StockScreen from '../screens/StockScreen';
-import PerfilScreen from '../screens/PerfilScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
-import DashboardScreen from '../screens/DashboardScreen';
 import { Colors, Icons, Radius, Spacing, Typography } from '../constants/theme';
 
 export type TecnicoDrawerParamList = {
@@ -73,37 +68,37 @@ export default function TecnicoDrawer() {
       />
       <Drawer.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        getComponent={() => require('../screens/DashboardScreen').default}
         options={{ title: 'Dashboard', drawerIcon: icon(BarChart3) }}
       />
       <Drawer.Screen
         name="Repuestos"
-        component={StockScreen}
+        getComponent={() => require('../screens/StockScreen').default}
         options={{ title: 'Repuestos', drawerIcon: icon(Package) }}
       />
       <Drawer.Screen
         name="Presupuestos"
-        component={require('../screens/QuoteHistoryScreen').default}
+        getComponent={() => require('../screens/QuoteHistoryScreen').default}
         options={{ title: 'Presupuestos', drawerIcon: icon(Calculator) }}
       />
       <Drawer.Screen
         name="Taller"
-        component={require('../screens/WorkshopCanvasScreen').default}
+        getComponent={() => require('../screens/WorkshopCanvasScreen').default}
         options={{ title: 'Taller', headerShown: false, drawerIcon: icon(LayoutGrid) }}
       />
       <Drawer.Screen
         name="Notificaciones"
-        component={NotificationsScreen}
+        getComponent={() => require('../screens/NotificationsScreen').default}
         options={{ title: 'Notificaciones', drawerIcon: icon(Bell) }}
       />
       <Drawer.Screen
         name="Perfil"
-        component={PerfilScreen}
+        getComponent={() => require('../screens/PerfilScreen').default}
         options={{ title: 'Mi perfil', drawerIcon: icon(User) }}
       />
       <Drawer.Screen
         name="Configuracion"
-        component={SettingsStack}
+        getComponent={() => require('./SettingsStack').default}
         options={{ title: 'Configuración', headerShown: false, drawerIcon: icon(Settings) }}
       />
     </Drawer.Navigator>

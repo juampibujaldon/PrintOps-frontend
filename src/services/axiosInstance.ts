@@ -4,9 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Keychain from 'react-native-keychain';
 import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
 
+const DEFAULT_TIMEOUT_MS = 15000;
+// Subir fotos por una red móvil lenta tarda mucho más que un request JSON.
+const UPLOAD_TIMEOUT_MS = 60000;
+
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: DEFAULT_TIMEOUT_MS,
   // No fijamos Content-Type por defecto: axios lo genera solo
   // (application/json para objetos y multipart/form-data con boundary para FormData).
 });
@@ -17,6 +21,10 @@ api.interceptors.request.use(
     const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    if (config.data instanceof FormData) {
+      config.timeout = Math.max(config.timeout ?? 0, UPLOAD_TIMEOUT_MS);
     }
 
     if (__DEV__) {
@@ -155,7 +163,13 @@ api.interceptors.response.use(
     }
 
     originalRequest._retry = true;
-    const token = await refreshAccessToken();
+    // Si otra request ya renovó el token mientras esta estaba en vuelo, alcanza con
+    // reintentar con el token vigente: un segundo refresh gastaría el refresh token rotado.
+    const sentAuthorization = originalRequest.headers?.Authorization;
+    const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const token = storedToken && `Bearer ${storedToken}` !== sentAuthorization
+      ? storedToken
+      : await refreshAccessToken();
     originalRequest.headers.Authorization = `Bearer ${token}`;
     return api(originalRequest);
   },

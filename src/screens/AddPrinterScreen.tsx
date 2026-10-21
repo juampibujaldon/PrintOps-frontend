@@ -7,6 +7,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
+import { photoPickerOptions } from '../constants/media';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Radius, Spacing, Typography } from '../constants/theme';
@@ -80,7 +81,7 @@ export default function AddPrinterScreen({ navigation }: Props) {
     const allowed = await requestCameraPermission();
     if (!allowed) return;
 
-    const result = await launchCamera({ mediaType: 'photo', quality: 0.7 });
+    const result = await launchCamera(photoPickerOptions());
     if (result.assets && result.assets.length > 0) {
       setPhoto(result.assets[0]);
     }
@@ -90,7 +91,7 @@ export default function AddPrinterScreen({ navigation }: Props) {
     const allowed = await requestLibraryPermission();
     if (!allowed) return;
 
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7 });
+    const result = await launchImageLibrary(photoPickerOptions());
     if (result.assets && result.assets.length > 0) {
       setPhoto(result.assets[0]);
     }

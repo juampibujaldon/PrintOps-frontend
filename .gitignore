@@ -65,3 +65,10 @@ coverage/
 # Ruby
 vendor/
 .bundle/
+
+# Perf measurement artifacts
+perf/*.bundle
+perf/*.map
+
+# graphify (grafo de conocimiento local, se regenera)
+graphify-out/

@@ -38,63 +38,63 @@ export default function TecnicoStack() {
       />
       <Stack.Screen
         name="AddPrinter"
-        component={require('../screens/AddPrinterScreen').default}
+        getComponent={() => require('../screens/AddPrinterScreen').default}
         options={{ title: 'Registrar Impresora' }}
       />
       <Stack.Screen
         name="PrinterDetail"
-        component={require('../screens/PrinterDetailScreen').default}
+        getComponent={() => require('../screens/PrinterDetailScreen').default}
         options={{ title: 'Detalle Impresora' }}
       />
       <Stack.Screen
         name="PrinterHistory"
-        component={require('../screens/PrinterHistoryScreen').default}
+        getComponent={() => require('../screens/PrinterHistoryScreen').default}
         options={{ title: 'Historial' }}
       />
       <Stack.Screen
         name="CreateOrder"
-        component={require('../screens/CreateOrderScreen').default}
+        getComponent={() => require('../screens/CreateOrderScreen').default}
         options={{ title: 'Nueva orden' }}
       />
       <Stack.Screen
         name="OrderDetail"
-        component={require('../screens/OrderDetailScreen').default}
+        getComponent={() => require('../screens/OrderDetailScreen').default}
         options={{ title: 'Detalle de orden' }}
       />
       <Stack.Screen
         name="OrdersList"
-        component={require('../screens/OrdersListScreen').default}
+        getComponent={() => require('../screens/OrdersListScreen').default}
         options={{ title: 'Órdenes' }}
       />
       <Stack.Screen
         name="ScanPrinter"
-        component={require('../screens/ScanPrinterScreen').default}
+        getComponent={() => require('../screens/ScanPrinterScreen').default}
         options={{ title: 'Escanear QR', headerShown: true }}
       />
       <Stack.Screen
         name="PrinterComponents"
-        component={require('../screens/PrinterComponentsScreen').default}
+        getComponent={() => require('../screens/PrinterComponentsScreen').default}
         options={{ title: 'Vida útil de repuestos' }}
       />
       <Stack.Screen
         name="PrinterRules"
-        component={require('../screens/PrinterRulesScreen').default}
+        getComponent={() => require('../screens/PrinterRulesScreen').default}
         options={{ title: 'Reglas de mantenimiento' }}
       />
 
       <Stack.Screen
         name="SparePartDetail"
-        component={require('../screens/SparePartDetailScreen').default}
+        getComponent={() => require('../screens/SparePartDetailScreen').default}
         options={{ title: 'Detalle de repuesto' }}
       />
       <Stack.Screen
         name="QuoteHistory"
-        component={require('../screens/QuoteHistoryScreen').default}
+        getComponent={() => require('../screens/QuoteHistoryScreen').default}
         options={{ title: 'Presupuestos' }}
       />
       <Stack.Screen
         name="QuoteCalculator"
-        component={require('../screens/QuoteCalculatorScreen').default}
+        getComponent={() => require('../screens/QuoteCalculatorScreen').default}
         options={{ title: 'Presupuesto' }}
       />
     </Stack.Navigator>

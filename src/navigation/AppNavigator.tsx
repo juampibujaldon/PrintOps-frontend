@@ -4,11 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import ResetPasswordScreen from '../screens/ResetPasswordScreen';
-import VerifyEmailScreen from '../screens/VerifyEmailScreen';
-import InviteErrorScreen, { InviteErrorCode } from '../screens/InviteErrorScreen';
-import RoleNavigator from './RoleNavigator';
+import type { InviteErrorCode } from '../screens/InviteErrorScreen';
 import { useAuth } from '../hooks/useAuth';
 import { navigationTheme } from './navTheme';
 
@@ -46,14 +42,14 @@ export default function AppNavigator() {
             {() => <SplashScreen onFinish={introDone ? undefined : finishIntro} />}
           </Stack.Screen>
         ) : isAuthenticated ? (
-          <Stack.Screen name="Role" component={RoleNavigator} />
+          <Stack.Screen name="Role" getComponent={() => require('./RoleNavigator').default} />
         ) : (
           <Stack.Group>
             <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="InviteError" component={InviteErrorScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="Register" getComponent={() => require('../screens/RegisterScreen').default} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="VerifyEmail" getComponent={() => require('../screens/VerifyEmailScreen').default} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="ResetPassword" getComponent={() => require('../screens/ResetPasswordScreen').default} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="InviteError" getComponent={() => require('../screens/InviteErrorScreen').default} options={{ animation: 'slide_from_bottom' }} />
           </Stack.Group>
         )}
       </Stack.Navigator>

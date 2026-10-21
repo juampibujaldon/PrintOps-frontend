@@ -13,10 +13,11 @@ const initialState: AuthState = {
   isAuthenticated: false,
 };
 
-function authReducer(state: AuthState, action: AuthAction): AuthState {
+export function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case 'SET_LOADING':
-      return { ...state, isLoading: action.payload };
+      // Mismo valor: devolver el mismo estado evita re-renderizar a todos los consumidores.
+      return state.isLoading === action.payload ? state : { ...state, isLoading: action.payload };
 
     case 'RESTORE_TOKEN':
       if (!action.payload) {

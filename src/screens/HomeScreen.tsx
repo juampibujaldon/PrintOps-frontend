@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.tsx
-import React, { useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -90,7 +90,16 @@ export default function HomeScreen() {
   }, [printers, statusFilter, search]);
 
   const handleAddPrinter = () => navigation.navigate('AddPrinter');
-  const handleOpenPrinter = (printer: PrinterResponse) => navigation.navigate('PrinterDetail', { printer });
+  const handleOpenPrinter = useCallback(
+    (printer: PrinterResponse) => navigation.navigate('PrinterDetail', { printer }),
+    [navigation],
+  );
+  const renderPrinter = useCallback(
+    ({ item, index }: { item: PrinterResponse; index: number }) => (
+      <PrinterCard printer={item} index={index} onPress={handleOpenPrinter} />
+    ),
+    [handleOpenPrinter],
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -143,9 +152,7 @@ export default function HomeScreen() {
       <FlatList
         data={filteredPrinters}
         keyExtractor={item => String(item.id)}
-        renderItem={({ item, index }) => (
-          <PrinterCard printer={item} index={index} onPress={() => handleOpenPrinter(item)} />
-        )}
+        renderItem={renderPrinter}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.textTertiary} />}
