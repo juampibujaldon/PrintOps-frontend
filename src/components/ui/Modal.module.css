@@ -1,0 +1,119 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: var(--color-overlay);
+  animation: fade-in var(--motion-base) var(--ease-standard);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100dvh - 2 * var(--space-lg));
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-floating);
+  outline: none;
+  animation: pop-in var(--motion-base) var(--ease-decelerate);
+}
+
+.sm {
+  max-width: 400px;
+}
+
+.md {
+  max-width: 560px;
+}
+
+.lg {
+  max-width: 800px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-lg) var(--space-sm) var(--space-xl);
+}
+
+.title {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-title3);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: var(--color-fill);
+  color: var(--color-text-secondary);
+}
+
+.close:hover {
+  background: var(--color-fill-pressed);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-xl) var(--space-xl);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl) var(--space-lg);
+  border-top: 0.5px solid var(--color-separator);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Mobile: hoja inferior */
+@media (max-width: 599px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .dialog {
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: sheet-in var(--motion-base) var(--ease-decelerate);
+  }
+
+  .footer {
+    padding-bottom: max(var(--space-lg), env(safe-area-inset-bottom));
+  }
+}

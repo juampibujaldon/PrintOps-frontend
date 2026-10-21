@@ -1,23 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import type { ReactNode } from 'react';
+import { cx } from '../../utils/cx';
+import styles from './EmptyState.module.css';
 
-export default function EmptyState({ icon, title, description, action }: { icon?: React.ReactNode, title: string, description?: string, action?: React.ReactNode }) {
-  return (
-    <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
-      {icon ? <View style={styles.icon}>{icon}</View> : null}
-      <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.desc}>{description}</Text> : null}
-      {action ? <View style={styles.action}>{action}</View> : null}
-    </Animated.View>
-  );
+interface Props {
+  icon?: ReactNode;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.xxl * 2 },
-  icon: { marginBottom: Spacing.lg },
-  title: { ...Typography.title3, color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.xs },
-  desc: { ...Typography.subheadline, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  action: { marginTop: Spacing.xl, alignSelf: 'stretch' },
-});
+export default function EmptyState({ icon, title, description, action, className }: Props) {
+  return (
+    <div className={cx(styles.container, className)}>
+      {icon ? <div className={styles.icon}>{icon}</div> : null}
+      <h2 className={styles.title}>{title}</h2>
+      {description ? <p className={styles.desc}>{description}</p> : null}
+      {action ? <div className={styles.action}>{action}</div> : null}
+    </div>
+  );
+}

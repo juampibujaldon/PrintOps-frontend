@@ -1,63 +1,61 @@
-/* eslint-env jest */
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Keychain from 'react-native-keychain';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_BASE_URL, STORAGE_KEYS } from '../src/constants/api';
 
-jest.mock('../src/services/googleAuth', () => ({
-  getGoogleIdToken: jest.fn(),
-  signOutFromGoogle: jest.fn().mockResolvedValue(undefined),
-  GoogleSignInError: class extends Error {},
-}));
+vi.mock('@react-oauth/google', () => ({ googleLogout: vi.fn() }));
 
+import { googleLogout } from '@react-oauth/google';
 import { authService, googleErrorMessage } from '../src/services/authService';
-import { getGoogleIdToken, signOutFromGoogle } from '../src/services/googleAuth';
 
 const GOOGLE_URL = `${API_BASE_URL}/api/auth/google`;
 const COMPLETE_URL = `${API_BASE_URL}/api/auth/google/complete`;
 const authResponse = {
-  accessToken: 'acc', refreshToken: 'ref', expiresIn: 900,
+  accessToken: 'acc',
+  refreshToken: 'ref',
+  expiresIn: 900,
   user: { id: 1, email: 'a@b.com', role: 'MANAGER', workspaceId: 7 },
 };
 
 let mock: MockAdapter;
-beforeEach(async () => {
-  jest.clearAllMocks();
+beforeEach(() => {
+  vi.clearAllMocks();
   mock = new MockAdapter(axios);
-  await AsyncStorage.clear();
-  (getGoogleIdToken as jest.Mock).mockResolvedValue('google-id-token');
 });
 afterEach(() => mock.restore());
 
 describe('loginWithGoogle', () => {
-  it('200 -> authenticated, persisting tokens like the password login', async () => {
+  it('200 -> authenticated, persisting tokens like the password login (rememberMe -> localStorage)', async () => {
     mock.onPost(GOOGLE_URL).reply(200, authResponse);
-    const result = await authService.loginWithGoogle('dev-1', true);
+    const result = await authService.loginWithGoogle('google-id-token', 'dev-1', true);
     expect(result).toEqual({ type: 'authenticated', auth: authResponse });
     expect(JSON.parse(mock.history.post[0].data)).toEqual({
-      idToken: 'google-id-token', deviceId: 'dev-1', rememberMe: true,
+      idToken: 'google-id-token',
+      deviceId: 'dev-1',
+      rememberMe: true,
     });
-    expect(await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
-    expect(Keychain.setGenericPassword).toHaveBeenCalledWith('refreshToken', 'ref', { service: 'refreshTokenService' });
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
+    expect(localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)).toBe('ref');
+  });
+
+  it('without rememberMe the session lives in sessionStorage only', async () => {
+    mock.onPost(GOOGLE_URL).reply(200, authResponse);
+    await authService.loginWithGoogle('tok', 'dev-1', false);
+    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
   });
 
   it('202 -> onboarding, without persisting a session', async () => {
     mock.onPost(GOOGLE_URL).reply(202, { onboardingToken: 'ob', email: 'a@b.com', name: null });
-    const result = await authService.loginWithGoogle('dev-1', false);
+    const result = await authService.loginWithGoogle('tok', 'dev-1', false);
     expect(result).toEqual({ type: 'onboarding', onboardingToken: 'ob', email: 'a@b.com', name: null });
-    expect(await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
+    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
   });
 
   it.each([401, 403, 503])('%s -> rejects with the HTTP error', async (status) => {
     mock.onPost(GOOGLE_URL).reply(status);
-    await expect(authService.loginWithGoogle('dev-1', false)).rejects.toMatchObject({ response: { status } });
-  });
-
-  it('user cancel -> cancelled, no request made', async () => {
-    (getGoogleIdToken as jest.Mock).mockResolvedValue(null);
-    await expect(authService.loginWithGoogle('dev-1', false)).resolves.toEqual({ type: 'cancelled' });
-    expect(mock.history.post).toHaveLength(0);
+    await expect(authService.loginWithGoogle('tok', 'dev-1', false)).rejects.toMatchObject({ response: { status } });
   });
 });
 
@@ -67,9 +65,13 @@ describe('completeGoogleOnboarding', () => {
     const auth = await authService.completeGoogleOnboarding('ob', 'dev-1', false, { workspaceName: 'Mi taller' });
     expect(auth).toEqual(authResponse);
     expect(JSON.parse(mock.history.post[0].data)).toEqual({
-      onboardingToken: 'ob', deviceId: 'dev-1', rememberMe: false, inviteToken: null, workspaceName: 'Mi taller',
+      onboardingToken: 'ob',
+      deviceId: 'dev-1',
+      rememberMe: false,
+      inviteToken: null,
+      workspaceName: 'Mi taller',
     });
-    expect(await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
+    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
   });
 
   it('sends the invite token with null workspaceName', async () => {
@@ -88,7 +90,9 @@ describe('googleErrorMessage', () => {
     expect(googleErrorMessage({ response: { status, data: {} } })).toContain(fragment);
   });
   it('prefers a backend message for other statuses', () => {
-    expect(googleErrorMessage({ response: { status: 409, data: { message: 'Email ya registrado' } } })).toBe('Email ya registrado');
+    expect(googleErrorMessage({ response: { status: 409, data: { message: 'Email ya registrado' } } })).toBe(
+      'Email ya registrado',
+    );
   });
   it('shows the lockout message when the IP is blocked (429)', () => {
     const message = 'IP bloqueada por múltiples intentos fallidos. Espere 15 minutos.';
@@ -97,9 +101,17 @@ describe('googleErrorMessage', () => {
 });
 
 describe('logout', () => {
-  it('signs out of Google (also when the remote call fails)', async () => {
+  it('signs out of Google and clears the session (also when the remote call fails)', async () => {
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'acc');
     mock.onPost(/\/api\/auth\/logout/).reply(500);
     await expect(authService.logout('dev-1', 'tok')).rejects.toBeDefined();
-    expect(signOutFromGoogle).toHaveBeenCalled();
+    expect(googleLogout).toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
+  });
+
+  it('always sends keepSession=false (no soft logout on the web)', async () => {
+    mock.onPost(/\/api\/auth\/logout/).reply(200);
+    await authService.logout('dev-1', 'tok');
+    expect(mock.history.post[0].url).toContain('keepSession=false');
   });
 });

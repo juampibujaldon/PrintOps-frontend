@@ -1,9 +1,12 @@
 // src/context/AuthContext.tsx
-import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
-import { authService, GoogleLoginResult } from '../services/authService';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
+import type { ReactNode } from 'react';
+import { authService } from '../services/authService';
+import type { GoogleLoginResult } from '../services/authService';
 import { webSocketService } from '../services/webSocketService';
 import { setOnSessionExpired } from '../services/axiosInstance';
-import { AuthAction, AuthResponse, AuthState } from '../types/auth';
+import { clearSession } from '../services/storage';
+import type { AuthAction, AuthResponse, AuthState } from '../types/auth';
 
 const initialState: AuthState = {
   user: null,
@@ -54,137 +57,119 @@ interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   register: (email: string, password: string, inviteToken?: string, workspaceName?: string) => Promise<string>;
-  signInWithGoogle: (rememberMe: boolean) => Promise<GoogleLoginResult>;
+  signInWithGoogle: (idToken: string, rememberMe: boolean) => Promise<GoogleLoginResult>;
   completeGoogleOnboarding: (
     onboardingToken: string,
     rememberMe: boolean,
     choice: { inviteToken?: string; workspaceName?: string },
   ) => Promise<void>;
   logout: () => Promise<void>;
-  restore: (skipBiometrics?: boolean) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Restaurar sesión al iniciar
+  // Restaurar sesión al iniciar.
   useEffect(() => {
-    authService.restoreSession()
+    let cancelled = false;
+    authService
+      .restoreSession()
       .then((session) => {
-        // Sin espera artificial: el AppNavigator mantiene el splash hasta que
-        // termina la animación del logo, solo en este arranque.
-        dispatch({ type: 'RESTORE_TOKEN', payload: session
-          ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
-          : null });
+        if (cancelled) return;
+        dispatch({
+          type: 'RESTORE_TOKEN',
+          payload: session
+            ? { user: session.user, token: session.accessToken, refreshToken: session.refreshToken }
+            : null,
+        });
         if (session) webSocketService.connect(session.user.id);
       })
       .catch(() => {
-        // Si la restauración falla (ej. refresh token expirado), ir al login
-        // en lugar de quedarse colgado en el Splash.
-        dispatch({ type: 'RESTORE_TOKEN', payload: null });
+        if (!cancelled) dispatch({ type: 'RESTORE_TOKEN', payload: null });
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Si el interceptor no puede renovar el token, se vuelve al login.
   useEffect(() => {
     setOnSessionExpired(() => {
       webSocketService.disconnect();
+      clearSession();
       dispatch({ type: 'LOGOUT' });
     });
     return () => setOnSessionExpired(null);
   }, []);
 
-  const login = async (email: string, password: string, rememberMe: boolean) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    try {
-      const data = await authService.login(email, password, rememberMe);
-      dispatch({
-        type: 'LOGIN_SUCCESS',
-        payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
-      });
-      webSocketService.connect(data.user.id);
-    } catch (error) {
-      // Si el login falla, no dejamos la app clavada en el Splash.
-      dispatch({ type: 'SET_LOADING', payload: false });
-      throw error;
-    }
-  };
-
-  const applyAuth = (data: AuthResponse) => {
+  const applyAuth = useCallback((data: AuthResponse) => {
     dispatch({
       type: 'LOGIN_SUCCESS',
       payload: { user: data.user, token: data.accessToken, refreshToken: data.refreshToken },
     });
     webSocketService.connect(data.user.id);
-  };
+  }, []);
 
-  // Sin SET_LOADING: isLoading muestra el Splash y desmontaría Login/onboarding
-  // (perderíamos la pantalla y sus parámetros). Cada pantalla maneja su propio loading.
-  const signInWithGoogle = async (rememberMe: boolean): Promise<GoogleLoginResult> => {
-    const deviceId = await authService.getOrCreateDeviceId();
-    const result = await authService.loginWithGoogle(deviceId, rememberMe);
-    if (result.type === 'authenticated') applyAuth(result.auth);
-    return result;
-  };
+  // Sin SET_LOADING en los logins: isLoading reemplaza la pantalla por el loader y desmontaría
+  // Login/onboarding (perderíamos el formulario ante un error). Cada pantalla maneja su loading.
+  const login = useCallback(
+    async (email: string, password: string, rememberMe: boolean) => {
+      applyAuth(await authService.login(email, password, rememberMe));
+    },
+    [applyAuth],
+  );
 
-  const completeGoogleOnboarding = async (
-    onboardingToken: string,
-    rememberMe: boolean,
-    choice: { inviteToken?: string; workspaceName?: string },
-  ) => {
-    const deviceId = await authService.getOrCreateDeviceId();
-    applyAuth(await authService.completeGoogleOnboarding(onboardingToken, deviceId, rememberMe, choice));
-  };
+  const signInWithGoogle = useCallback(
+    async (idToken: string, rememberMe: boolean): Promise<GoogleLoginResult> => {
+      const deviceId = authService.getOrCreateDeviceId();
+      const result = await authService.loginWithGoogle(idToken, deviceId, rememberMe);
+      if (result.type === 'authenticated') applyAuth(result.auth);
+      return result;
+    },
+    [applyAuth],
+  );
 
-  const register = async (
-    email: string,
-    password: string,
-    inviteToken?: string,
-    workspaceName?: string,
-  ): Promise<string> => {
-    // Sin auto-login: el usuario debe verificar su email antes de iniciar sesión.
-    return await authService.register(email, password, inviteToken, workspaceName);
-  };
+  const completeGoogleOnboarding = useCallback(
+    async (
+      onboardingToken: string,
+      rememberMe: boolean,
+      choice: { inviteToken?: string; workspaceName?: string },
+    ) => {
+      const deviceId = authService.getOrCreateDeviceId();
+      applyAuth(await authService.completeGoogleOnboarding(onboardingToken, deviceId, rememberMe, choice));
+    },
+    [applyAuth],
+  );
 
-  const logout = async () => {
+  // Sin auto-login: el usuario debe verificar su email antes de iniciar sesión.
+  const register = useCallback(
+    (email: string, password: string, inviteToken?: string, workspaceName?: string): Promise<string> =>
+      authService.register(email, password, inviteToken, workspaceName),
+    [],
+  );
+
+  const token = state.token;
+  const logout = useCallback(async () => {
     try {
-      const deviceId = await authService.getOrCreateDeviceId();
-      if (state.token) {
-        await authService.logout(deviceId, state.token);
+      const deviceId = authService.getOrCreateDeviceId();
+      if (token) {
+        await authService.logout(deviceId, token);
       }
     } catch {
       // Falla remota (red/401): igual cerramos la sesión local.
     } finally {
       webSocketService.disconnect();
-      // Siempre limpiamos el estado local, aunque la llamada remota falle.
+      clearSession();
       dispatch({ type: 'LOGOUT' });
     }
-  };
+  }, [token]);
 
-  const restore = async (skipBiometrics = false) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    try {
-      const session = await authService.restoreSession(skipBiometrics);
-      if (session) {
-        dispatch({ type: 'RESTORE_TOKEN', payload: { user: session.user, token: session.accessToken, refreshToken: session.refreshToken } });
-        webSocketService.connect(session.user.id);
-        return true;
-      } else {
-        dispatch({ type: 'SET_LOADING', payload: false });
-        return false;
-      }
-    } catch (error: any) {
-      dispatch({ type: 'SET_LOADING', payload: false });
-      throw error;
-    }
-  };
-
-  // Las funciones solo leen `state` (logout usa state.token): recalcular con cada
-  // cambio de estado alcanza y evita re-renderizar a todos los consumidores siempre.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const value = useMemo(() => ({ state, login, register, signInWithGoogle, completeGoogleOnboarding, logout, restore }), [state]);
+  const value = useMemo(
+    () => ({ state, login, register, signInWithGoogle, completeGoogleOnboarding, logout }),
+    [state, login, register, signInWithGoogle, completeGoogleOnboarding, logout],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

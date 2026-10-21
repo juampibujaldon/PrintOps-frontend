@@ -1,5 +1,8 @@
-import { TextStyle } from 'react-native';
-import { Easing, withTiming, withSpring, ReduceMotion } from 'react-native-reanimated';
+import type { CSSProperties } from 'react';
+
+// Los mismos valores viven como CSS custom properties en src/styles/tokens.css.
+// Este módulo se mantiene para el código que necesita colores dinámicos en JS
+// (p. ej. colores de estado de impresoras y órdenes).
 
 // 1. COLORS
 // Paleta basada en los colores de sistema de iOS: fondos agrupados en gris muy
@@ -116,28 +119,28 @@ export const tint = (hex: string, alpha = 0.14): string => {
 
 // 2. TYPOGRAPHY
 // Escala de Dynamic Type de iOS (tamaño "Large"), fuente del sistema.
-export const Typography: Record<string, TextStyle> = {
-  display: { fontSize: 34, fontWeight: '700', letterSpacing: 0.37 }, // Large Title
-  title: { fontSize: 28, fontWeight: '700', letterSpacing: 0.36 },
-  headline: { fontSize: 17, fontWeight: '600', letterSpacing: -0.41 },
-  body: { fontSize: 17, fontWeight: '400', letterSpacing: -0.41 },
-  callout: { fontSize: 16, fontWeight: '400', letterSpacing: -0.32 },
-  subheadline: { fontSize: 15, fontWeight: '400', letterSpacing: -0.24 },
-  footnote: { fontSize: 13, fontWeight: '400', letterSpacing: -0.08 },
-  caption: { fontSize: 12, fontWeight: '400', letterSpacing: 0 },
+// Valores como CSSProperties (px). Para CSS Modules usar las variables --fs-*.
+export const Typography: Record<string, CSSProperties> = {
+  display: { fontSize: 34, fontWeight: 700, letterSpacing: 0.37 }, // Large Title
+  title: { fontSize: 28, fontWeight: 700, letterSpacing: 0.36 },
+  headline: { fontSize: 17, fontWeight: 600, letterSpacing: -0.41 },
+  body: { fontSize: 17, fontWeight: 400, letterSpacing: -0.41 },
+  callout: { fontSize: 16, fontWeight: 400, letterSpacing: -0.32 },
+  subheadline: { fontSize: 15, fontWeight: 400, letterSpacing: -0.24 },
+  footnote: { fontSize: 13, fontWeight: 400, letterSpacing: -0.08 },
+  caption: { fontSize: 12, fontWeight: 400, letterSpacing: 0 },
 
   // Modificadores
-  tabular: { fontVariant: ['tabular-nums'] },
+  tabular: { fontVariantNumeric: 'tabular-nums' },
 
   // Legacy aliases
-  title1: { fontSize: 28, fontWeight: '700', letterSpacing: 0.36 },
-  title2: { fontSize: 22, fontWeight: '700', letterSpacing: 0.35 },
-  title3: { fontSize: 20, fontWeight: '600', letterSpacing: 0.38 },
-  caption1: { fontSize: 12, fontWeight: '400', letterSpacing: 0 },
-  caption2: { fontSize: 11, fontWeight: '400', letterSpacing: 0.06 },
-  largeTitle: { fontSize: 34, fontWeight: '700', letterSpacing: 0.37 },
-  // Encabezado de sección de lista agrupada (iOS usa footnote en mayúsculas).
-  labelUppercase: { fontSize: 13, fontWeight: '400', letterSpacing: -0.08, textTransform: 'uppercase' },
+  title1: { fontSize: 28, fontWeight: 700, letterSpacing: 0.36 },
+  title2: { fontSize: 22, fontWeight: 700, letterSpacing: 0.35 },
+  title3: { fontSize: 20, fontWeight: 600, letterSpacing: 0.38 },
+  caption1: { fontSize: 12, fontWeight: 400, letterSpacing: 0 },
+  caption2: { fontSize: 11, fontWeight: 400, letterSpacing: 0.06 },
+  largeTitle: { fontSize: 34, fontWeight: 700, letterSpacing: 0.37 },
+  labelUppercase: { fontSize: 13, fontWeight: 400, letterSpacing: -0.08, textTransform: 'uppercase' },
 };
 
 // 3. SPACING, ICONS & RADII
@@ -165,45 +168,13 @@ export const Radius = {
   full: 999,
 };
 
-// 4. SHADOWS
-// Sombras muy difusas y de baja opacidad: la jerarquía la da el color de fondo,
-// no los bordes ni sombras marcadas.
+// 4. SHADOWS (box-shadow CSS)
 export const Shadows = {
-  cardLight: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  cardDark: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  floatingLight: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  floatingDark: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-
-  // Legacy aliases
-  card: { shadowColor: '#000000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
-  floating: { shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 8 },
+  card: '0 1px 6px rgba(0, 0, 0, 0.04)',
+  floating: '0 8px 24px rgba(0, 0, 0, 0.08)',
 };
 
-// 5. MOTION (Reanimated)
+// 5. MOTION (valores CSS)
 export const Motion = {
   durations: {
     fast: 160,
@@ -211,21 +182,7 @@ export const Motion = {
     slow: 380,
   },
   easings: {
-    standard: Easing.bezier(0.25, 0.1, 0.25, 1), // ease de UIKit
-    decelerate: Easing.bezier(0.32, 0.72, 0, 1), // salida suave de sheets/modales
+    standard: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+    decelerate: 'cubic-bezier(0.32, 0.72, 0, 1)',
   },
-  springs: {
-    bouncy: { damping: 18, mass: 1, stiffness: 180, reduceMotion: ReduceMotion.System },
-    // Feedback de presión: rápido y sin rebote visible
-    damped: { damping: 26, mass: 0.8, stiffness: 320, reduceMotion: ReduceMotion.System },
-  },
-};
-
-// Reanimated helpers
-export const withStandardTiming = (toValue: number, config?: object) => {
-  return withTiming(toValue, { duration: Motion.durations.base, easing: Motion.easings.standard, reduceMotion: ReduceMotion.System, ...config });
-};
-
-export const withDampedSpring = (toValue: number, config?: object) => {
-  return withSpring(toValue, { ...Motion.springs.damped, ...config });
 };

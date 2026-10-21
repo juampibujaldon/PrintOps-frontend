@@ -120,7 +120,7 @@ export function usePrinterHistory(printerId: number) {
         type: 'ORDERS_SUCCESS',
         payload: { orders: res.orders, totalPages: res.totalPages, page: res.currentPage },
       }))
-      .catch((error: any) =>
+      .catch((error: { response?: { data?: { message?: string } } }) =>
         active && dispatch({
           type: 'ORDERS_ERROR',
           payload: error?.response?.data?.message || 'No se pudo cargar el historial',

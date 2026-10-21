@@ -1,0 +1,14 @@
+.skeleton {
+  background: var(--color-fill);
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes shimmer {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}

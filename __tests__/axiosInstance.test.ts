@@ -1,25 +1,22 @@
-/* eslint-env jest */
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Keychain from 'react-native-keychain';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../src/services/axiosInstance';
 import { API_BASE_URL, STORAGE_KEYS } from '../src/constants/api';
 
 const REFRESH_URL = `${API_BASE_URL}/api/auth/refresh`;
 const DATA_URL = `${API_BASE_URL}/api/data`;
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let apiMock: MockAdapter;
 let authMock: MockAdapter;
 let refreshCalls: number;
 
-beforeEach(async () => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-  await AsyncStorage.clear();
-  await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'old');
-  await AsyncStorage.setItem(STORAGE_KEYS.DEVICE_ID, 'device-1');
-  (Keychain.getGenericPassword as jest.Mock).mockResolvedValue({ password: 'refresh-1' });
+beforeEach(() => {
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'old');
+  localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-1');
+  localStorage.setItem(STORAGE_KEYS.DEVICE_ID, 'device-1');
 
   refreshCalls = 0;
   authMock = new MockAdapter(axios);
@@ -35,13 +32,13 @@ beforeEach(async () => {
 afterEach(() => {
   apiMock.restore();
   authMock.restore();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
-// El backend acepta solo el token 'new'. `latencyMs` simula respuestas que llegan en momentos distintos.
+// El backend acepta solo el token 'new'. `latencyByCall` simula respuestas que llegan en momentos distintos.
 const serverAcceptingNewToken = (latencyByCall: number[]) => {
   let call = 0;
-  apiMock.onGet(DATA_URL).reply(async config => {
+  apiMock.onGet(DATA_URL).reply(async (config) => {
     await delay(latencyByCall[call++] ?? 0);
     return config.headers?.Authorization === 'Bearer new' ? [200, 'ok'] : [401];
   });
@@ -69,12 +66,34 @@ describe('401 handling', () => {
     expect(res.data).toBe('ok');
     expect(refreshCalls).toBe(1);
   });
+
+  it('stores the rotated tokens after a refresh', async () => {
+    serverAcceptingNewToken([0]);
+    await api.get(DATA_URL);
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('new');
+    expect(localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)).toBe('refresh-2');
+  });
+
+  it('does not try to refresh on 403', async () => {
+    apiMock.onGet(DATA_URL).reply(403);
+    await expect(api.get(DATA_URL)).rejects.toMatchObject({ response: { status: 403 } });
+    expect(refreshCalls).toBe(0);
+  });
+});
+
+describe('validation errors', () => {
+  it('turns the [{field, message}] list into a single message with Spanish labels', async () => {
+    apiMock.onPost(DATA_URL).reply(400, [{ field: 'marginPercent', message: 'marginPercent no puede superar 100' }]);
+    await expect(api.post(DATA_URL, {})).rejects.toMatchObject({
+      response: { data: { error: 'Datos inválidos', message: 'Margen (%): no puede superar 100' } },
+    });
+  });
 });
 
 describe('multipart uploads', () => {
   const captureTimeout = async (data?: unknown, timeout?: number) => {
     let seen: number | undefined;
-    apiMock.onPost(`${API_BASE_URL}/api/upload`).reply(config => {
+    apiMock.onPost(`${API_BASE_URL}/api/upload`).reply((config) => {
       seen = config.timeout;
       return [200, {}];
     });

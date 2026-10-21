@@ -1,63 +1,67 @@
-import React from 'react';
-import { StyleSheet, Text, ActivityIndicator, ViewStyle, StyleProp, View } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
-import PressableScale from './PressableScale';
+import { forwardRef } from 'react';
+import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from 'react';
+import { cx } from '../../utils/cx';
+import Spinner from './Spinner';
+import styles from './Button.module.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tinted' | 'ghost' | 'danger';
 
-interface ButtonProps {
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {
+  /** Texto del botón. */
   title: string;
   variant?: ButtonVariant;
+  /** Alias de onClick (API del original RN). */
   onPress?: () => void;
-  disabled?: boolean;
   loading?: boolean;
-  icon?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
+  icon?: ReactNode;
+  /** Ocupa todo el ancho disponible (default true). */
+  fullWidth?: boolean;
+  size?: 'md' | 'sm';
 }
 
-const PALETTE: Record<ButtonVariant, { bg: string; fg: string }> = {
-  primary: { bg: Colors.primary, fg: Colors.onPrimary },
-  secondary: { bg: Colors.fill, fg: Colors.textPrimary },
-  tinted: { bg: Colors.primaryTint, fg: Colors.primary },
-  ghost: { bg: 'transparent', fg: Colors.primary },
-  danger: { bg: Colors.errorBg, fg: Colors.red },
-};
-
-export default function Button({ title, variant = 'primary', onPress, disabled, loading, icon, style }: ButtonProps) {
-  const { bg, fg } = PALETTE[variant];
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    title,
+    variant = 'primary',
+    onPress,
+    onClick,
+    disabled,
+    loading,
+    icon,
+    fullWidth = true,
+    size = 'md',
+    type = 'button',
+    className,
+    ...rest
+  },
+  ref,
+) {
   const inactive = disabled || loading;
-
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+    if (inactive) return;
+    onClick?.(e);
+    onPress?.();
+  };
   return (
-    <PressableScale
-      onPress={onPress}
+    <button
+      ref={ref}
+      type={type}
+      className={cx(styles.button, styles[variant], size === 'sm' && styles.sm, fullWidth && styles.full, className)}
       disabled={inactive}
-      style={[styles.base, { backgroundColor: bg }, disabled && styles.disabled, style]}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled, busy: !!loading }}
+      aria-busy={loading || undefined}
+      onClick={handleClick}
+      {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={fg} />
+        <Spinner size={20} label="Cargando" />
       ) : (
-        <View style={styles.content}>
+        <>
           {icon}
-          <Text style={[styles.text, { color: fg }]} numberOfLines={1}>{title}</Text>
-        </View>
+          <span className={styles.label}>{title}</span>
+        </>
       )}
-    </PressableScale>
+    </button>
   );
-}
-
-const styles = StyleSheet.create({
-  base: {
-    minHeight: 50,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  disabled: { opacity: 0.4 },
-  text: {
-    ...Typography.headline,
-  },
 });
+
+export default Button;

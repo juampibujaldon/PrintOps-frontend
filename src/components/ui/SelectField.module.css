@@ -1,0 +1,70 @@
+.container {
+  padding: var(--space-sm) 0;
+}
+
+.label {
+  display: block;
+  margin: 0 0 6px 4px;
+  font-size: var(--fs-footnote);
+  letter-spacing: var(--ls-footnote);
+  color: var(--color-text-secondary);
+}
+
+.select,
+.native {
+  width: 100%;
+  min-height: 46px;
+  background: var(--color-fill);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-md);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-body);
+  color: var(--color-text-primary);
+}
+
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.select:hover:not(:disabled) {
+  background: var(--color-fill-pressed);
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  margin-right: var(--space-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disabled {
+  color: var(--color-text-disabled);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.selectWrap {
+  position: relative;
+}
+
+.native {
+  appearance: none;
+  border: 0;
+  padding-right: 40px;
+}
+
+.selectWrap .chevron {
+  position: absolute;
+  right: var(--space-md);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}

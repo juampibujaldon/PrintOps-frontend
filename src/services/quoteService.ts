@@ -1,7 +1,5 @@
 // src/services/quoteService.ts
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import ReactNativeBlobUtil from 'react-native-blob-util';
-import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
+import { API_BASE_URL } from '../constants/api';
 import api from './axiosInstance';
 import {
   Quote,
@@ -111,25 +109,15 @@ const remove = async (id: number): Promise<void> => {
   await api.delete(`${API_BASE_URL}/api/quotes/${id}`);
 };
 
-// Descarga el PDF a la carpeta de caché y devuelve la ruta absoluta del archivo.
-const downloadPdf = async (id: number, quoteNumber: string): Promise<string> => {
-  // Pasa primero por axios: si el access token venció, su interceptor lo
-  // refresca (ReactNativeBlobUtil va por fuera de axios y no lo haría).
-  await get(id);
-  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-  const path = `${ReactNativeBlobUtil.fs.dirs.CacheDir}/presupuesto-${quoteNumber}.pdf`;
-  const res = await ReactNativeBlobUtil.config({ path, fileCache: true }).fetch(
-    'GET',
-    `${API_BASE_URL}/api/quotes/${id}/pdf`,
-    { Authorization: `Bearer ${token ?? ''}` },
-  );
-  // fetch no falla con 4xx/5xx: sin este chequeo se compartía el JSON de error como PDF.
-  const status = res.info().status;
-  if (status !== 200) {
-    await ReactNativeBlobUtil.fs.unlink(path).catch(() => {});
-    throw new Error(`El servidor no pudo generar el PDF (HTTP ${status}).`);
-  }
-  return path;
+// Descarga el PDF del presupuesto como Blob (el interceptor de axios se ocupa del token).
+// La pantalla decide qué hacer: descargar (ver utils/download.ts) / abrir / compartir.
+const downloadPdf = async (id: number): Promise<Blob> => {
+  const { data } = await api.get<Blob>(`${API_BASE_URL}/api/quotes/${id}/pdf`, {
+    responseType: 'blob',
+    // El PDF puede tardar en generarse en el servidor.
+    timeout: 60000,
+  });
+  return data;
 };
 
 export const quoteService = {

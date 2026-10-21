@@ -31,31 +31,21 @@ export interface PrinterResponse {
   watts: number | null;
 }
 
-export interface PhotoAsset {
-  uri: string;
-  type: string;
-  name: string;
-}
+// En web una foto es un Blob/File (ver utils/image.ts: resizeImageToBlob).
+export type PhotoAsset = Blob | File;
 
 const createPrinter = async (data: PrinterData, photo?: PhotoAsset): Promise<PrinterResponse> => {
   const formData = new FormData();
 
-  // Part "printer": JSON con Content-Type application/json (estilo React Native).
-  formData.append('printer', {
-    string: JSON.stringify(data),
-    type: 'application/json',
-  } as any);
+  // Part "printer": JSON con Content-Type application/json.
+  formData.append('printer', new Blob([JSON.stringify(data)], { type: 'application/json' }));
 
   if (photo) {
-    formData.append('photo', {
-      uri: photo.uri,
-      type: photo.type || 'image/jpeg',
-      name: photo.name || 'photo.jpg',
-    } as any);
+    const name = photo instanceof File && photo.name ? photo.name : 'photo.jpg';
+    formData.append('photo', photo, name);
   }
 
-  // ERR-03: NO seteamos Content-Type manualmente. Axios / el networking nativo
-  // de React Native generan el multipart/form-data con el boundary correcto.
+  // NO seteamos Content-Type manualmente: el navegador genera el multipart con el boundary.
   const response = await api.post<PrinterResponse>(`${API_BASE_URL}/api/printers`, formData);
 
   return response.data;

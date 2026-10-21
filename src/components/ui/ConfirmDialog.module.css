@@ -1,0 +1,7 @@
+.message {
+  color: var(--color-text-secondary);
+  font-size: var(--fs-callout);
+  line-height: 22px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

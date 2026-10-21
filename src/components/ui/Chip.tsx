@@ -1,30 +1,22 @@
-import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
-import PressableScale from './PressableScale';
+import { cx } from '../../utils/cx';
+import styles from './Chip.module.css';
 
-export default function Chip({ label, selected, onPress }: { label: string, selected: boolean, onPress: () => void }) {
-  return (
-    <PressableScale
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      style={[styles.chip, selected && styles.selectedBg]}
-    >
-      <Text style={[styles.text, selected && styles.selectedText]}>{label}</Text>
-    </PressableScale>
-  );
+interface Props {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  className?: string;
 }
 
-const styles = StyleSheet.create({
-  chip: {
-    height: 34,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md + 2,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.fill,
-  },
-  selectedBg: { backgroundColor: Colors.textPrimary },
-  text: { ...Typography.subheadline, fontWeight: '500', color: Colors.textPrimary },
-  selectedText: { color: Colors.surface },
-});
+export default function Chip({ label, selected, onPress, className }: Props) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      aria-pressed={selected}
+      className={cx(styles.chip, selected && styles.selected, className)}
+    >
+      {label}
+    </button>
+  );
+}

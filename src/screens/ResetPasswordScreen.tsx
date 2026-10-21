@@ -1,19 +1,19 @@
 // src/screens/ResetPasswordScreen.tsx
-import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, Alert,
-} from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AuthLayout from '../components/layout/AuthLayout';
+import { Button, TextField } from '../components/ui';
+import { useToast } from '../context/ToastContext';
 import { authService } from '../services/authService';
-import { Colors, Spacing, Typography } from '../constants/theme';
-import TextField from '../components/ui/TextField';
-import Button from '../components/ui/Button';
-import PressableScale from '../components/ui/PressableScale';
+import styles from './AuthScreens.module.css';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
+interface ApiError {
+  response?: { data?: { message?: string } };
+}
 
-export default function ResetPasswordScreen({ navigation }: Props) {
+export default function ResetPasswordScreen() {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
@@ -22,16 +22,16 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
   const requestCode = async () => {
     if (!email.trim()) {
-      Alert.alert('Atención', 'Ingresá tu email.');
+      showToast('Ingresá tu email.', { type: 'error', title: 'Atención' });
       return;
     }
     setLoading(true);
     try {
       const message = await authService.forgotPassword(email.trim());
-      Alert.alert('Email enviado', message);
+      showToast(message, { type: 'success', title: 'Email enviado' });
       setStep('code');
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo enviar el email');
+    } catch (error) {
+      showToast((error as ApiError)?.response?.data?.message || 'No se pudo enviar el email', { type: 'error', title: 'Error' });
     } finally {
       setLoading(false);
     }
@@ -39,103 +39,88 @@ export default function ResetPasswordScreen({ navigation }: Props) {
 
   const submitReset = async () => {
     if (!token.trim()) {
-      Alert.alert('Atención', 'Ingresá el código recibido por email.');
+      showToast('Ingresá el código recibido por email.', { type: 'error', title: 'Atención' });
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert('Atención', 'La contraseña debe tener al menos 8 caracteres.');
+      showToast('La contraseña debe tener al menos 8 caracteres.', { type: 'error', title: 'Atención' });
       return;
     }
     setLoading(true);
     try {
       const message = await authService.resetPassword(token.trim(), newPassword);
-      Alert.alert('Listo', message);
-      navigation.goBack();
-    } catch (error: any) {
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo restablecer la contraseña');
+      showToast(message, { type: 'success', title: 'Listo' });
+      navigate('/login');
+    } catch (error) {
+      showToast((error as ApiError)?.response?.data?.message || 'No se pudo restablecer la contraseña', {
+        type: 'error',
+        title: 'Error',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Recuperar contraseña</Text>
+    <AuthLayout>
+      <h1 className={styles.titleCenter}>Recuperar contraseña</h1>
 
       {step === 'email' ? (
-        <>
-          <Text style={styles.subtitle}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void requestCode();
+          }}
+          noValidate
+        >
+          <p className={`${styles.subtitle} ${styles.center}`}>
             Ingresá tu email y te enviaremos un código para restablecer la contraseña.
-          </Text>
+          </p>
           <TextField
             label="Email"
+            type="email"
             placeholder="taller@ejemplo.com"
-            keyboardType="email-address"
+            autoComplete="email"
             autoCapitalize="none"
-            autoCorrect={false}
+            autoCorrect="off"
             value={email}
             onChangeText={setEmail}
           />
-          <Button title="Enviar código" onPress={requestCode} loading={loading} />
-        </>
+          <Button title="Enviar código" type="submit" loading={loading} />
+        </form>
       ) : (
-        <>
-          <Text style={styles.subtitle}>
-            Ingresá el código recibido y tu nueva contraseña.
-          </Text>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitReset();
+          }}
+          noValidate
+        >
+          <p className={`${styles.subtitle} ${styles.center}`}>Ingresá el código recibido y tu nueva contraseña.</p>
           <TextField
             label="Código de reset"
             placeholder="Código recibido por email"
             autoCapitalize="none"
-            autoCorrect={false}
+            autoCorrect="off"
+            autoComplete="one-time-code"
             value={token}
             onChangeText={setToken}
           />
           <TextField
             label="Nueva contraseña"
+            type="password"
             placeholder="Mínimo 8 caracteres"
-            secureTextEntry
+            autoComplete="new-password"
             value={newPassword}
             onChangeText={setNewPassword}
           />
-          <Button title="Restablecer contraseña" onPress={submitReset} loading={loading} />
-        </>
+          <Button title="Restablecer contraseña" type="submit" loading={loading} />
+        </form>
       )}
 
-      <PressableScale style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>Volver al inicio de sesión</Text>
-      </PressableScale>
-    </View>
+      <button type="button" className={styles.linkStrong} onClick={() => navigate('/login')}>
+        Volver al inicio de sesión
+      </button>
+    </AuthLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.background,
-  },
-  title: {
-    ...Typography.title2,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  subtitle: {
-    ...Typography.subheadline,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-    lineHeight: 20,
-  },
-  backButton: {
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-  },
-  backText: {
-    ...Typography.subheadline,
-    color: Colors.accent,
-    fontWeight: '600',
-  },
-});

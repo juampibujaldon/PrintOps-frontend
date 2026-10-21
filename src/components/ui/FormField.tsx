@@ -1,47 +1,13 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { Colors, Radius, Spacing, Typography } from '../../constants/theme';
-import { useFocusRing } from './useFocusRing';
+import { forwardRef } from 'react';
+import TextField from './TextField';
+import type { TextFieldProps } from './TextField';
 
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+// Campo de formulario con `label` obligatorio y padding horizontal (pantallas de ajustes).
+// Mismas props que TextField (incluye `hint`, `error`, `multiline`).
+type FormFieldProps = TextFieldProps & { label: string };
 
-interface Props extends TextInputProps {
-  label: string;
-  error?: string;
-  hint?: string;
-}
-
-export default function FormField({ label, error, hint, style, onFocus, onBlur, ...props }: Props) {
-  const { ringStyle, handleFocus, handleBlur } = useFocusRing(!!error, onFocus, onBlur);
-  return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
-      <AnimatedTextInput
-        style={[styles.input, ringStyle, style]}
-        placeholderTextColor={Colors.textTertiary}
-        selectionColor={Colors.primary}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        {...props}
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {hint && !error ? <Text style={styles.hint}>{hint}</Text> : null}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  label: { ...Typography.footnote, color: Colors.textSecondary, marginBottom: 6, marginLeft: 4 },
-  input: {
-    minHeight: 46,
-    borderWidth: 1.5,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    color: Colors.textPrimary,
-    ...Typography.body,
-  },
-  error: { ...Typography.footnote, color: Colors.errorText, marginTop: 6, marginLeft: 4 },
-  hint: { ...Typography.footnote, color: Colors.textSecondary, marginTop: 6, marginLeft: 4 },
+const FormField = forwardRef<HTMLInputElement | HTMLTextAreaElement, FormFieldProps>(function FormField(props, ref) {
+  return <TextField ref={ref} padded {...props} />;
 });
+
+export default FormField;

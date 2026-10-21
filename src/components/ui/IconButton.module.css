@@ -1,0 +1,40 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  transition: background-color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-primary-tint);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+}
+
+.sm {
+  width: 34px;
+  height: 34px;
+}
+
+.tinted {
+  background: var(--color-primary-tint);
+}
+
+.danger {
+  color: var(--color-red);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-error-bg);
+}

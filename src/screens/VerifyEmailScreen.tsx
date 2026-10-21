@@ -1,38 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
+// src/screens/VerifyEmailScreen.tsx
+import { useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import AuthLayout from '../components/layout/AuthLayout';
+import { Button, TextField } from '../components/ui';
+import { useAlert } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
 import { authService } from '../services/authService';
-import TextField from '../components/ui/TextField';
-import Button from '../components/ui/Button';
-import PressableScale from '../components/ui/PressableScale';
-import { Colors, Spacing, Typography } from '../constants/theme';
+import type { VerifyEmailState } from '../types/auth';
+import styles from './AuthScreens.module.css';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'VerifyEmail'>;
+interface ApiError {
+  response?: { data?: { message?: string; error?: string } };
+}
 
-export default function VerifyEmailScreen({ navigation, route }: Props) {
-  const { email } = route.params;
+export default function VerifyEmailScreen() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const alert = useAlert();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const email = (location.state as VerifyEmailState | null)?.email;
+  // Sin email en location.state (p. ej. recarga o URL directa) no se puede reenviar: al login.
+  if (!email) return <Navigate to="/login" replace />;
+
   const handleVerify = async () => {
     if (!code || code.length !== 6) {
-      Alert.alert('Error', 'Ingresá el código de 6 dígitos.');
+      showToast('Ingresá el código de 6 dígitos.', { type: 'error', title: 'Error' });
       return;
     }
-
     setLoading(true);
     try {
       const message = await authService.verifyEmail(code);
-      Alert.alert('¡Éxito!', message, [
-        { text: 'Ir a Login', onPress: () => navigation.navigate('Login') },
-      ]);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        'No se pudo verificar el código.';
-      Alert.alert('Error', message);
+      await alert({ title: '¡Éxito!', message, okLabel: 'Ir a Login' });
+      navigate('/login');
+    } catch (error) {
+      const data = (error as ApiError)?.response?.data;
+      showToast(data?.error || data?.message || 'No se pudo verificar el código.', { type: 'error', title: 'Error' });
     } finally {
       setLoading(false);
     }
@@ -41,73 +46,44 @@ export default function VerifyEmailScreen({ navigation, route }: Props) {
   const handleResend = async () => {
     try {
       const message = await authService.resendVerification(email);
-      Alert.alert('Email reenviado', message);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        'No se pudo reenviar el email.';
-      Alert.alert('Error', message);
+      showToast(message, { type: 'success', title: 'Email reenviado' });
+    } catch (error) {
+      const data = (error as ApiError)?.response?.data;
+      showToast(data?.message || data?.error || 'No se pudo reenviar el email.', { type: 'error', title: 'Error' });
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Verificar Email</Text>
-      <Text style={styles.subtitle}>
-        Ingresá el código de 6 dígitos que enviamos a {email}
-      </Text>
+    <AuthLayout>
+      <h1 className={styles.titleCenter}>Verificar Email</h1>
+      <p className={`${styles.subtitle} ${styles.center}`}>Ingresá el código de 6 dígitos que enviamos a {email}</p>
 
-      <TextField
-        label="Código de verificación"
-        placeholder="123456"
-        keyboardType="number-pad"
-        maxLength={6}
-        value={code}
-        onChangeText={setCode}
-        style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8 }}
-      />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleVerify();
+        }}
+        noValidate
+      >
+        <TextField
+          label="Código de verificación"
+          placeholder="123456"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={code}
+          onChangeText={setCode}
+          containerClassName={styles.codeInput}
+        />
+        <Button title="Verificar" type="submit" loading={loading} />
+      </form>
 
-      <Button title="Verificar" onPress={handleVerify} loading={loading} />
-
-      <PressableScale style={styles.linkButton} onPress={handleResend}>
-        <Text style={styles.linkText}>¿No recibiste el código? Reenviar</Text>
-      </PressableScale>
-
-      <PressableScale style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.linkText}>Volver al Login</Text>
-      </PressableScale>
-    </View>
+      <button type="button" className={styles.linkMuted} onClick={handleResend}>
+        ¿No recibiste el código? Reenviar
+      </button>
+      <button type="button" className={styles.linkMuted} onClick={() => navigate('/login')}>
+        Volver al Login
+      </button>
+    </AuthLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.background,
-  },
-  title: {
-    ...Typography.title1,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  subtitle: {
-    ...Typography.subheadline,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-  },
-  linkButton: {
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  linkText: {
-    ...Typography.subheadline,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-});

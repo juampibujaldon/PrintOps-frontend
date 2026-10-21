@@ -1,8 +1,16 @@
 // src/services/axiosInstance.ts
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Keychain from 'react-native-keychain';
-import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
+import { API_BASE_URL } from '../constants/api';
+import {
+  getAccessToken,
+  getOrCreateDeviceId,
+  getRefreshToken,
+  removeAccessToken,
+  setAccessToken,
+  setRefreshToken,
+} from './storage';
+
+const isDev = import.meta.env.DEV && import.meta.env.MODE !== 'test';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 // Subir fotos por una red móvil lenta tarda mucho más que un request JSON.
@@ -17,8 +25,8 @@ const api = axios.create({
 
 // ── Request interceptor: adjunta el Bearer token y loguea el request ──
 api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  (config: InternalAxiosRequestConfig) => {
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -27,7 +35,7 @@ api.interceptors.request.use(
       config.timeout = Math.max(config.timeout ?? 0, UPLOAD_TIMEOUT_MS);
     }
 
-    if (__DEV__) {
+    if (isDev) {
       console.log(
         `[API] ${config.method?.toUpperCase()} ${fullUrl(config)}`,
         '| auth:', config.headers.Authorization ? 'Bearer ***' : 'NONE',
@@ -66,15 +74,16 @@ const FIELD_LABELS: Record<string, string> = {
 function normalizeValidationErrors(error: AxiosError) {
   const data = error.response?.data as unknown;
   if (!Array.isArray(data) || data.length === 0) return;
-  const lines = data
-    .filter((e: any) => e && typeof e.message === 'string')
-    .map((e: any) => {
-      const label = FIELD_LABELS[e.field];
+  type FieldError = { field?: string; message: string };
+  const lines = (data as FieldError[])
+    .filter((e) => e && typeof e.message === 'string')
+    .map((e) => {
+      const label = e.field ? FIELD_LABELS[e.field] : undefined;
       // "marginPercent no puede superar 100" → "Margen (%): no puede superar 100"
       return label ? `${label}: ${e.message.replace(new RegExp(`^${e.field}\\s*`), '')}` : e.message;
     });
   if (lines.length > 0) {
-    (error.response as any).data = { error: 'Datos inválidos', message: lines.join('\n'), fields: data };
+    if (error.response) error.response.data = { error: 'Datos inválidos', message: lines.join('\n'), fields: data };
   }
 }
 
@@ -101,9 +110,8 @@ export function refreshAccessToken(): Promise<string> {
 
 async function doRefresh(): Promise<string> {
   try {
-    const credentials = await Keychain.getGenericPassword({ service: 'refreshTokenService' });
-    const refreshToken = credentials ? credentials.password : null;
-    const deviceId = await AsyncStorage.getItem(STORAGE_KEYS.DEVICE_ID);
+    const refreshToken = getRefreshToken();
+    const deviceId = getOrCreateDeviceId();
 
     if (!refreshToken || !deviceId) {
       throw new Error('No hay refresh token');
@@ -114,17 +122,15 @@ async function doRefresh(): Promise<string> {
       deviceId,
     });
 
-    await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+    setAccessToken(data.accessToken);
     if (data.refreshToken) {
-      await Keychain.setGenericPassword('refreshToken', data.refreshToken, {
-        service: 'refreshTokenService',
-      });
+      setRefreshToken(data.refreshToken);
     }
     return data.accessToken;
   } catch (refreshError) {
-    // Solo limpiamos el access token local. BIOMETRICS_ENABLED y el Keychain
-    // se limpian en authService si el refresh token está definitivamente inválido.
-    await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    // Solo limpiamos el access token local; el resto de la sesión se limpia en
+    // AuthContext (onSessionExpired) si el refresh token está definitivamente inválido.
+    removeAccessToken();
     // Error de red: puede ser transitorio, no se cierra la sesión.
     const isNetworkError = axios.isAxiosError(refreshError) && !refreshError.response;
     if (!isNetworkError) {
@@ -144,7 +150,7 @@ api.interceptors.response.use(
 
     normalizeValidationErrors(error);
 
-    if (__DEV__) {
+    if (isDev) {
       console.log(`[API] response ${status} ${originalRequest?.method?.toUpperCase()} ${fullUrl(originalRequest)}`);
       // En 4xx el body dice qué falló: sin esto un 400 no daba ninguna pista.
       if (status && status >= 400 && status < 500 && status !== 401) {
@@ -166,7 +172,7 @@ api.interceptors.response.use(
     // Si otra request ya renovó el token mientras esta estaba en vuelo, alcanza con
     // reintentar con el token vigente: un segundo refresh gastaría el refresh token rotado.
     const sentAuthorization = originalRequest.headers?.Authorization;
-    const storedToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const storedToken = getAccessToken();
     const token = storedToken && `Bearer ${storedToken}` !== sentAuthorization
       ? storedToken
       : await refreshAccessToken();

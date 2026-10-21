@@ -1,0 +1,8 @@
+.pressable {
+  transition: transform var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard);
+}
+
+.pressable:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.85;
+}

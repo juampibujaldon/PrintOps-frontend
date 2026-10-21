@@ -43,3 +43,30 @@ export interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
 }
+
+export type InviteErrorCode = 'INVITE_NOT_FOUND' | 'INVITE_USED' | 'INVITE_EXPIRED' | 'INVITE_WRONG_EMAIL';
+
+/** location.state de /google-onboarding. */
+export interface GoogleOnboardingState {
+  onboardingToken: string;
+  email: string;
+  name: string | null;
+  rememberMe: boolean;
+}
+
+/** location.state de /invite-error. */
+export interface InviteErrorState {
+  code: InviteErrorCode;
+  email?: string;
+  message?: string;
+}
+
+/** location.state de /verify-email. */
+export interface VerifyEmailState {
+  email: string;
+}
+
+/** location.state de /register ('create' = abrir en "Crear taller"). */
+export interface RegisterState {
+  mode?: 'create';
+}

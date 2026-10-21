@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, Switch, StyleSheet } from 'react-native';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import { useId } from 'react';
+import { cx } from '../../utils/cx';
+import styles from './SwitchRow.module.css';
 
 interface Props {
   label: string;
@@ -12,32 +12,28 @@ interface Props {
 }
 
 export default function SwitchRow({ label, description, value, onValueChange, disabled = false, isLast = false }: Props) {
+  const id = useId();
   return (
-    <View style={styles.row}>
-      <View style={[styles.inner, !isLast && styles.border]}>
-        <View style={styles.content}>
-          <Text style={[styles.label, disabled && styles.disabled]}>{label}</Text>
-          {description ? <Text style={styles.desc}>{description}</Text> : null}
-        </View>
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
+    <div className={styles.row}>
+      <div className={cx(styles.inner, !isLast && styles.border)}>
+        <div className={styles.content}>
+          <span id={id} className={cx(styles.label, disabled && styles.disabled)}>
+            {label}
+          </span>
+          {description ? <span className={styles.desc}>{description}</span> : null}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={value}
+          aria-labelledby={id}
           disabled={disabled}
-          trackColor={{ false: Colors.fillPressed, true: Colors.green }}
-          thumbColor="#FFFFFF"
-          ios_backgroundColor={Colors.fillPressed}
-        />
-      </View>
-    </View>
+          className={cx(styles.track, value && styles.on)}
+          onClick={() => onValueChange(!value)}
+        >
+          <span className={styles.thumb} />
+        </button>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { paddingLeft: Spacing.lg },
-  inner: { flexDirection: 'row', alignItems: 'center', paddingRight: Spacing.lg, minHeight: 52, paddingVertical: Spacing.sm },
-  border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator },
-  content: { flex: 1, marginRight: Spacing.md },
-  label: { ...Typography.body, color: Colors.textPrimary },
-  desc: { ...Typography.footnote, color: Colors.textSecondary, marginTop: 2 },
-  disabled: { color: Colors.textDisabled },
-});

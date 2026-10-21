@@ -1,13 +1,19 @@
 import { Client } from '@stomp/stompjs';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Polyfill de TextEncoder: React Native no siempre lo trae.
-import 'text-encoding';
-import Toast from 'react-native-toast-message';
-import { API_BASE_URL, STORAGE_KEYS } from '../constants/api';
+import { API_BASE_URL } from '../constants/api';
 import { refreshAccessToken } from './axiosInstance';
+import { getAccessToken } from './storage';
 
-// Mismo host que la API (10.0.2.2 en el emulador Android, localhost en iOS).
+const isDev = import.meta.env.DEV && import.meta.env.MODE !== 'test';
+
+export interface WsNotification {
+  title?: string;
+  body?: string;
+  [key: string]: unknown;
+}
+
+type Listener = (msg: WsNotification) => void;
+
+// Mismo host que la API.
 const WS_URL = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
 
 // Segundos que le quedan al JWT (null si no se puede leer). Margen para no
@@ -24,7 +30,8 @@ function secondsToExpiry(token: string): number | null {
 
 class WebSocketService {
   private client: Client | null = null;
-  private onMessageCallback: ((msg: any) => void) | null = null;
+  private onMessageCallback: Listener | null = null;
+  private listeners = new Set<Listener>();
   // El servidor rechazó el token (vencido/revocado): refrescar antes de reintentar.
   private forceRefresh = false;
   // Rechazos seguidos aun después de refrescar: la sesión no es recuperable.
@@ -38,14 +45,12 @@ class WebSocketService {
 
     const client = new Client({
       brokerURL: WS_URL,
-      forceBinaryWSFrames: true,
-      appendMissingNULLonIncoming: true,
       reconnectDelay: 5000,
       // El backend autentica el frame CONNECT con el JWT. Antes se reconectaba cada
       // 5 s con el access token guardado aunque hubiera vencido (dura 15 min y solo
       // se renovaba si alguna request HTTP daba 401): el error se repetía para siempre.
       beforeConnect: async () => {
-        let token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+        let token = getAccessToken();
         const remaining = token ? secondsToExpiry(token) : null;
         if (!token || this.forceRefresh || (remaining != null && remaining < 30)) {
           try {
@@ -54,7 +59,7 @@ class WebSocketService {
           } catch {
             // Sesión vencida o sin red: no seguir reintentando con un token inválido.
             // Al volver a iniciar sesión, AuthContext vuelve a llamar a connect().
-            if (__DEV__) {
+            if (isDev) {
               console.warn('[WS] No se pudo renovar el token; WebSocket desconectado.');
             }
             this.disconnect();
@@ -69,21 +74,15 @@ class WebSocketService {
           if (!message.body) {
             return;
           }
-          let parsed: any;
+          let parsed: WsNotification;
           try {
             parsed = JSON.parse(message.body);
           } catch {
             return;
           }
 
-          Toast.show({
-            type: 'info',
-            text1: parsed.title || 'Nueva notificación',
-            text2: parsed.body || 'Tenés un nuevo mensaje.',
-            position: 'top',
-            visibilityTime: 4000,
-          });
-
+          // Los listeners (p. ej. el puente a ToastContext) muestran el aviso.
+          this.listeners.forEach(l => l(parsed));
           this.onMessageCallback?.(parsed);
         });
       },
@@ -95,19 +94,19 @@ class WebSocketService {
           this.authFailures += 1;
           this.forceRefresh = true;
           if (this.authFailures >= 3) {
-            if (__DEV__) {
+            if (isDev) {
               console.warn('[WS] Token rechazado repetidamente; WebSocket desconectado.');
             }
             this.disconnect();
             return;
           }
         }
-        if (__DEV__) {
+        if (isDev) {
           console.warn('[WS] Error STOMP:', message);
         }
       },
       onWebSocketError: event => {
-        if (__DEV__) {
+        if (isDev) {
           console.warn('[WS] Error de conexión:', event);
         }
       },
@@ -124,8 +123,20 @@ class WebSocketService {
     }
   }
 
-  onMessage(callback: (msg: any) => void) {
+  /** Un único callback "principal" (lo usa la pantalla de notificaciones). Devuelve cómo quitarlo. */
+  onMessage(callback: Listener | null): () => void {
     this.onMessageCallback = callback;
+    return () => {
+      if (this.onMessageCallback === callback) this.onMessageCallback = null;
+    };
+  }
+
+  /** Suscripción múltiple a notificaciones entrantes. Devuelve la función para cancelar. */
+  subscribe(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 }
 

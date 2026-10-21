@@ -1,30 +1,23 @@
 // src/screens/RegisterScreen.tsx
-import React, { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, Alert, Pressable, KeyboardAvoidingView, Platform, ScrollView,
-} from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useForm, Controller } from 'react-hook-form';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { InviteErrorCode } from './InviteErrorScreen';
-import { useAuth } from '../hooks/useAuth';
-import { RegisterFormData } from '../types/auth';
-import { Colors, Spacing, Typography } from '../constants/theme';
-import TextField from '../components/ui/TextField';
-import Button from '../components/ui/Button';
-import PressableScale from '../components/ui/PressableScale';
-import GoogleSignInButton from '../components/auth/GoogleSignInButton';
+import AuthLayout from '../components/layout/AuthLayout';
 import GoogleDivider from '../components/auth/GoogleDivider';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
+import { Button, TextField } from '../components/ui';
+import { useAlert, useConfirm } from '../context/ConfirmContext';
+import { useToast } from '../context/ToastContext';
+import { useAuth } from '../hooks/useAuth';
+import { apiErrorMessage } from '../services/authService';
+import type { InviteErrorState, RegisterFormData } from '../types/auth';
+import { cx } from '../utils/cx';
+import styles from './AuthScreens.module.css';
 
 const schema = yup.object({
-  email: yup
-    .string()
-    .email('Email inválido')
-    .required('El email es requerido'),
+  email: yup.string().email('Email inválido').required('El email es requerido'),
   password: yup
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
@@ -37,23 +30,18 @@ const schema = yup.object({
   workspaceName: yup.string().optional(),
 });
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Register'>;
-  route: RouteProp<RootStackParamList, 'Register'>;
-};
-
-export default function RegisterScreen({ navigation, route }: Props) {
-  const { register } = useAuth();
+export default function RegisterScreen() {
+  const { register: registerUser } = useAuth();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const alert = useAlert();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(false);
+  // Siempre abre en "Crear taller" (también con location.state.mode === 'create', que llega desde /invite-error).
   const [isTecnico, setIsTecnico] = useState(false);
 
-  // Desde la pantalla de invitación inválida: "Crear mi propio taller".
-  useEffect(() => {
-    if (route.params?.mode === 'create') setIsTecnico(false);
-  }, [route.params?.mode]);
-
   const {
-    control,
+    register,
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterFormData>({
@@ -63,220 +51,125 @@ export default function RegisterScreen({ navigation, route }: Props) {
 
   const onSubmit = async (data: RegisterFormData) => {
     if (isTecnico && !data.inviteToken?.trim()) {
-      Alert.alert('Atención', 'Ingresá el código de invitación que te envió el manager.');
+      showToast('Ingresá el código de invitación que te envió el manager.', { type: 'error', title: 'Atención' });
       return;
     }
     setLoading(true);
     try {
-      const message = await register(
+      const message = await registerUser(
         data.email,
         data.password,
         isTecnico ? data.inviteToken?.trim() : undefined,
         isTecnico ? undefined : data.workspaceName?.trim(),
       );
-      Alert.alert('¡Éxito!', message, [
-        { text: 'Entendido', onPress: () => navigation.navigate('Login') },
-      ]);
-    } catch (error: any) {
-      const code: string | undefined = error?.response?.data?.code;
-      const message =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        'Error al registrarse';
+      await alert({ title: '¡Éxito!', message, okLabel: 'Entendido' });
+      navigate('/login');
+    } catch (error) {
+      const code: string | undefined = (error as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const message = apiErrorMessage(error, 'Error al registrarse');
       if (code?.startsWith('INVITE_')) {
         // Invitación inválida/usada/vencida: pantalla dedicada con qué hacer en cada caso.
-        navigation.navigate('InviteError', { code: code as InviteErrorCode, email: data.email, message });
+        const state: InviteErrorState = { code: code as InviteErrorState['code'], email: data.email, message };
+        navigate('/invite-error', { state });
       } else if (code === 'EMAIL_TAKEN') {
-        Alert.alert('Ese email ya tiene cuenta', message, [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Iniciar sesión', onPress: () => navigation.navigate('Login') },
-        ]);
+        const goLogin = await confirm({
+          title: 'Ese email ya tiene cuenta',
+          message,
+          confirmLabel: 'Iniciar sesión',
+        });
+        if (goLogin) navigate('/login');
       } else {
-        Alert.alert('Error', message);
+        showToast(message, { type: 'error', title: 'Error' });
       }
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView style={styles.flex} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-    <Animated.View entering={FadeInDown.duration(450).springify().damping(22)}>
-      <Text style={styles.title}>Crear cuenta</Text>
-      <Text style={styles.subtitle}>Creá tu taller o unite a uno existente con una invitación.</Text>
+  const modes = [
+    { label: 'Crear taller', value: false },
+    { label: 'Tengo invitación', value: true },
+  ];
 
-      <View style={styles.segment}>
-        {[{ label: 'Crear taller', value: false }, { label: 'Tengo invitación', value: true }].map(opt => {
+  return (
+    <AuthLayout>
+      <h1 className={styles.title}>Crear cuenta</h1>
+      <p className={styles.subtitle}>Creá tu taller o unite a uno existente con una invitación.</p>
+
+      <div className={styles.segment} role="group" aria-label="Tipo de registro">
+        {modes.map((opt) => {
           const active = isTecnico === opt.value;
           return (
-            <Pressable
+            <button
               key={opt.label}
-              onPress={() => setIsTecnico(opt.value)}
-              style={[styles.segmentItem, active && styles.segmentItemActive]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
+              type="button"
+              onClick={() => setIsTecnico(opt.value)}
+              className={cx(styles.segmentItem, active && styles.segmentItemActive)}
+              aria-pressed={active}
             >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.label}</Text>
-            </Pressable>
+              {opt.label}
+            </button>
           );
         })}
-      </View>
+      </div>
 
-      <Controller
-        control={control}
-        name="email"
-        render={({ field: { onChange, value } }) => (
+      <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+        <TextField
+          label="Email"
+          type="email"
+          placeholder="taller@ejemplo.com"
+          autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <TextField
+          label="Contraseña"
+          type="password"
+          placeholder="Mínimo 8 caracteres"
+          autoComplete="new-password"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <TextField
+          label="Confirmar contraseña"
+          type="password"
+          placeholder="Repetí la contraseña"
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
+        {isTecnico ? (
           <TextField
-            label="Email"
-            placeholder="taller@ejemplo.com"
-            keyboardType="email-address"
+            label="Código de invitación"
+            placeholder="Código enviado por el manager"
             autoCapitalize="none"
-            autoCorrect={false}
-            value={value}
-            onChangeText={onChange}
-            error={errors.email?.message}
+            autoCorrect="off"
+            error={errors.inviteToken?.message}
+            {...register('inviteToken')}
           />
-        )}
-      />
-
-      <Controller
-        control={control}
-        name="password"
-        render={({ field: { onChange, value } }) => (
+        ) : (
           <TextField
-            label="Contraseña"
-            placeholder="Mínimo 8 caracteres"
-            secureTextEntry
-            value={value}
-            onChangeText={onChange}
-            error={errors.password?.message}
+            label="Nombre del taller (opcional)"
+            placeholder="Ej. Taller Central"
+            error={errors.workspaceName?.message}
+            {...register('workspaceName')}
           />
         )}
-      />
 
-      <Controller
-        control={control}
-        name="confirmPassword"
-        render={({ field: { onChange, value } }) => (
-          <TextField
-            label="Confirmar contraseña"
-            placeholder="Repetí la contraseña"
-            secureTextEntry
-            value={value}
-            onChangeText={onChange}
-            error={errors.confirmPassword?.message}
-          />
-        )}
-      />
+        <Button title={isTecnico ? 'Unirme al taller' : 'Crear taller'} type="submit" loading={loading} />
 
-      {isTecnico ? (
-        <Controller
-          control={control}
-          name="inviteToken"
-          render={({ field: { onChange, value } }) => (
-            <TextField
-              label="Código de invitación"
-              placeholder="Código enviado por el manager"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={value}
-              onChangeText={onChange}
-              error={errors.inviteToken?.message}
-            />
-          )}
-        />
-      ) : (
-        <Controller
-          control={control}
-          name="workspaceName"
-          render={({ field: { onChange, value } }) => (
-            <TextField
-              label="Nombre del taller (opcional)"
-              placeholder="Ej. Taller Central"
-              value={value}
-              onChangeText={onChange}
-              error={errors.workspaceName?.message}
-            />
-          )}
-        />
-      )}
+        <GoogleDivider />
+        <GoogleSignInButton />
+      </form>
 
-      <Button
-        title={isTecnico ? 'Unirme al taller' : 'Crear taller'}
-        onPress={handleSubmit(onSubmit)}
-        loading={loading}
-      />
-
-      <GoogleDivider />
-      <GoogleSignInButton />
-
-      <View style={styles.loginContainer}>
-        <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
-        <PressableScale onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginLink}>Iniciar sesión</Text>
-        </PressableScale>
-      </View>
-    </Animated.View>
-    </ScrollView>
-    </KeyboardAvoidingView>
+      <p className={styles.switchRow}>
+        <span>¿Ya tienes cuenta?</span>
+        <button type="button" className={styles.inlineLink} onClick={() => navigate('/login')}>
+          Iniciar sesión
+        </button>
+      </p>
+    </AuthLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.background },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.xxl,
-  },
-  title: {
-    ...Typography.largeTitle,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    ...Typography.subheadline,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xl,
-  },
-  // Control segmentado estilo iOS.
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: Colors.fill,
-    borderRadius: 9,
-    padding: 2,
-    marginBottom: Spacing.xl,
-  },
-  segmentItem: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 7,
-    alignItems: 'center',
-  },
-  segmentItemActive: {
-    backgroundColor: Colors.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  segmentText: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary },
-  segmentTextActive: { fontWeight: '600' },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: Spacing.xl,
-  },
-  loginText: {
-    ...Typography.subheadline,
-    color: Colors.textSecondary,
-  },
-  loginLink: {
-    ...Typography.subheadline,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-});

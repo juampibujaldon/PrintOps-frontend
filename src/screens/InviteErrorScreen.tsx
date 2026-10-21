@@ -1,17 +1,14 @@
 // src/screens/InviteErrorScreen.tsx
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { LucideIcon, KeyRound, MailX, TimerOff, UserCheck } from 'lucide-react-native';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { Colors, Radius, Shadows, Spacing, Typography, tint } from '../constants/theme';
-import Button from '../components/ui/Button';
+// Recibe { code, email?, message? } por location.state; sin eso vuelve a /login.
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { KeyRound, MailX, TimerOff, UserCheck } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Colors, tint } from '../constants/theme';
+import { Button } from '../components/ui';
+import type { InviteErrorCode, InviteErrorState } from '../types/auth';
+import styles from './InviteErrorScreen.module.css';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'InviteError'>;
-
-export type InviteErrorCode = 'INVITE_NOT_FOUND' | 'INVITE_USED' | 'INVITE_EXPIRED' | 'INVITE_WRONG_EMAIL';
+export type { InviteErrorCode };
 
 interface Content {
   Icon: LucideIcon;
@@ -22,8 +19,9 @@ interface Content {
   primary: 'retry' | 'login';
 }
 
-// Dónde genera el admin una invitación nueva (HomeScreen → ícono "Invitar técnico").
-const NEW_INVITE_STEP = 'Pedile al administrador una invitación nueva: la genera desde Impresoras › ícono "Invitar técnico".';
+// Dónde genera el admin una invitación nueva (Impresoras → ícono "Invitar técnico").
+const NEW_INVITE_STEP =
+  'Pedile al administrador una invitación nueva: la genera desde Impresoras › ícono "Invitar técnico".';
 
 const CONTENT: Record<InviteErrorCode, Content> = {
   INVITE_NOT_FOUND: {
@@ -62,7 +60,7 @@ const CONTENT: Record<InviteErrorCode, Content> = {
     Icon: MailX,
     color: Colors.statusMantenim,
     title: 'El código es para otro email',
-    description: email =>
+    description: (email) =>
       `La invitación es personal y fue emitida para otra dirección${email ? `, no para ${email}` : ''}.`,
     steps: [
       'Registrate con el mismo email al que te llegó la invitación.',
@@ -72,108 +70,66 @@ const CONTENT: Record<InviteErrorCode, Content> = {
   },
 };
 
-export default function InviteErrorScreen({ navigation, route }: Props) {
-  const insets = useSafeAreaInsets();
-  const { code, email, message } = route.params;
+export default function InviteErrorScreen() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = location.state as InviteErrorState | null;
+  if (!params?.code) return <Navigate to="/login" replace />;
+
+  const { code, email, message } = params;
   const content = CONTENT[code] ?? CONTENT.INVITE_NOT_FOUND;
   const { Icon } = content;
+  const description = content.description(email);
 
-  const retry = () => navigation.goBack();
-  const login = () => navigation.navigate('Login');
-  const createWorkshop = () => navigation.navigate('Register', { mode: 'create' });
+  // Volver a revisar el código = regresar al formulario anterior (registro / onboarding).
+  const retry = () => (location.key === 'default' ? navigate('/register') : navigate(-1));
+  const login = () => navigate('/login');
+  const createWorkshop = () => navigate('/register', { state: { mode: 'create' } });
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeIn.duration(350)} style={styles.hero}>
-          <View style={[styles.iconRing, { backgroundColor: tint(content.color, 0.08) }]}>
-            <View style={[styles.iconCircle, { backgroundColor: tint(content.color, 0.16) }]}>
-              <Icon color={content.color} size={40} strokeWidth={1.75} />
-            </View>
-          </View>
-          <Text style={styles.title}>{content.title}</Text>
-          <Text style={styles.description}>{content.description(email)}</Text>
+    <main className={styles.root}>
+      <div className={styles.column}>
+        <section className={styles.hero}>
+          <div className={styles.iconRing} style={{ backgroundColor: tint(content.color, 0.08) }}>
+            <div className={styles.iconCircle} style={{ backgroundColor: tint(content.color, 0.16) }}>
+              <Icon color={content.color} size={40} strokeWidth={1.75} aria-hidden="true" />
+            </div>
+          </div>
+          <h1 className={styles.title}>{content.title}</h1>
+          <p className={styles.description}>{description}</p>
           {/* Mensaje del servidor solo si aporta algo distinto al texto propio */}
-          {message && !content.description(email).includes(message) ? (
-            <Text style={styles.serverMessage}>{message}</Text>
-          ) : null}
-        </Animated.View>
+          {message && !description.includes(message) ? <p className={styles.serverMessage}>{message}</p> : null}
+        </section>
 
-        <Animated.View entering={FadeInDown.delay(120).duration(350)} style={styles.card}>
-          <Text style={styles.cardTitle}>Qué podés hacer</Text>
-          {content.steps.map((step, i) => (
-            <View key={i} style={styles.step}>
-              <View style={[styles.stepNumber, { backgroundColor: tint(content.color, 0.14) }]}>
-                <Text style={[styles.stepNumberText, { color: content.color }]}>{i + 1}</Text>
-              </View>
-              <Text style={styles.stepText}>{step}</Text>
-            </View>
-          ))}
-        </Animated.View>
-      </ScrollView>
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Qué podés hacer</h2>
+          <ol className={styles.steps}>
+            {content.steps.map((step, i) => (
+              <li key={i} className={styles.step}>
+                <span className={styles.stepNumber} style={{ backgroundColor: tint(content.color, 0.14), color: content.color }}>
+                  {i + 1}
+                </span>
+                <span className={styles.stepText}>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
 
-      <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
-        {content.primary === 'login' ? (
-          <>
-            <Button title="Iniciar sesión" onPress={login} />
-            <Button title="Probar otro código" variant="tinted" onPress={retry} />
-          </>
-        ) : (
-          <>
-            <Button title={code === 'INVITE_WRONG_EMAIL' ? 'Cambiar email' : 'Revisar el código'} onPress={retry} />
-            <Button title="Ir a iniciar sesión" variant="tinted" onPress={login} />
-          </>
-        )}
-        <Button title="Crear mi propio taller" variant="ghost" onPress={createWorkshop} />
-      </View>
-    </View>
+        <div className={styles.actions}>
+          {content.primary === 'login' ? (
+            <>
+              <Button title="Iniciar sesión" onPress={login} />
+              <Button title="Probar otro código" variant="tinted" onPress={retry} />
+            </>
+          ) : (
+            <>
+              <Button title={code === 'INVITE_WRONG_EMAIL' ? 'Cambiar email' : 'Revisar el código'} onPress={retry} />
+              <Button title="Ir a iniciar sesión" variant="tinted" onPress={login} />
+            </>
+          )}
+          <Button title="Crear mi propio taller" variant="ghost" onPress={createWorkshop} />
+        </div>
+      </div>
+    </main>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xxl, paddingBottom: Spacing.xl },
-
-  hero: { alignItems: 'center', marginBottom: Spacing.xl },
-  iconRing: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  iconCircle: { width: 84, height: 84, borderRadius: 42, justifyContent: 'center', alignItems: 'center' },
-  title: { ...Typography.title2, color: Colors.textPrimary, textAlign: 'center' },
-  description: {
-    ...Typography.callout,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 23,
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-  },
-  serverMessage: { ...Typography.footnote, color: Colors.textTertiary, textAlign: 'center', marginTop: Spacing.sm },
-
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    ...Shadows.cardLight,
-  },
-  cardTitle: { ...Typography.headline, color: Colors.textPrimary },
-  step: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
-  stepNumber: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
-  stepNumberText: { ...Typography.footnote, fontWeight: '700' },
-  stepText: { ...Typography.subheadline, color: Colors.textSecondary, flex: 1, lineHeight: 21, paddingTop: 2 },
-
-  actions: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    gap: Spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.separator,
-    backgroundColor: Colors.background,
-  },
-});

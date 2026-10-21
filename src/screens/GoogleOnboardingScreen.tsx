@@ -1,35 +1,38 @@
 // src/screens/GoogleOnboardingScreen.tsx
 // Paso final del "Continuar con Google" cuando el email no tiene cuenta:
 // crear un taller nuevo o unirse a uno con código de invitación.
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { InviteErrorCode } from './InviteErrorScreen';
-import { useAuth } from '../hooks/useAuth';
+// Recibe { onboardingToken, email, name, rememberMe } por location.state; sin eso vuelve a /login.
+import { useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import AuthLayout from '../components/layout/AuthLayout';
+import { Button, TextField } from '../components/ui';
 import { useToast } from '../context/ToastContext';
-import { Colors, Spacing, Typography } from '../constants/theme';
-import TextField from '../components/ui/TextField';
-import Button from '../components/ui/Button';
-
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'GoogleOnboarding'>;
-  route: RouteProp<RootStackParamList, 'GoogleOnboarding'>;
-};
+import { useAuth } from '../hooks/useAuth';
+import type { GoogleOnboardingState, InviteErrorState } from '../types/auth';
+import { cx } from '../utils/cx';
+import styles from './AuthScreens.module.css';
 
 type Mode = 'create' | 'invite';
 
-export default function GoogleOnboardingScreen({ navigation, route }: Props) {
-  const { onboardingToken, email, rememberMe } = route.params;
+interface ApiError {
+  response?: { status?: number; data?: { code?: string; message?: string } };
+}
+
+export default function GoogleOnboardingScreen() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { completeGoogleOnboarding } = useAuth();
   const { showToast } = useToast();
+
   const [mode, setMode] = useState<Mode>('create');
   const [workspaceName, setWorkspaceName] = useState('');
   const [inviteToken, setInviteToken] = useState('');
   const [codeError, setCodeError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
 
+  const params = location.state as GoogleOnboardingState | null;
+  if (!params?.onboardingToken) return <Navigate to="/login" replace />;
+  const { onboardingToken, email, rememberMe } = params;
   const defaultName = `Taller de ${email}`;
 
   const onSubmit = async () => {
@@ -46,21 +49,23 @@ export default function GoogleOnboardingScreen({ navigation, route }: Props) {
         rememberMe,
         mode === 'invite' ? { inviteToken: code } : { workspaceName: workspaceName.trim() || defaultName },
       );
-      // Autenticado: el AppNavigator reemplaza el stack de auth por la app.
-    } catch (error: any) {
-      const status: number | undefined = error?.response?.status;
-      const errorCode: string | undefined = error?.response?.data?.code;
-      const message: string | undefined = error?.response?.data?.message;
+      // Autenticado: PublicOnly redirige a la app.
+    } catch (error) {
+      const e = error as ApiError;
+      const status = e?.response?.status;
+      const errorCode = e?.response?.data?.code;
+      const message = e?.response?.data?.message;
       if (status === 401) {
-        showToast('La verificación con Google venció. Volvé a intentarlo.');
-        navigation.navigate('Login');
+        showToast('La verificación con Google venció. Volvé a intentarlo.', { type: 'error' });
+        navigate('/login');
       } else if (status === 409) {
-        showToast(message || 'Ese email ya tiene una cuenta.');
-        navigation.navigate('Login');
+        showToast(message || 'Ese email ya tiene una cuenta.', { type: 'error' });
+        navigate('/login');
       } else if (errorCode?.startsWith('INVITE_')) {
-        navigation.navigate('InviteError', { code: errorCode as InviteErrorCode, email, message });
+        const state: InviteErrorState = { code: errorCode as InviteErrorState['code'], email, message };
+        navigate('/invite-error', { state });
       } else {
-        showToast(message || 'No se pudo completar el registro. Probá de nuevo.');
+        showToast(message || 'No se pudo completar el registro. Probá de nuevo.', { type: 'error' });
       }
     } finally {
       setLoading(false);
@@ -73,28 +78,37 @@ export default function GoogleOnboardingScreen({ navigation, route }: Props) {
   ];
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.flex} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>¡Casi listo!</Text>
-        <Text style={styles.subtitle}>Vas a entrar con tu cuenta de Google:</Text>
-        <Text style={styles.email}>{email}</Text>
+    <AuthLayout>
+      <h1 className={styles.title}>¡Casi listo!</h1>
+      <p className={styles.headerSubtitle} style={{ textAlign: 'left' }}>
+        Vas a entrar con tu cuenta de Google:
+      </p>
+      <p className={styles.email}>{email}</p>
 
-        <View style={styles.options}>
-          {options.map(opt => {
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSubmit();
+        }}
+        noValidate
+      >
+        <div className={styles.options} role="radiogroup" aria-label="Cómo querés continuar">
+          {options.map((opt) => {
             const active = mode === opt.value;
             return (
-              <Pressable
+              <button
                 key={opt.value}
-                onPress={() => setMode(opt.value)}
-                style={[styles.option, active && styles.optionActive]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: active }}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setMode(opt.value)}
+                className={cx(styles.option, active && styles.optionActive)}
               >
-                <Text style={[styles.optionText, active && styles.optionTextActive]}>{opt.label}</Text>
-              </Pressable>
+                {opt.label}
+              </button>
             );
           })}
-        </View>
+        </div>
 
         {mode === 'create' ? (
           <TextField
@@ -108,36 +122,16 @@ export default function GoogleOnboardingScreen({ navigation, route }: Props) {
             label="Código de invitación"
             placeholder="Código enviado por el manager"
             autoCapitalize="none"
-            autoCorrect={false}
+            autoCorrect="off"
             value={inviteToken}
             onChangeText={setInviteToken}
             error={codeError}
           />
         )}
 
-        <Button title="Continuar" onPress={onSubmit} loading={loading} />
-        <Button title="Cancelar" variant="ghost" onPress={() => navigation.navigate('Login')} style={styles.cancel} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Button title="Continuar" type="submit" loading={loading} />
+        <Button title="Cancelar" variant="ghost" className={styles.spacer} onPress={() => navigate('/login')} />
+      </form>
+    </AuthLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.background },
-  container: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xxl },
-  title: { ...Typography.largeTitle, color: Colors.textPrimary, marginBottom: Spacing.xs },
-  subtitle: { ...Typography.subheadline, color: Colors.textSecondary },
-  email: { ...Typography.headline, color: Colors.textPrimary, marginBottom: Spacing.xl },
-  options: { marginBottom: Spacing.xl, gap: Spacing.sm },
-  option: {
-    padding: Spacing.md,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.fill,
-    backgroundColor: Colors.surface,
-  },
-  optionActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryTint },
-  optionText: { ...Typography.subheadline, color: Colors.textPrimary },
-  optionTextActive: { color: Colors.primary, fontWeight: '600' },
-  cancel: { marginTop: Spacing.sm },
-});

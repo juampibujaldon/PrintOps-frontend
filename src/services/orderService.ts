@@ -131,13 +131,10 @@ const addPart = async (id: number, part: PartInput): Promise<OrderResponse> => {
 const addPhotos = async (orderId: number, photos: PhotoAsset[]): Promise<OrderResponse> => {
   const formData = new FormData();
   photos.forEach((p, i) => {
-    formData.append('photos', {
-      uri: p.uri,
-      type: p.type || 'image/jpeg',
-      name: p.name || `photo_${i}.jpg`,
-    } as any);
+    const name = p instanceof File && p.name ? p.name : `photo_${i}.jpg`;
+    formData.append('photos', p, name);
   });
-  // Sin Content-Type manual: axios/RN generan el boundary.
+  // Sin Content-Type manual: el navegador genera el boundary.
   const response = await api.post<OrderResponse>(`${API_BASE_URL}/api/orders/${orderId}/photos`, formData);
   return response.data;
 };

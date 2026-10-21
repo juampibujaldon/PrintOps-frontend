@@ -1,0 +1,25 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xxl) var(--space-lg);
+  background: var(--color-background);
+}
+
+.column {
+  width: 100%;
+  max-width: 420px;
+  animation: rise 450ms var(--ease-decelerate);
+}
+
+.wide {
+  max-width: 560px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

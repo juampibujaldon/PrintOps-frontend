@@ -1,17 +1,10 @@
 // src/constants/media.ts
-import type { CameraOptions, ImageLibraryOptions } from 'react-native-image-picker';
 
 // Las fotos de cámara pesan varios MB; para impresoras/órdenes alcanza con 1280px de lado.
 export const PHOTO_MAX_DIMENSION = 1280;
 
-export const PHOTO_PICKER_OPTIONS = {
-  mediaType: 'photo',
-  quality: 0.7,
-  maxWidth: PHOTO_MAX_DIMENSION,
-  maxHeight: PHOTO_MAX_DIMENSION,
-} as const satisfies CameraOptions;
+// Calidad JPEG al redimensionar (0..1).
+export const PHOTO_JPEG_QUALITY = 0.7;
 
-export const photoPickerOptions = (extra: Partial<ImageLibraryOptions> = {}) => ({
-  ...PHOTO_PICKER_OPTIONS,
-  ...extra,
-});
+// Tope de selección por defecto cuando se permiten varias fotos.
+export const PHOTO_MAX_COUNT = 5;
