@@ -1,0 +1,83 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.chip {
+  padding: 8px var(--space-md);
+  border: 0.5px solid var(--color-separator);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.chip:focus-visible,
+.dateInput:focus-visible,
+.clear:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.chipActive {
+  color: #fff;
+}
+
+.dateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.dateField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dateLabel {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.dateInput {
+  height: 36px;
+  padding: 0 var(--space-sm);
+  border: 0.5px solid var(--color-separator);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  font-size: var(--fs-footnote);
+  color: var(--color-text-primary);
+}
+
+.clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.hint {
+  align-self: center;
+  font-size: var(--fs-caption);
+  color: var(--color-text-tertiary);
+}

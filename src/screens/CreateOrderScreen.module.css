@@ -1,0 +1,263 @@
+.skeleton {
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-lg);
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: var(--space-xxl);
+}
+
+.stepper {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+.stepperStep {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepperDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 0.5px solid var(--color-separator);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-bold);
+  color: var(--color-text-secondary);
+}
+
+.stepperDotActive {
+  background: var(--color-text-primary);
+  border-color: var(--color-text-primary);
+  color: var(--color-background);
+}
+
+.stepperLabel {
+  font-size: var(--fs-caption);
+  color: var(--color-text-secondary);
+}
+
+.stepperLabelActive {
+  color: var(--color-text-primary);
+  font-weight: var(--fw-semibold);
+}
+
+.warning {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-warning-text);
+}
+
+.stepTitle {
+  margin: var(--space-lg) 0 var(--space-sm);
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+}
+
+.typeGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.typeOption {
+  flex: 1 1 120px;
+  padding: 12px var(--space-sm);
+  border: 0.5px solid var(--color-separator);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.typeOption:focus-visible,
+.checkToggle:focus-visible,
+.naToggle:focus-visible,
+.iconBtn:focus-visible,
+.addItemButton:focus-visible,
+.photoRemove:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.typeOption:disabled {
+  opacity: 0.4;
+}
+
+.typeOptionSelected {
+  background: var(--color-text-primary);
+  border-color: var(--color-text-primary);
+  color: var(--color-background);
+}
+
+.checklistItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.checkToggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 9px;
+  border: 1.5px solid var(--color-separator);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-on-primary);
+}
+
+.checkToggleDone {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checklistField {
+  flex: 1;
+  min-width: 0;
+}
+
+.checklistTextMuted {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.naToggle {
+  flex: none;
+  height: 34px;
+  margin-top: 6px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-fill);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.naToggleActive {
+  background: var(--color-text-primary);
+  color: var(--color-background);
+}
+
+.iconBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-top: 5px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+}
+
+.addItemButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-sm) var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-semibold);
+  color: var(--color-primary);
+}
+
+.partRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 6px var(--space-md);
+  margin-bottom: var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.partRowText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-subheadline);
+  overflow-wrap: anywhere;
+}
+
+.photoGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.photoTile {
+  position: relative;
+}
+
+.photo {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.photoRemove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+}
+
+.photoActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0 var(--space-lg);
+}
+
+.errorText {
+  margin-top: var(--space-sm);
+  font-size: var(--fs-footnote);
+  color: var(--color-error-text);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-md);
+  border-top: 0.5px solid var(--color-separator);
+}
+
+.summary {
+  padding: var(--space-md);
+}
+
+.summaryLine {
+  padding: 3px 0;
+  font-size: var(--fs-subheadline);
+}

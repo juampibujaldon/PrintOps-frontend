@@ -1,0 +1,121 @@
+.node {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  width: 120px;
+  height: 70px;
+  padding: 0;
+  text-align: left;
+  background: var(--color-surface);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+  transition: opacity 200ms var(--ease-standard), box-shadow 160ms var(--ease-standard), scale 160ms var(--ease-standard);
+}
+
+.editable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragging {
+  z-index: 100;
+  cursor: grabbing;
+  scale: 1.05;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  transition: none;
+}
+
+.dimmed {
+  opacity: 0.3;
+}
+
+.node:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.statusBar {
+  flex: none;
+  width: 4px;
+  border-top-left-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-md);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 var(--space-sm);
+}
+
+.name {
+  overflow: hidden;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model {
+  margin-top: 1px;
+  overflow: hidden;
+  font-size: var(--fs-caption2);
+  color: var(--color-text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.statusText {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cornerBadge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-bold);
+  color: #fff;
+  border: 2px solid var(--color-surface);
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node {
+    transition: none;
+  }
+}

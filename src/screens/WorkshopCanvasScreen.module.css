@@ -1,0 +1,173 @@
+.skeletonRow {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.skeletonCard {
+  width: 136px;
+  height: 96px;
+  border-radius: var(--radius-lg);
+}
+
+.skeletonCanvas {
+  height: max(420px, calc(100dvh - 330px));
+  border-radius: var(--radius-lg);
+}
+
+.viewToggle {
+  display: flex;
+  padding: 2px;
+  background: var(--color-fill);
+  border-radius: var(--radius-sm);
+}
+
+.toggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 var(--space-md);
+  color: var(--color-text-secondary);
+  border-radius: calc(var(--radius-sm) - 2px);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+}
+
+.toggleBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.toggleActive {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 479px) {
+  .toggleLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+.editBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-sm);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.listItem {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-md) var(--space-md) 0;
+  overflow: hidden;
+  text-align: left;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.listStatusBar {
+  flex: none;
+  align-self: stretch;
+  width: 4px;
+}
+
+.listText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.listTitle {
+  overflow: hidden;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listSubtitle {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: var(--fs-caption);
+  color: var(--color-text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listStatusText {
+  flex: none;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+}
+
+.addHint {
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-subheadline);
+  color: var(--color-text-secondary);
+}
+
+.addList {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.addItem {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-md) var(--space-lg);
+  text-align: left;
+  font-size: var(--fs-body);
+  color: var(--color-primary);
+  border-bottom: 0.5px solid var(--color-separator);
+}
+
+.addItem:hover {
+  background: var(--color-fill);
+}
+
+.addList li:last-child .addItem {
+  border-bottom: 0;
+}

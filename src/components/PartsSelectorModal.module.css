@@ -1,0 +1,110 @@
+.spinner {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-md) 0;
+}
+
+.list {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: var(--space-md);
+}
+
+.resultRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-xs);
+  text-align: left;
+  border-bottom: 0.5px solid var(--color-separator);
+}
+
+.resultRow:hover:not(:disabled) {
+  background: var(--color-fill);
+}
+
+.resultRow:focus-visible {
+  outline: 0;
+  box-shadow: inset var(--focus-ring);
+}
+
+.resultInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.resultName {
+  font-size: var(--fs-subheadline);
+  overflow-wrap: anywhere;
+}
+
+.resultNameDisabled {
+  composes: resultName;
+  color: var(--color-text-tertiary);
+}
+
+.resultMeta {
+  font-size: var(--fs-caption);
+  color: var(--color-text-secondary);
+}
+
+.outBadge {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-status-fuera);
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-bold);
+  color: #fff;
+}
+
+.empty {
+  padding: var(--space-md) 0;
+  text-align: center;
+  font-size: var(--fs-subheadline);
+  color: var(--color-text-secondary);
+}
+
+.qtyBlock {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.selectedName {
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+}
+
+.selectedMeta {
+  margin-bottom: var(--space-sm);
+  font-size: var(--fs-caption);
+  color: var(--color-text-secondary);
+}
+
+.qtyRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.qtyField {
+  flex: 1;
+  min-width: 0;
+}
+
+.qtyBtn {
+  margin-bottom: var(--space-md);
+}
+
+.subtitle {
+  margin: var(--space-lg) 0 var(--space-sm);
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}

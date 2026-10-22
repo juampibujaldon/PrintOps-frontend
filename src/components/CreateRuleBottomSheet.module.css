@@ -1,0 +1,87 @@
+.label {
+  display: block;
+  margin: var(--space-sm) 0 var(--space-xs);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.chip {
+  flex: 1;
+  min-width: 90px;
+  padding: 10px var(--space-sm);
+  border: 0.5px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.chip:focus-visible,
+.removeBtn:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.chipSelected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.list {
+  margin-bottom: var(--space-xs);
+}
+
+.checklistItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+  padding: 4px var(--space-sm) 4px var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+}
+
+.checklistText {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.removeBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+}
+
+.addRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.addField {
+  flex: 1;
+  min-width: 0;
+}
+
+.addBtn {
+  flex: none;
+  min-height: 46px;
+}

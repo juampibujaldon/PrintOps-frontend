@@ -1,0 +1,248 @@
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 var(--space-xl);
+  padding-bottom: var(--space-xxl);
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.column {
+  min-width: 0;
+}
+
+.skeleton {
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-lg);
+}
+
+.card {
+  margin-bottom: var(--space-md);
+}
+
+.type {
+  font-size: var(--fs-title2);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-title2);
+}
+
+.typeLabel {
+  margin-top: 2px;
+  font-size: var(--fs-subheadline);
+  color: var(--color-text-secondary);
+}
+
+.statusWrap {
+  display: flex;
+  margin-top: var(--space-sm);
+}
+
+.description {
+  margin-top: var(--space-sm);
+  font-size: var(--fs-subheadline);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.meta {
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.actionButton {
+  flex: 1 1 120px;
+  min-width: 120px;
+}
+
+.sectionTitle {
+  margin: 0 0 6px var(--space-lg);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--ls-footnote);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.checklistRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 0;
+}
+
+.checkIcon {
+  flex: none;
+  display: inline-flex;
+  justify-content: center;
+  width: 24px;
+}
+
+.na {
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.checklistText {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-subheadline);
+  overflow-wrap: anywhere;
+}
+
+.checklistTextMuted {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.partRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 6px 0;
+}
+
+.partName {
+  font-size: var(--fs-subheadline);
+  overflow-wrap: anywhere;
+}
+
+.partQty {
+  flex: none;
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-bold);
+  color: var(--color-text-secondary);
+}
+
+.emptyText {
+  padding: var(--space-sm) 0;
+  font-size: var(--fs-subheadline);
+  color: var(--color-text-secondary);
+}
+
+.photoGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.photoBtn {
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.photoBtn:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-fill);
+}
+
+.pendingTitle {
+  margin: var(--space-md) 0 var(--space-sm);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.pendingItem {
+  position: relative;
+}
+
+.removePhoto {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+}
+
+.uploadBtn {
+  margin-top: var(--space-md);
+}
+
+.errorText {
+  margin-top: var(--space-sm);
+  font-size: var(--fs-footnote);
+  color: var(--color-error-text);
+}
+
+.photoActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.sheetFooter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+}
+
+.lightbox {
+  background: var(--color-surface);
+}
+
+.lightboxBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.lightboxImg {
+  max-width: 100%;
+  max-height: 65dvh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
+.lightboxLabel {
+  font-size: var(--fs-subheadline);
+  color: var(--color-text-secondary);
+}
+
+.lightboxNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.lightboxCount {
+  font-size: var(--fs-footnote);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}

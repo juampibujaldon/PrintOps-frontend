@@ -1,0 +1,145 @@
+.list {
+  padding-bottom: var(--space-md);
+}
+
+.itemRow {
+  display: flex;
+}
+
+.timelineColumn {
+  flex: none;
+  width: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  margin-top: 6px;
+  border-radius: 50%;
+}
+
+.connector {
+  flex: 1;
+  width: 2px;
+  margin-top: 4px;
+  background: var(--color-separator);
+  opacity: 0.6;
+}
+
+.itemContent {
+  flex: 1;
+  min-width: 0;
+  margin: 0 0 var(--space-md) var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 0.5px solid var(--color-separator);
+  border-radius: var(--radius-lg);
+}
+
+.itemHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.meta {
+  margin-bottom: var(--space-xs);
+  font-size: var(--fs-footnote);
+  color: var(--color-text-tertiary);
+}
+
+.description {
+  margin-bottom: var(--space-sm);
+  font-size: var(--fs-subheadline);
+  overflow-wrap: anywhere;
+}
+
+.partsSection {
+  margin-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 0.5px solid var(--color-separator);
+}
+
+.partsTitle {
+  margin-bottom: 2px;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--color-text-tertiary);
+}
+
+.partLine {
+  padding: 1px 0;
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.partsTotal {
+  margin-top: 2px;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-bold);
+}
+
+.photosRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.thumbs {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.thumbnail {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-separator);
+}
+
+.photoCount {
+  flex: none;
+  font-size: var(--fs-caption2);
+  color: var(--color-text-tertiary);
+}
+
+.itemFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.orderNumber {
+  font-size: var(--fs-caption2);
+  color: var(--color-text-tertiary);
+}
+
+.detailLink {
+  padding: 4px 0;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-primary);
+}
+
+.detailLink:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--space-xl);
+}

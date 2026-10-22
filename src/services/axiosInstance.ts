@@ -108,7 +108,26 @@ export function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
-async function doRefresh(): Promise<string> {
+// Varias pestañas comparten localStorage y el refresh token rota en cada uso: si dos pestañas
+// refrescan a la vez, la segunda mandaría un token ya rotado y cerraría la sesión. El lock
+// serializa el refresh entre pestañas; si al obtenerlo el refresh token ya cambió, otra pestaña
+// refrescó y se reutiliza su access token.
+function doRefresh(): Promise<string> {
+  const tokenBefore = getRefreshToken();
+  if (typeof navigator === 'undefined' || !navigator.locks) {
+    return refreshWithServer();
+  }
+  return navigator.locks.request('printops-token-refresh', async () => {
+    const current = getRefreshToken();
+    const accessToken = getAccessToken();
+    if (current && current !== tokenBefore && accessToken) {
+      return accessToken;
+    }
+    return refreshWithServer();
+  });
+}
+
+async function refreshWithServer(): Promise<string> {
   try {
     const refreshToken = getRefreshToken();
     const deviceId = getOrCreateDeviceId();

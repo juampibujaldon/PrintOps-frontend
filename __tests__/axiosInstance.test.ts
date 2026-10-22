@@ -117,3 +117,25 @@ describe('multipart uploads', () => {
     expect(await captureTimeout(form, 120000)).toBe(120000);
   });
 });
+
+describe('cross-tab refresh lock', () => {
+  it('reuses the access token when another tab rotated the refresh token while waiting for the lock', async () => {
+    // Simula una pestaña que refrescó mientras esta esperaba el lock.
+    const request = vi.fn(async (_name: string, cb: () => Promise<string>) => {
+      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-from-other-tab');
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'new');
+      return cb();
+    });
+    Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
+    try {
+      serverAcceptingNewToken([0, 0]);
+      apiMock.onGet(DATA_URL).replyOnce(401);
+      const res = await api.get(DATA_URL);
+      expect(res.data).toBe('ok');
+      expect(request).toHaveBeenCalledWith('printops-token-refresh', expect.any(Function));
+      expect(refreshCalls).toBe(0);
+    } finally {
+      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+    }
+  });
+});

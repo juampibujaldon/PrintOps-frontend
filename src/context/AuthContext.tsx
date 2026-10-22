@@ -5,7 +5,8 @@ import { authService } from '../services/authService';
 import type { GoogleLoginResult } from '../services/authService';
 import { webSocketService } from '../services/webSocketService';
 import { setOnSessionExpired } from '../services/axiosInstance';
-import { clearSession } from '../services/storage';
+import { clearSession, getRefreshToken } from '../services/storage';
+import { STORAGE_KEYS } from '../constants/api';
 import type { AuthAction, AuthResponse, AuthState } from '../types/auth';
 
 const initialState: AuthState = {
@@ -102,6 +103,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'LOGOUT' });
     });
     return () => setOnSessionExpired(null);
+  }, []);
+
+  // Logout en otra pestaña: el evento `storage` avisa que se borró el refresh token compartido.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.storageArea !== window.localStorage) return;
+      if ((e.key === STORAGE_KEYS.REFRESH_TOKEN && e.newValue == null) || e.key == null) {
+        if (getRefreshToken()) return;
+        webSocketService.disconnect();
+        dispatch({ type: 'LOGOUT' });
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const applyAuth = useCallback((data: AuthResponse) => {

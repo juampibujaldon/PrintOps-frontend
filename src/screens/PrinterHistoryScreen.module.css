@@ -1,0 +1,55 @@
+.content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-bottom: var(--space-xxl);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 40px var(--space-xl) 0;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-bold);
+}
+
+.emptySub {
+  font-size: var(--fs-subheadline);
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.skeletonItem {
+  display: flex;
+}
+
+.skeletonDot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin: 4px var(--space-sm) 0 6px;
+  border-radius: 50%;
+  background: var(--color-separator);
+}
+
+.skeletonCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 0.5px solid var(--color-separator);
+  border-radius: var(--radius-lg);
+}

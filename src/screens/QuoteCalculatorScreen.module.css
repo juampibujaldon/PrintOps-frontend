@@ -1,0 +1,265 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.skeleton {
+  border-radius: var(--radius-lg);
+}
+
+.tabBar {
+  display: flex;
+  gap: var(--space-sm);
+  max-width: 560px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-semibold);
+  text-align: center;
+}
+
+.tabActive {
+  background: var(--color-text-primary);
+  border-color: var(--color-text-primary);
+  color: var(--color-background);
+}
+
+.statusBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+  margin: var(--space-md) 0 var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.statusInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.statusHint {
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.statusBtn {
+  padding: 8px var(--space-md);
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.statusBtn:disabled {
+  opacity: 0.5;
+}
+
+/* Calculadora: mobile = precio arriba y formulario debajo; desktop = dos columnas */
+.calcLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.priceCol,
+.formCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.priceCard {
+  text-align: center;
+}
+
+.priceLabel {
+  font-size: var(--fs-footnote);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.priceValue {
+  margin: var(--space-xs) 0;
+  font-size: var(--fs-display);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.priceHint {
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.criticalBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  text-align: left;
+}
+
+.criticalBanner svg {
+  flex: none;
+}
+
+.section {
+  margin-top: var(--space-sm);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-regular);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.sectionCard {
+  padding: var(--space-md);
+}
+
+.chipsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.breakdownToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: var(--space-sm) 0;
+  color: var(--color-primary);
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-semibold);
+}
+
+.breakdown {
+  padding: var(--space-md);
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 6px 0;
+  font-size: var(--fs-subheadline);
+}
+
+.breakdownLabel {
+  color: var(--color-text-secondary);
+}
+
+.breakdownValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdownBold {
+  font-weight: var(--fw-bold);
+  color: var(--color-text-primary);
+}
+
+.narrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.wearSummary {
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.hint {
+  font-size: var(--fs-footnote);
+  color: var(--color-text-tertiary);
+  text-align: center;
+}
+
+.pdfActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.pdfReady {
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.pdfButtons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.leaveActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+@media (min-width: 600px) {
+  .pdfButtons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .pdfButtons > * {
+    flex: 1 1 180px;
+  }
+}
+
+@media (min-width: 960px) {
+  .calcLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+
+  /* El precio queda a la derecha y fijo mientras se completa el formulario */
+  .priceCol {
+    order: 2;
+    position: sticky;
+    top: var(--space-lg);
+  }
+
+  .formCol {
+    order: 1;
+  }
+}

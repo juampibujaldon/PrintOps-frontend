@@ -1,0 +1,26 @@
+/* Páginas de ajustes: columna centrada de ~720px en desktop. */
+.page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: var(--space-xxl);
+}
+
+.pageWithBar {
+  padding-bottom: 0;
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.menuIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  color: #fff;
+  border-radius: 7px;
+}

@@ -1,0 +1,133 @@
+.card {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  transition: box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-floating);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: var(--space-md) 52px var(--space-md) var(--space-md);
+  text-align: left;
+  border-radius: var(--radius-lg);
+}
+
+.topRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-headline);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outBadge {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-status-fuera);
+  color: #fff;
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-bold);
+}
+
+.partNumber {
+  margin-top: 2px;
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.price {
+  margin-top: 2px;
+  font-size: var(--fs-footnote);
+  color: var(--color-text-tertiary);
+}
+
+.categoryChip {
+  flex: none;
+  max-width: 40%;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-caption2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stockRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-sm);
+}
+
+.stockLabel {
+  font-size: var(--fs-caption);
+  color: var(--color-text-secondary);
+}
+
+.stockPct {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+}
+
+.track {
+  display: block;
+  height: 6px;
+  margin-top: var(--space-xs);
+  border-radius: 3px;
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.menuBtn {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+}
+
+.menuBtn:hover {
+  background: var(--color-fill);
+}

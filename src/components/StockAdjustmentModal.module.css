@@ -1,0 +1,62 @@
+.partName {
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.label {
+  margin-bottom: var(--space-xs);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-secondary);
+}
+
+.optionRow {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.option {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  text-align: center;
+}
+
+.optionSelected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.preview {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-bold);
+}
+
+.actions {
+  width: 100%;
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.actions > * {
+  flex: 1;
+}

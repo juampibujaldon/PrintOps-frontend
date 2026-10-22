@@ -1,0 +1,71 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 var(--space-sm);
+  border-radius: 10px;
+  background: var(--color-fill);
+  max-width: 480px;
+}
+
+.searchBox:focus-within {
+  box-shadow: var(--focus-ring);
+}
+
+.searchIcon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: var(--fs-body);
+  color: var(--color-text-primary);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.clear {
+  display: inline-flex;
+  color: var(--color-text-tertiary);
+}
+
+.chipsRow {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.chipsRow::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 720px) {
+  .chipsRow {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}

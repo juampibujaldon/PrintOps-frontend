@@ -1,0 +1,8 @@
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(174, 174, 178, 0.6) 1.1px, transparent 1.6px);
+  background-size: var(--grid-size, var(--grid-base)) var(--grid-size, var(--grid-base));
+  background-position: var(--grid-x, 0) var(--grid-y, 0);
+}

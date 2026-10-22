@@ -1,0 +1,89 @@
+.chartRow {
+  display: flex;
+  height: 180px;
+  margin-top: var(--space-sm);
+}
+
+.yAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 52px;
+  padding-right: var(--space-xs);
+  padding-bottom: 22px;
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
+}
+
+.barCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.tooltipSlot {
+  display: flex;
+  justify-content: center;
+  height: 16px;
+}
+
+.tooltip {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  background: var(--color-background);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.barTrack {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 1;
+  width: 60%;
+}
+
+.bar {
+  display: block;
+  background: var(--color-primary);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  opacity: 0.85;
+  transition: height var(--motion-base) var(--ease-decelerate), opacity var(--motion-fast);
+}
+
+.barCol:hover .bar,
+.barSelected {
+  opacity: 1;
+}
+
+.xLabel {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  margin: var(--space-lg) 0;
+  text-align: center;
+  font-size: var(--fs-footnote);
+  color: var(--color-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

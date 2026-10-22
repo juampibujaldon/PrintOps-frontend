@@ -1,0 +1,264 @@
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.chipsRow {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.chipsRow::-webkit-scrollbar {
+  display: none;
+}
+
+.filterRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+}
+
+.dateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dateField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1 1 150px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-fill);
+  color: var(--color-text-secondary);
+}
+
+.dateField:focus-within {
+  box-shadow: var(--focus-ring);
+}
+
+.dateLabel {
+  font-size: var(--fs-footnote);
+}
+
+.dateInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--fs-subheadline);
+}
+
+.clearDateBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+}
+
+.clearDateBtn:hover {
+  background: var(--color-fill);
+}
+
+.resultCount {
+  margin-bottom: var(--space-sm);
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+}
+
+.skeleton {
+  border-radius: var(--radius-lg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+  text-align: left;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.cardHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.client {
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-headline);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobDesc {
+  margin-top: 2px;
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priceBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+}
+
+.price {
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.units {
+  font-size: var(--fs-caption);
+  color: var(--color-text-tertiary);
+}
+
+.divider {
+  display: block;
+  height: 1px;
+  margin: var(--space-md) 0;
+  background: var(--color-border);
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.cardFooter > :first-child {
+  flex: none;
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-caption);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg) var(--space-md);
+}
+
+.actionBtn {
+  padding: 7px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-fill);
+  color: var(--color-text-primary);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+}
+
+.actDraft {
+  background: var(--color-fill);
+  color: var(--color-text-primary);
+}
+
+.actSent {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.actAccepted {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.actRejected,
+.actDelete {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.actPaid {
+  background: var(--color-success-text);
+  color: #fff;
+}
+
+@media (min-width: 700px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filterRow {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .search {
+    max-width: 320px;
+  }
+
+  .dateRow {
+    flex: 1;
+  }
+}
+
+@media (min-width: 1100px) {
+  .list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
