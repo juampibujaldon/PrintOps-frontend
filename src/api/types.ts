@@ -5,7 +5,12 @@ import type { components } from './schema';
 type Schemas = components['schemas'];
 // springdoc marca todos los componentes de un record como opcionales; las respuestas del
 // backend siempre los traen (con null si no hay valor), así que se tratan como presentes.
-type S = { [K in keyof Schemas]: Required<Schemas[K]> };
+type DeepRequired<T> = T extends (infer U)[]
+  ? DeepRequired<U>[]
+  : T extends object
+    ? { [K in keyof T]-?: DeepRequired<T[K]> }
+    : T;
+type S = { [K in keyof Schemas]: DeepRequired<Schemas[K]> };
 // Para los cuerpos de request se respeta la opcionalidad original.
 type In = Schemas;
 

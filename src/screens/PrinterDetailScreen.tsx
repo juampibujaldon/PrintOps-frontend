@@ -20,6 +20,9 @@ import {
 import { tint } from '../constants/theme';
 import { PRINTER_STATUS, daysUntilMaintenance } from '../constants/printers';
 import { useAuth } from '../hooks/useAuth';
+import { useLiveTelemetry } from '../hooks/useLiveTelemetry';
+import PrinterIntegrationCard from '../components/printer/PrinterIntegrationCard';
+import PrinterLiveCard from '../components/printer/PrinterLiveCard';
 import { usePrinterById } from '../hooks/usePrinterById';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
@@ -49,6 +52,8 @@ export default function PrinterDetailScreen() {
   const confirm = useConfirm();
   const { showToast } = useToast();
   const isTecnico = user?.role === 'TECNICO';
+  const isManager = user?.role === 'MANAGER';
+  const telemetry = useLiveTelemetry();
 
   const { printer, setPrinter, loading, refreshing, error, reload } = usePrinterById();
   const [changingStatus, setChangingStatus] = useState<PrinterStatus | null>(null);
@@ -307,6 +312,10 @@ export default function PrinterDetailScreen() {
               />
             </div>
           </div>
+
+          {/* Estado en vivo (agente local) e integración */}
+          {telemetry.get(printer.id) ? <PrinterLiveCard telemetry={telemetry.get(printer.id)!} /> : null}
+          {isManager ? <PrinterIntegrationCard printerId={printer.id} printerName={printer.name || printer.model} /> : null}
 
           {/* Información */}
           {info.length > 0 ? (

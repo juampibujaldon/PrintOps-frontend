@@ -6,6 +6,8 @@ import { Badge, Button, Card, EmptyState, ErrorState, ScreenHeader, Skeleton } f
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import { Colors } from '../constants/theme';
 import { partService } from '../services/partService';
+import SupplierPicker from '../components/SupplierPicker';
+import { useAuth } from '../hooks/useAuth';
 import type { MovementType, SparePartDTO, StockMovementDTO } from '../types/parts';
 import { safeHttpUrl } from '../utils/url';
 import styles from './SparePartDetailScreen.module.css';
@@ -25,6 +27,7 @@ export default function SparePartDetailScreen() {
   const statePart = (location.state as { part?: SparePartDTO } | null)?.part;
 
   const [part, setPart] = useState<SparePartDTO | null>(statePart?.id === partId ? statePart : null);
+  const { user } = useAuth();
   const [movements, setMovements] = useState<StockMovementDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -129,6 +132,8 @@ export default function SparePartDetailScreen() {
               </a>
             ) : null}
           </div>
+
+          {user?.role === 'MANAGER' && <SupplierPicker part={part} onChange={setPart} />}
 
           <Card className={styles.stockPanel}>
             <p className={styles.stockBig}>{part.stock}</p>

@@ -7,6 +7,9 @@ import SparePartDetailScreen from '../src/screens/SparePartDetailScreen';
 import { partService } from '../src/services/partService';
 import type { SparePartDTO } from '../src/types/parts';
 
+// La pantalla consulta el rol (proveedor habitual solo para el supervisor).
+vi.mock('../src/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 1, email: 't@t', role: 'TECNICO', workspaceId: 1 } }) }));
+
 vi.mock('../src/services/partService', () => ({
   partService: { getPart: vi.fn(), getMovements: vi.fn() },
 }));

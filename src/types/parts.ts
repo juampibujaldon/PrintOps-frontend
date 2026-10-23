@@ -14,6 +14,7 @@ export interface SparePartDTO {
   supplierUrl: string | null;
   isLowStock: boolean;
   isOutOfStock: boolean;
+  supplierId?: number | null;
 }
 
 export interface CreateSparePartInput {

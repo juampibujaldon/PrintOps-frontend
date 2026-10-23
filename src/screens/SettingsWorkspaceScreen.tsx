@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { workspaceService } from '../services/workspaceService';
 import type { Workspace } from '../services/workspaceService';
 import { useAuth } from '../hooks/useAuth';
+import LogoUploader from '../components/quote/LogoUploader';
 import { useToast } from '../context/ToastContext';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { ErrorState, FormField, SaveBar, ScreenHeader, SelectField, SettingsSection, Skeleton } from '../components/ui';
@@ -73,7 +74,6 @@ export default function SettingsWorkspaceScreen() {
         phone: form.phone?.trim(),
         contactEmail: form.contactEmail?.trim(),
         address: form.address?.trim(),
-        logoUrl: form.logoUrl?.trim(),
         currency: form.currency,
       });
       setOriginal(saved);
@@ -127,6 +127,19 @@ export default function SettingsWorkspaceScreen() {
             onChange={(v) => setForm({ ...form, currency: v })}
             disabled={!isManager}
           />
+        </SettingsSection>
+
+        <SettingsSection title="Logo para los PDF">
+          <div className={styles.segmentRow}>
+            <LogoUploader
+              workspace={(original as Workspace | null) ?? null}
+              canEdit={isManager}
+              onChange={(w) => {
+                setOriginal(w);
+                setForm((f) => ({ ...f, logoUrl: w.logoUrl }));
+              }}
+            />
+          </div>
         </SettingsSection>
 
         <SettingsSection title="Datos de Contacto (Para PDFs)">

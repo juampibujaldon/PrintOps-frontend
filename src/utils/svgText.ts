@@ -5,7 +5,9 @@ let ctx: CanvasRenderingContext2D | null | undefined;
 function measure(text: string, fontPx: number, weight: number): number {
   if (ctx === undefined) {
     try {
-      ctx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+      // jsdom (tests) no implementa canvas: se usa la estimación.
+      const jsdom = typeof navigator !== 'undefined' && navigator.userAgent.includes('jsdom');
+      ctx = typeof document !== 'undefined' && !jsdom ? document.createElement('canvas').getContext('2d') : null;
     } catch {
       ctx = null;
     }

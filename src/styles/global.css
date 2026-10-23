@@ -116,3 +116,19 @@ body.scroll-locked {
     scroll-behavior: auto !important;
   }
 }
+
+/* Botón con aspecto de link (p. ej. en tablas). */
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+}

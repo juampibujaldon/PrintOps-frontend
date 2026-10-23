@@ -39,6 +39,9 @@ export const routes: RouteObject[] = [
         ],
       },
 
+      // ── Presupuesto compartido con el cliente (sin sesión, sin menú) ──
+      { path: '/q/:token', ...screen(() => import('./screens/PublicQuoteScreen')) },
+
       // ── Privadas (dentro de AppShell) ──
       {
         element: <RequireAuth />,
@@ -64,6 +67,11 @@ export const routes: RouteObject[] = [
               { path: '/quotes/new', ...screen(() => import('./screens/QuoteCalculatorScreen')) },
               { path: '/quotes/:quoteId', ...screen(() => import('./screens/QuoteCalculatorScreen')) },
               { path: '/workshop', ...screen(() => import('./screens/WorkshopCanvasScreen')) },
+              { path: '/jobs', ...screen(() => import('./screens/JobsScreen')) },
+              { path: '/spools', ...screen(() => import('./screens/SpoolsScreen')) },
+              { path: '/purchasing', ...screen(() => import('./screens/PurchasingScreen')) },
+              { path: '/analytics', ...screen(() => import('./screens/AnalyticsScreen')) },
+              { path: '/activity', ...screen(() => import('./screens/ActivityScreen')) },
               { path: '/notifications', ...screen(() => import('./screens/NotificationsScreen')) },
               { path: '/profile', ...screen(() => import('./screens/PerfilScreen')) },
               { path: '/settings', ...screen(() => import('./screens/ConfiguracionScreen')) },

@@ -4,7 +4,7 @@ import PrintOpsLogo from '../brand/PrintOpsLogo';
 import { useAuth } from '../../hooks/useAuth';
 import { useConfirm } from '../../context/ConfirmContext';
 import { cx } from '../../utils/cx';
-import { NAV_ITEMS, isNavItemActive } from './navItems';
+import { isNavItemActive, visibleSections } from './navItems';
 import styles from './Sidebar.module.css';
 
 interface Props {
@@ -38,25 +38,32 @@ export default function Sidebar({ onNavigate, className }: Props) {
       <div className={styles.brand}>
         <PrintOpsLogo width={190} showSubtitle={false} />
       </div>
-      <ul className={styles.list}>
-        {NAV_ITEMS.map((item) => {
-          const active = isNavItemActive(item, pathname);
-          const Icon = item.icon;
-          return (
-            <li key={item.to}>
-              <Link
-                to={item.to}
-                className={cx(styles.item, active && styles.active)}
-                aria-current={active ? 'page' : undefined}
-                onClick={onNavigate}
-              >
-                <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
-                <span>{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <div className={styles.list}>
+        {visibleSections(user?.role).map((section, i) => (
+          <div key={section.title ?? i} className={styles.group}>
+            {section.title && <p className={styles.groupTitle}>{section.title}</p>}
+            <ul className={styles.groupList}>
+              {section.items.map((item) => {
+                const active = isNavItemActive(item, pathname);
+                const Icon = item.icon;
+                return (
+                  <li key={item.to}>
+                    <Link
+                      to={item.to}
+                      className={cx(styles.item, active && styles.active)}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={onNavigate}
+                    >
+                      <Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
       <div className={styles.footer}>
         {user ? (
           <div className={styles.user}>
