@@ -1,47 +1,41 @@
 // src/screens/QuoteCalculatorScreen.tsx
 // Rutas: /quotes/new (quoteId undefined) y /quotes/:quoteId (edición / solo lectura si no es borrador).
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+// Editor en dos columnas: secciones del presupuesto (izquierda) y resumen de precio, PDF y
+// link para el cliente (derecha, fija al hacer scroll).
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useBlocker, useLocation, useParams } from 'react-router-dom';
-import { AlertTriangle, ChevronDown, ChevronRight, Download, ExternalLink, Share2, SlidersHorizontal } from 'lucide-react';
+import { Calculator, Coins, Cpu, Receipt, SlidersHorizontal, User } from 'lucide-react';
 import { Badge, Button, Card, Chip, EmptyState, ErrorState, Modal, ScreenHeader, Skeleton, TextField } from '../components/ui';
 import PrinterSelector from '../components/PrinterSelector';
 import QuotePdfPreview from '../components/QuotePdfPreview';
 import WearIndicator from '../components/WearIndicator';
+import ExtraCostsEditor from '../components/quote/ExtraCostsEditor';
+import QuotePdfPanel from '../components/quote/QuotePdfPanel';
+import QuoteShareCard from '../components/quote/QuoteShareCard';
+import QuoteSummaryCard from '../components/quote/QuoteSummaryCard';
+import SpoolSelect from '../components/quote/SpoolSelect';
+import { formatMoney } from '../components/quote/money';
 import { useConfirm } from '../context/ConfirmContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../hooks/useAuth';
 import { missingFields, useQuoteCalculator } from '../hooks/useQuoteCalculator';
 import { printerService } from '../services/printerService';
 import type { PrinterResponse } from '../services/printerService';
 import { quoteService } from '../services/quoteService';
 import { workspaceService } from '../services/workspaceService';
-import {
-  FILAMENT_TYPES,
-  QUOTE_STATUS_COLORS,
-  QUOTE_STATUS_LABELS,
-  QUOTE_TRANSITIONS,
-} from '../types/quote';
-import type { Quote, QuoteInputs, QuoteStatus } from '../types/quote';
+import type { Workspace } from '../services/workspaceService';
+import { FILAMENT_TYPES, QUOTE_STATUS_COLORS, QUOTE_STATUS_LABELS, QUOTE_TRANSITIONS } from '../types/quote';
+import type { FilamentType, Quote, QuoteInputs, QuoteStatus } from '../types/quote';
 import { criticalComponent, initialState, num, reducer } from '../utils/quoteForm';
-import type { FormState } from '../utils/quoteForm';
+import type { ExtraCostRow, FormState } from '../utils/quoteForm';
 import { canShareFile, downloadBlob, openBlobInNewTab, shareFile } from '../utils/download';
-import { cx } from '../utils/cx';
 import styles from './QuoteCalculatorScreen.module.css';
-
-type Tab = 'calc' | 'wear' | 'pdf';
-
-const money = (v: number) => `$${v.toFixed(2)}`;
 
 // Prioriza el mensaje del backend; si no, el del error (validación local, red).
 const errorMessage = (error: unknown, fallback: string) => {
   const e = error as { response?: { data?: { message?: string } }; message?: string };
   return e?.response?.data?.message || e?.message || fallback;
 };
-
-const TABS: Array<{ key: Tab; label: string }> = [
-  { key: 'calc', label: 'Calculadora' },
-  { key: 'wear', label: 'Desgaste' },
-  { key: 'pdf', label: 'PDF' },
-];
 
 interface GeneratedPdf {
   blob: Blob;
@@ -55,16 +49,20 @@ export default function QuoteCalculatorScreen() {
   const stateTitle = (location.state as { title?: string } | null)?.title;
   const confirm = useConfirm();
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const isManager = user?.role === 'MANAGER';
 
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [tab, setTab] = useState<Tab>('calc');
+  const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteId, setQuoteId] = useState<number | null>(null);
   const [quoteNumber, setQuoteNumber] = useState<string>('');
   const [selectedPrinter, setSelectedPrinter] = useState<PrinterResponse | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [pdf, setPdf] = useState<GeneratedPdf | null>(null);
-  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [status, setStatus] = useState<QuoteStatus>('DRAFT');
   const [changingStatus, setChangingStatus] = useState(false);
   const [loadingQuote, setLoadingQuote] = useState(routeQuoteId != null);
@@ -72,6 +70,7 @@ export default function QuoteCalculatorScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [savingBeforeLeave, setSavingBeforeLeave] = useState(false);
+  const wearRef = useRef<HTMLDivElement>(null);
   // El backend solo permite editar borradores: el resto se muestra en solo lectura.
   const locked = status !== 'DRAFT';
 
@@ -86,8 +85,12 @@ export default function QuoteCalculatorScreen() {
     dispatch({ type: 'SET', field, value });
   };
 
+  // Datos del taller (logo y nombre para el PDF).
+  useEffect(() => {
+    workspaceService.getMine().then(setWorkspace).catch(() => setWorkspace(null));
+  }, []);
+
   // ── Presupuesto nuevo: precargar los valores por defecto del taller ──
-  // (sin esto "Precio de energía" quedaba vacío y el formulario nunca era válido).
   useEffect(() => {
     if (routeQuoteId != null) return;
     let cancelled = false;
@@ -111,6 +114,13 @@ export default function QuoteCalculatorScreen() {
     };
   }, [routeQuoteId]);
 
+  const applyQuote = useCallback((q: Quote) => {
+    setQuote(q);
+    setQuoteId(q.id);
+    setQuoteNumber(q.quoteNumber);
+    setStatus(q.status);
+  }, []);
+
   // ── Carga en modo edición (funciona al recargar: se trae por id) ──
   useEffect(() => {
     if (routeQuoteId == null) return;
@@ -127,8 +137,7 @@ export default function QuoteCalculatorScreen() {
       .get(routeQuoteId)
       .then((q) => {
         if (cancelled) return;
-        setQuoteNumber(q.quoteNumber);
-        setStatus(q.status);
+        applyQuote(q);
         dispatch({ type: 'LOAD', quote: q });
         setDirty(false);
         if (q.printerId) {
@@ -143,7 +152,7 @@ export default function QuoteCalculatorScreen() {
     return () => {
       cancelled = true;
     };
-  }, [routeQuoteId, reloadKey]);
+  }, [routeQuoteId, reloadKey, applyQuote]);
 
   const inputs: QuoteInputs = useMemo(
     () => ({
@@ -162,6 +171,9 @@ export default function QuoteCalculatorScreen() {
       printerId: state.printerId,
       clientName: state.clientName.trim() || undefined,
       jobDescription: state.jobDescription.trim() || undefined,
+      spoolId: state.spoolId,
+      extraCosts: state.extraCosts.map((r) => ({ description: r.description, amount: r.amount.trim() === '' ? 0 : num(r.amount) })),
+      draftWatermark: state.draftWatermark,
     }),
     [state],
   );
@@ -180,10 +192,9 @@ export default function QuoteCalculatorScreen() {
   // Avisa qué falta en vez de no hacer nada si el formulario es inválido.
   const persistDraft = useCallback(async (): Promise<Quote> => {
     if (!valid) {
-      throw new Error(`Revisá estos campos en la pestaña Calculadora: ${missing.join(', ')}.`);
+      throw new Error(`Revisá estos campos: ${missing.join(', ')}.`);
     }
-    // Un presupuesto que ya no es borrador no se puede editar (PUT → 400):
-    // se usa tal como está, p. ej. para generar el PDF.
+    // Un presupuesto que ya no es borrador no se puede editar (PUT → 400): se usa tal como está.
     if (quoteId && locked) {
       return await quoteService.get(quoteId);
     }
@@ -193,20 +204,18 @@ export default function QuoteCalculatorScreen() {
       // /quotes/new y /quotes/:quoteId son rutas distintas y remontarían la pantalla.
       window.history.replaceState(window.history.state, '', `/quotes/${q.id}`);
     }
-    setQuoteId(q.id);
-    setQuoteNumber(q.quoteNumber);
-    setStatus(q.status);
+    applyQuote(q);
     return q;
-  }, [valid, missing, quoteId, locked, inputs]);
+  }, [valid, missing, quoteId, locked, inputs, applyQuote]);
 
   // ── Cambio de estado: si es un borrador con cambios (o nuevo) se guarda antes ──
   const changeQuoteStatus = async (to: QuoteStatus) => {
-    // Estados finales: pedir confirmación porque no se pueden revertir.
     if (to === 'PAID' || to === 'REJECTED' || status === 'DRAFT') {
       const extra = status === 'DRAFT' ? ' El presupuesto ya no se podrá editar.' : '';
+      const accepted = to === 'ACCEPTED' ? ' Va a entrar a la cola de impresión.' : '';
       const ok = await confirm({
         title: `Marcar como ${QUOTE_STATUS_LABELS[to].toLowerCase()}`,
-        message: `¿Confirmás el cambio de estado?${extra}`,
+        message: `¿Confirmás el cambio de estado?${extra}${accepted}`,
         confirmLabel: 'Confirmar',
       });
       if (!ok) return;
@@ -215,9 +224,9 @@ export default function QuoteCalculatorScreen() {
     try {
       const current = !quoteId || (!locked && dirty) ? await persistDraft() : null;
       const id = current?.id ?? quoteId!;
-      const updated = await quoteService.updateStatus(id, to);
+      applyQuote(await quoteService.updateStatus(id, to));
       setDirty(false);
-      setStatus(updated.status);
+      if (to === 'ACCEPTED') showToast('El trabajo entró a la cola de impresión.', { type: 'success', title: 'Aceptado' });
     } catch (error) {
       showToast(errorMessage(error, 'No se pudo cambiar el estado'), { type: 'error', title: 'No se pudo cambiar el estado' });
     } finally {
@@ -288,10 +297,7 @@ export default function QuoteCalculatorScreen() {
     }
   };
 
-  const pdfFile = useMemo(
-    () => (pdf ? new File([pdf.blob], pdf.filename, { type: 'application/pdf' }) : null),
-    [pdf],
-  );
+  const pdfFile = useMemo(() => (pdf ? new File([pdf.blob], pdf.filename, { type: 'application/pdf' }) : null), [pdf]);
   const shareable = pdfFile ? canShareFile(pdfFile) : false;
 
   const openPdf = () => {
@@ -304,10 +310,38 @@ export default function QuoteCalculatorScreen() {
     }
   };
 
-  const sharePdf = async () => {
-    if (!pdfFile) return;
-    // Cerrar la hoja de compartir sin elegir destino no es un error.
-    await shareFile(pdfFile, `Presupuesto ${quoteNumber}`);
+  // ── Link público ──
+  const share = async () => {
+    setSharing(true);
+    try {
+      const q = !quoteId || (!locked && dirty) ? await persistDraft() : null;
+      applyQuote(await quoteService.share(q?.id ?? quoteId!));
+      setDirty(false);
+      showToast('Link creado. Copialo o mandalo por WhatsApp.', { type: 'success' });
+    } catch (error) {
+      showToast(errorMessage(error, 'No se pudo crear el link'), { type: 'error' });
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const unshare = async () => {
+    if (!quoteId) return;
+    const ok = await confirm({
+      title: 'Desactivar link',
+      message: 'El link deja de funcionar para el cliente. Podés crear uno nuevo después.',
+      confirmLabel: 'Desactivar',
+      destructive: true,
+    });
+    if (!ok) return;
+    setSharing(true);
+    try {
+      applyQuote(await quoteService.unshare(quoteId));
+    } catch (error) {
+      showToast(errorMessage(error, 'No se pudo desactivar el link'), { type: 'error' });
+    } finally {
+      setSharing(false);
+    }
   };
 
   const onSelectPrinter = (p: PrinterResponse | null) => {
@@ -315,6 +349,23 @@ export default function QuoteCalculatorScreen() {
     setSelectedPrinter(p);
     dispatch({ type: 'SET_PRINTER', printerId: p?.id ?? null });
     if (p?.watts != null) dispatch({ type: 'SET', field: 'printerWatts', value: String(p.watts) });
+    markDirty();
+  };
+
+  const onSelectSpool = (s: { id: number; pricePerGram: number; material: string } | null) => {
+    if (locked) return;
+    dispatch({
+      type: 'SET_SPOOL',
+      spoolId: s?.id ?? null,
+      pricePerGram: s?.pricePerGram,
+      filamentType: s ? (s.material as FilamentType) : undefined,
+    });
+    markDirty();
+  };
+
+  const onExtrasChange = (rows: ExtraCostRow[]) => {
+    if (locked) return;
+    dispatch({ type: 'SET_EXTRAS', extraCosts: rows });
     markDirty();
   };
 
@@ -327,17 +378,37 @@ export default function QuoteCalculatorScreen() {
 
   const critical = criticalComponent(wear);
   const title = stateTitle ?? (routeQuoteId != null ? 'Presupuesto' : 'Nuevo presupuesto');
-
-  const header = <ScreenHeader title={title} subtitle={quoteNumber || undefined} backTo="/quotes" />;
+  const header = (
+    <ScreenHeader
+      title={title}
+      subtitle={quoteNumber || undefined}
+      backTo="/quotes"
+      rightContent={
+        !locked ? (
+          <Button
+            title={dirty ? 'Guardar' : 'Guardado'}
+            size="sm"
+            fullWidth={false}
+            variant={dirty ? 'primary' : 'secondary'}
+            disabled={!dirty && quoteId != null}
+            loading={saving}
+            onPress={saveDraft}
+          />
+        ) : undefined
+      }
+    />
+  );
 
   if (loadingQuote) {
     return (
       <>
         {header}
-        <div className={styles.stack} aria-busy="true">
-          <Skeleton height={60} className={styles.skeleton} />
-          <Skeleton height={120} className={styles.skeleton} />
-          <Skeleton height={260} className={styles.skeleton} />
+        <div className={styles.layout} aria-busy="true">
+          <div className={styles.sections}>
+            <Skeleton height={220} />
+            <Skeleton height={220} />
+          </div>
+          <Skeleton height={360} />
         </div>
       </>
     );
@@ -356,7 +427,7 @@ export default function QuoteCalculatorScreen() {
     label: string,
     key: keyof FormState,
     placeholder: string,
-    extra: { inputMode?: 'decimal' | 'numeric'; error?: string } = {},
+    extra: { inputMode?: 'decimal' | 'numeric'; error?: string; hint?: string; suffix?: string } = {},
   ) => (
     <TextField
       label={label}
@@ -366,6 +437,8 @@ export default function QuoteCalculatorScreen() {
       onChangeText={(v) => updateField(key, v)}
       placeholder={placeholder}
       error={extra.error}
+      hint={extra.hint}
+      suffix={extra.suffix}
     />
   );
 
@@ -373,30 +446,12 @@ export default function QuoteCalculatorScreen() {
     <>
       {header}
 
-      {/* Tabs */}
-      <div className={styles.tabBar} role="tablist" aria-label="Secciones del presupuesto">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            id={`quote-tab-${t.key}`}
-            aria-selected={tab === t.key}
-            aria-controls={`quote-panel-${t.key}`}
-            className={cx(styles.tab, tab === t.key && styles.tabActive)}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {/* Estado del presupuesto y próximos pasos */}
       <div className={styles.statusBar}>
         <div className={styles.statusInfo}>
           <Badge label={QUOTE_STATUS_LABELS[status]} color={QUOTE_STATUS_COLORS[status]} />
           <span className={styles.statusHint}>
-            {quoteId ? quoteNumber || 'Guardado' : 'Sin guardar'}
+            {quoteId ? (dirty ? 'Cambios sin guardar' : 'Guardado') : 'Sin guardar'}
             {locked ? ' · solo lectura' : ''}
           </span>
         </div>
@@ -416,181 +471,161 @@ export default function QuoteCalculatorScreen() {
         </div>
       </div>
 
-      {tab === 'calc' && (
-        <div id="quote-panel-calc" role="tabpanel" aria-labelledby="quote-tab-calc" className={styles.calcLayout}>
-          <aside className={styles.priceCol}>
-            <Card className={styles.priceCard}>
-              <p className={styles.priceLabel}>Precio final</p>
-              <p className={styles.priceValue} aria-live="polite">
-                {money(results.totalPrice)}
-              </p>
-              <p className={styles.priceHint}>
-                {inputs.units} unidad{inputs.units !== 1 ? 'es' : ''} · margen {Math.round(inputs.marginPercent)}%
-              </p>
-            </Card>
+      <div className={styles.layout}>
+        <div className={styles.sections}>
+          <Section icon={<User size={17} />} title="Cliente y trabajo">
+            <TextField label="Cliente" readOnly={locked} value={state.clientName} placeholder="Nombre o empresa"
+              onChangeText={(v) => updateField('clientName', v)} />
+            <TextField multiline label="Descripción del trabajo" readOnly={locked} value={state.jobDescription}
+              placeholder="Ej: 10 soportes de pared en PETG negro" onChangeText={(v) => updateField('jobDescription', v)} />
+            {field('Unidades', 'units', '1', { inputMode: 'numeric' })}
+          </Section>
 
-            {critical && (
-              <button type="button" className={styles.criticalBanner} onClick={() => setTab('wear')}>
-                <AlertTriangle size={16} aria-hidden="true" />
-                <span>
-                  {critical.name} llegará al {Math.round(critical.percent)}% de su vida útil. Ver desgaste.
-                </span>
-              </button>
-            )}
+          <Section icon={<Cpu size={17} />} title="Impresora y material">
+            <PrinterSelector selected={selectedPrinter} onSelect={onSelectPrinter} disabled={locked} />
+            <SpoolSelect value={state.spoolId} disabled={locked} onChange={onSelectSpool} />
+            <div className={styles.chipsWrap} role="group" aria-label="Tipo de filamento">
+              {FILAMENT_TYPES.map((ft) => (
+                <Chip key={ft} label={ft} selected={state.filamentType === ft} onPress={() => updateField('filamentType', ft)} />
+              ))}
+            </div>
+            <div className={styles.pair}>
+              {field('Filamento por unidad', 'filamentGrams', 'Ej: 45', { suffix: 'g' })}
+              {field('Precio por gramo', 'filamentPricePerGram', 'Ej: 20', {
+                hint: state.spoolId ? 'Tomado de la bobina' : undefined,
+              })}
+            </div>
+            {field('Potencia de la impresora', 'printerWatts', 'Ej: 120', { suffix: 'W' })}
+          </Section>
 
-            <button
-              type="button"
-              className={styles.breakdownToggle}
-              aria-expanded={breakdownOpen}
-              onClick={() => setBreakdownOpen((o) => !o)}
-            >
-              {breakdownOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-              Desglose de costos
-            </button>
-            {breakdownOpen && (
-              <Card className={styles.breakdown}>
-                <BreakdownRow label="Filamento" value={money(results.filamentCost)} />
-                <BreakdownRow label="Energía" value={money(results.energyCost)} />
-                <BreakdownRow label="Diseño" value={money(results.designCost)} />
-                <BreakdownRow label="Operador" value={money(results.operatorCost)} />
-                <BreakdownRow label="Costo total" value={money(results.totalCost)} bold />
-                <BreakdownRow label="Ganancia" value={money(results.totalProfit)} />
-                <BreakdownRow label="ROI" value={`${results.roi.toFixed(1)}%`} />
-              </Card>
-            )}
+          <Section icon={<Calculator size={17} />} title="Tiempo y mano de obra">
+            <div className={styles.pair}>
+              {field('Horas de impresión por unidad', 'printingHours', 'Ej: 3.5', { suffix: 'h' })}
+              {field('Precio de la energía', 'energyPriceKwh', 'Ej: 120', { suffix: '$/kWh' })}
+            </div>
+            <div className={styles.pair}>
+              {field('Operador por hora', 'operatorHourlyRate', 'Opcional', { suffix: '$/h' })}
+              {field('Horas de diseño', 'designHours', 'Opcional', { suffix: 'h' })}
+            </div>
+            {field('Diseño por hora', 'designHourlyRate', 'Opcional', { suffix: '$/h' })}
+          </Section>
 
-            {!locked && (
-              <Button title="Guardar borrador" variant="secondary" onPress={saveDraft} loading={saving} />
-            )}
-          </aside>
+          <Section icon={<Receipt size={17} />} title="Gastos extra" hint="Se cobran a costo, sin margen ni descuento.">
+            <ExtraCostsEditor rows={state.extraCosts} readOnly={locked} onChange={onExtrasChange} />
+          </Section>
 
-          <div className={styles.formCol}>
-            <h2 className={styles.section}>Material</h2>
-            <Card className={styles.sectionCard}>
-              <div className={styles.chipsWrap} role="group" aria-label="Tipo de filamento">
-                {FILAMENT_TYPES.map((ft) => (
-                  <Chip key={ft} label={ft} selected={state.filamentType === ft} onPress={() => updateField('filamentType', ft)} />
-                ))}
-              </div>
-              {field('Filamento (gramos)', 'filamentGrams', 'Ej: 45')}
-              {field('Precio por gramo', 'filamentPricePerGram', 'Ej: 0.03')}
-              {field('Potencia (watts)', 'printerWatts', 'Ej: 60')}
-              {field('Precio de energía (kWh)', 'energyPriceKwh', 'Ej: 0.12')}
-            </Card>
-
-            <h2 className={styles.section}>Tiempo</h2>
-            <Card className={styles.sectionCard}>
-              {field('Horas de impresión', 'printingHours', 'Ej: 3.5')}
-              {field('Horas de diseño (opcional)', 'designHours', 'Ej: 1')}
-              {field('Tarifa de diseño por hora (opcional)', 'designHourlyRate', 'Ej: 15')}
-              {field('Tarifa de operador por hora (opcional)', 'operatorHourlyRate', 'Ej: 8')}
-            </Card>
-
-            <h2 className={styles.section}>Negocio</h2>
-            <Card className={styles.sectionCard}>
-              {field('Margen (%)', 'marginPercent', '30', {
+          <Section icon={<Coins size={17} />} title="Precio">
+            <div className={styles.pair}>
+              {field('Margen', 'marginPercent', '30', {
                 inputMode: 'numeric',
+                suffix: '%',
                 error: inputs.marginPercent > 1000 ? 'Máximo 1000%' : undefined,
               })}
-              {field('Descuento (%)', 'discountPercent', '0', {
+              {field('Descuento', 'discountPercent', '0', {
                 inputMode: 'numeric',
+                suffix: '%',
                 error: (inputs.discountPercent ?? 0) > 50 ? 'Máximo 50%' : undefined,
               })}
-              {field('Unidades', 'units', '1', { inputMode: 'numeric' })}
-            </Card>
+            </div>
+            <input
+              className={styles.marginRange}
+              type="range"
+              min={0}
+              max={300}
+              step={5}
+              disabled={locked}
+              value={Math.min(300, inputs.marginPercent)}
+              aria-label="Margen (%)"
+              onChange={(e) => updateField('marginPercent', e.target.value)}
+            />
+            <p className={styles.unitPrice}>
+              Precio por unidad: <strong>{formatMoney(results.unitPrice * (1 - (inputs.discountPercent ?? 0) / 100))}</strong>
+            </p>
+          </Section>
 
-            <h2 className={styles.section}>Cliente</h2>
-            <Card className={styles.sectionCard}>
-              <TextField
-                label="Nombre del cliente (opcional)"
-                readOnly={locked}
-                value={state.clientName}
-                onChangeText={(v) => updateField('clientName', v)}
-              />
-              <TextField
-                multiline
-                label="Descripción del trabajo (opcional)"
-                readOnly={locked}
-                value={state.jobDescription}
-                onChangeText={(v) => updateField('jobDescription', v)}
-              />
-              <PrinterSelector selected={selectedPrinter} onSelect={onSelectPrinter} disabled={locked} />
-            </Card>
+          <div ref={wearRef} className={styles.wide}>
+            <Section icon={<SlidersHorizontal size={17} />} title="Desgaste de la impresora">
+              {!selectedPrinter && !state.printerId ? (
+                <EmptyState title="Elegí una impresora para estimar el desgaste de sus componentes" />
+              ) : wear ? (
+                <>
+                  <p className={styles.wearSummary}>
+                    Este trabajo suma {(inputs.printingHours * inputs.units).toFixed(1)} h de uso a los componentes.
+                  </p>
+                  <div className={styles.wearGrid}>
+                    <WearIndicator label="Boquilla" percent={wear.nozzle.percent} hoursRemaining={wear.nozzle.hoursRemaining} critical={wear.nozzle.critical} />
+                    <WearIndicator label="Hotend" percent={wear.hotend.percent} hoursRemaining={wear.hotend.hoursRemaining} critical={wear.hotend.critical} />
+                    <WearIndicator label="Correas" percent={wear.belts.percent} hoursRemaining={wear.belts.hoursRemaining} critical={wear.belts.critical} />
+                    <WearIndicator label="Rodamientos" percent={wear.bearings.percent} hoursRemaining={wear.bearings.hoursRemaining} critical={wear.bearings.critical} />
+                    <WearIndicator label="Cama caliente" percent={wear.heatbed.percent} hoursRemaining={wear.heatbed.hoursRemaining} critical={wear.heatbed.critical} />
+                  </div>
+                  <Button
+                    title="Ajustar calidad y reemplazos"
+                    variant="tinted"
+                    fullWidth={false}
+                    icon={<SlidersHorizontal size={18} strokeWidth={2} aria-hidden="true" />}
+                    onPress={openComponents}
+                  />
+                </>
+              ) : (
+                <EmptyState
+                  title={missing.length > 0 ? `Para estimar el desgaste revisá: ${missing.join(', ')}.` : 'Calculando desgaste…'}
+                />
+              )}
+            </Section>
           </div>
         </div>
-      )}
 
-      {tab === 'wear' && (
-        <div id="quote-panel-wear" role="tabpanel" aria-labelledby="quote-tab-wear" className={styles.narrow}>
-          {!selectedPrinter && !state.printerId ? (
-            <EmptyState title="Seleccioná una impresora para ver el desgaste de sus componentes" />
-          ) : wear ? (
-            <>
-              <Card className={styles.sectionCard}>
-                <p className={styles.wearSummary}>
-                  Este trabajo consume un total de {(inputs.printingHours * inputs.units).toFixed(2)} horas sobre los
-                  componentes.
-                </p>
-                <WearIndicator label="Boquilla (Nozzle)" percent={wear.nozzle.percent} hoursRemaining={wear.nozzle.hoursRemaining} critical={wear.nozzle.critical} />
-                <WearIndicator label="Hotend" percent={wear.hotend.percent} hoursRemaining={wear.hotend.hoursRemaining} critical={wear.hotend.critical} />
-                <WearIndicator label="Correas (Belts)" percent={wear.belts.percent} hoursRemaining={wear.belts.hoursRemaining} critical={wear.belts.critical} />
-                <WearIndicator label="Rodamientos (Bearings)" percent={wear.bearings.percent} hoursRemaining={wear.bearings.hoursRemaining} critical={wear.bearings.critical} />
-                <WearIndicator label="Cama caliente (Heatbed)" percent={wear.heatbed.percent} hoursRemaining={wear.heatbed.hoursRemaining} critical={wear.heatbed.critical} />
-              </Card>
-              <Button
-                title="Ajustar calidad y reemplazos"
-                variant="tinted"
-                icon={<SlidersHorizontal size={18} strokeWidth={2} aria-hidden="true" />}
-                onPress={openComponents}
-              />
-              <p className={styles.hint}>Se abre en una pestaña nueva: tu presupuesto sin guardar se conserva en esta.</p>
-            </>
-          ) : (
-            <EmptyState
-              title={
-                missing.length > 0
-                  ? `Para estimar el desgaste revisá: ${missing.join(', ')}.`
-                  : 'Calculando desgaste…'
-              }
-            />
+        <aside className={styles.sidebar} aria-label="Resumen del presupuesto">
+          <QuoteSummaryCard
+            results={results}
+            units={inputs.units}
+            marginPercent={inputs.marginPercent}
+            discountPercent={inputs.discountPercent ?? 0}
+            critical={critical}
+            missing={missing}
+            onShowWear={() => wearRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          />
+          <QuotePdfPanel
+            isDraft={status === 'DRAFT'}
+            watermark={state.draftWatermark}
+            readOnly={locked}
+            onWatermarkChange={(v) => {
+              dispatch({ type: 'SET_WATERMARK', value: v });
+              markDirty();
+            }}
+            workspace={workspace}
+            canEditLogo={isManager}
+            onWorkspaceChange={(w) => {
+              setWorkspace(w);
+              setPdf(null);
+            }}
+            generating={generating}
+            pdfReady={pdf != null}
+            shareable={shareable}
+            onPreview={() => setPreviewOpen(true)}
+            onGenerate={() => void generatePdf()}
+            onDownload={() => pdf && downloadBlob(pdf.blob, pdf.filename)}
+            onOpen={openPdf}
+            onShare={() => pdfFile && void shareFile(pdfFile, `Presupuesto ${quoteNumber}`)}
+          />
+          {status !== 'REJECTED' && (
+            <QuoteShareCard quote={quote} busy={sharing} onShare={() => void share()} onUnshare={() => void unshare()} />
           )}
-        </div>
-      )}
+        </aside>
+      </div>
 
-      {tab === 'pdf' && (
-        <div id="quote-panel-pdf" role="tabpanel" aria-labelledby="quote-tab-pdf" className={styles.narrow}>
-          <QuotePdfPreview inputs={inputs} results={results} quoteNumber={quoteNumber || undefined} status={status} />
-          <Button title="Generar PDF" onPress={generatePdf} loading={generating} />
-          {pdf && (
-            <Card className={styles.pdfActions}>
-              <p className={styles.pdfReady}>{pdf.filename}</p>
-              <div className={styles.pdfButtons}>
-                <Button
-                  title="Descargar"
-                  variant="secondary"
-                  icon={<Download size={18} aria-hidden="true" />}
-                  onPress={() => downloadBlob(pdf.blob, pdf.filename)}
-                />
-                <Button
-                  title="Abrir en pestaña nueva"
-                  variant="secondary"
-                  icon={<ExternalLink size={18} aria-hidden="true" />}
-                  onPress={openPdf}
-                />
-                {shareable && (
-                  <Button
-                    title="Compartir"
-                    variant="secondary"
-                    icon={<Share2 size={18} aria-hidden="true" />}
-                    onPress={() => void sharePdf()}
-                  />
-                )}
-              </div>
-            </Card>
-          )}
-          {!locked && <Button title="Guardar borrador" variant="secondary" onPress={saveDraft} loading={saving} />}
-        </div>
-      )}
+      <Modal open={previewOpen} onClose={() => setPreviewOpen(false)} title="Vista previa del PDF" size="lg">
+        <QuotePdfPreview
+          inputs={inputs}
+          results={results}
+          quoteNumber={quoteNumber || undefined}
+          status={status}
+          watermark={state.draftWatermark}
+          workshopName={workspace?.name}
+          logoUrl={workspace?.logoUrl}
+        />
+      </Modal>
 
       <Modal
         open={blocker.state === 'blocked'}
@@ -612,11 +647,17 @@ export default function QuoteCalculatorScreen() {
   );
 }
 
-function BreakdownRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Section({ icon, title, hint, children }: { icon: React.ReactNode; title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className={styles.breakdownRow}>
-      <span className={cx(styles.breakdownLabel, bold && styles.breakdownBold)}>{label}</span>
-      <span className={cx(styles.breakdownValue, bold && styles.breakdownBold)}>{value}</span>
-    </div>
+    <Card className={styles.section}>
+      <header className={styles.sectionHeader}>
+        <span className={styles.sectionIcon} aria-hidden="true">{icon}</span>
+        <div>
+          <h2 className={styles.sectionTitle}>{title}</h2>
+          {hint && <p className={styles.sectionHint}>{hint}</p>}
+        </div>
+      </header>
+      <div className={styles.sectionBody}>{children}</div>
+    </Card>
   );
 }

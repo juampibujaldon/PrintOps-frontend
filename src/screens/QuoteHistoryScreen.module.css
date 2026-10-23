@@ -262,3 +262,9 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-lg) 0 var(--space-xxl);
+}

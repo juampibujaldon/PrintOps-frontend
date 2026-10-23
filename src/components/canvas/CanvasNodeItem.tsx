@@ -1,10 +1,11 @@
-import { memo, useRef, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { Colors, tint } from '../../constants/theme';
+import { Colors } from '../../constants/theme';
 import { PRINTER_STATUS, daysUntilMaintenance } from '../../constants/printers';
 import type { PrinterResponse } from '../../services/printerService';
+import type { PrinterTelemetry } from '../../api/types';
 import { NODE_HEIGHT, NODE_WIDTH, SNAP_SIZE, constrainNodePosition } from '../../utils/canvas';
+import { fitText } from '../../utils/svgText';
 import { cx } from '../../utils/cx';
 import styles from './CanvasNodeItem.module.css';
 
@@ -12,7 +13,7 @@ export { NODE_HEIGHT, NODE_WIDTH };
 
 interface Props {
   printer: PrinterResponse;
-  /** Esquina superior izquierda en px (coordenadas del plano). */
+  /** Esquina superior izquierda en coordenadas del plano. */
   x: number;
   y: number;
   canvasWidth: number;
@@ -21,7 +22,8 @@ interface Props {
   // Atenuado cuando hay un filtro activo en el resumen y la impresora no coincide.
   dimmed?: boolean;
   openOrders?: number;
-  // Callbacks estables y compartidos por todos los nodos (no se crean closures por nodo).
+  // Estado en vivo informado por el agente local (si la impresora está integrada).
+  telemetry?: PrinterTelemetry;
   getScale: () => number;
   /** Durante el arrastre (sin re-render de React): actualiza las aristas. */
   onMove: (printerId: number, x: number, y: number) => void;
@@ -40,8 +42,30 @@ interface DragState {
   y: number;
 }
 
-const place = (x: number, y: number) => `translate(${x}px, ${y}px)`;
+const LIVE_LABEL: Record<string, string> = {
+  PRINTING: 'Imprimiendo',
+  PAUSED: 'En pausa',
+  FINISHED: 'Terminó',
+  ERROR: 'Error',
+  IDLE: 'Lista',
+  OFFLINE: 'Sin conexión',
+};
 
+const LIVE_COLOR: Record<string, string> = {
+  PRINTING: Colors.primary,
+  PAUSED: Colors.orange,
+  FINISHED: Colors.green,
+  ERROR: Colors.red,
+  IDLE: Colors.green,
+  OFFLINE: Colors.statusUnknown,
+};
+
+const place = (x: number, y: number) => `translate(${x} ${y})`;
+const PAD = 12;
+const TEXT_W = NODE_WIDTH - PAD - 8;
+
+// Impresora en el plano, dibujada en SVG: al hacer zoom el navegador la vuelve a trazar en
+// vectorial (antes era HTML dentro de una capa escalada y se veía pixelada).
 function CanvasNodeItem({
   printer,
   x,
@@ -51,21 +75,41 @@ function CanvasNodeItem({
   editMode,
   dimmed = false,
   openOrders = 0,
+  telemetry,
   getScale,
   onMove,
   onDragEnd,
   onPress,
 }: Props) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<SVGGElement>(null);
   const drag = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const status = PRINTER_STATUS[printer.status] ?? { label: 'Sin estado', color: Colors.statusUnknown };
   const days = daysUntilMaintenance(printer.nextMaintenanceDate);
   const alertColor = days == null ? null : days < 0 ? Colors.statusFuera : days <= 7 ? Colors.statusMantenim : null;
-  const label = `${printer.name || printer.model}, ${status.label}`;
 
-  const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
+  const live = telemetry && telemetry.online ? telemetry : null;
+  const liveState = live?.state ?? null;
+  const statusText = live
+    ? `${LIVE_LABEL[live.state] ?? live.state}${live.state === 'PRINTING' && live.progress != null ? ` ${Math.round(live.progress)}%` : ''}`
+    : status.label;
+  const statusColor = live ? LIVE_COLOR[live.state] ?? status.color : status.color;
+  const showProgress = liveState === 'PRINTING' || liveState === 'PAUSED';
+  const progress = Math.max(0, Math.min(100, live?.progress ?? 0));
+
+  const name = printer.name || printer.model;
+  const label = `${name}, ${status.label}${live ? `, ${statusText}` : ''}`;
+  const texts = useMemo(
+    () => ({
+      name: fitText(name, TEXT_W, 13, 600),
+      model: fitText(`${printer.brand} ${printer.model}`, TEXT_W, 11),
+      status: fitText(statusText, TEXT_W - 10, 11, 600),
+    }),
+    [name, printer.brand, printer.model, statusText],
+  );
+
+  const onPointerDown = (e: PointerEvent<SVGGElement>) => {
     if (!editMode || (e.pointerType === 'mouse' && e.button !== 0)) return;
     // No iniciar el pan del plano.
     e.stopPropagation();
@@ -74,7 +118,7 @@ function CanvasNodeItem({
     setDragging(true);
   };
 
-  const onPointerMove = (e: PointerEvent<HTMLButtonElement>) => {
+  const onPointerMove = (e: PointerEvent<SVGGElement>) => {
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
     const scale = getScale();
@@ -87,11 +131,11 @@ function CanvasNodeItem({
     if (next.x === d.x && next.y === d.y) return;
     d.x = next.x;
     d.y = next.y;
-    if (ref.current) ref.current.style.transform = place(next.x, next.y);
+    ref.current?.setAttribute('transform', place(next.x, next.y));
     onMove(printer.id, next.x, next.y);
   };
 
-  const endDrag = (e: PointerEvent<HTMLButtonElement>, commit: boolean) => {
+  const endDrag = (e: PointerEvent<SVGGElement>, commit: boolean) => {
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
     drag.current = null;
@@ -100,14 +144,19 @@ function CanvasNodeItem({
     if (commit) {
       if (d.x !== d.originX || d.y !== d.originY) onDragEnd(printer.id, d.x, d.y);
     } else {
-      if (ref.current) ref.current.style.transform = place(d.originX, d.originY);
+      ref.current?.setAttribute('transform', place(d.originX, d.originY));
       onMove(printer.id, d.originX, d.originY);
     }
   };
 
-  // Accesibilidad: en modo edición las flechas mueven el nodo un paso de la grilla.
-  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+  const onKeyDown = (e: KeyboardEvent<SVGGElement>) => {
+    if (!editMode && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onPress?.(printer);
+      return;
+    }
     if (!editMode) return;
+    // Accesibilidad: en modo edición las flechas mueven el nodo un paso de la grilla.
     const step = SNAP_SIZE;
     const delta: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0],
@@ -118,16 +167,20 @@ function CanvasNodeItem({
     const move = delta[e.key];
     if (!move) return;
     e.preventDefault();
+    e.stopPropagation();
     const next = constrainNodePosition(x + move[0], y + move[1], canvasWidth, canvasHeight);
     if (next.x !== x || next.y !== y) onDragEnd(printer.id, next.x, next.y);
   };
 
+  const badge = alertColor ? { color: alertColor, text: '!' } : openOrders > 0 ? { color: Colors.primary, text: String(openOrders) } : null;
+
   return (
-    <button
+    <g
       ref={ref}
-      type="button"
+      transform={place(x, y)}
       className={cx(styles.node, editMode && styles.editable, dragging && styles.dragging, dimmed && styles.dimmed)}
-      style={{ transform: place(x, y), borderColor: tint(status.color, 0.55) }}
+      role="button"
+      tabIndex={0}
       aria-label={editMode ? `${label}. Usá las flechas para moverla.` : label}
       onClick={() => {
         if (!editMode) onPress?.(printer);
@@ -138,29 +191,30 @@ function CanvasNodeItem({
       onPointerCancel={(e) => endDrag(e, false)}
       onKeyDown={onKeyDown}
     >
-      <span className={styles.statusBar} style={{ backgroundColor: status.color }} />
-      <span className={styles.body}>
-        <span className={styles.name}>{printer.name || printer.model}</span>
-        <span className={styles.model}>
-          {printer.brand} {printer.model}
-        </span>
-        <span className={styles.statusRow}>
-          <span className={styles.dot} style={{ backgroundColor: status.color }} />
-          <span className={styles.statusText} style={{ color: status.color }}>
-            {status.label}
-          </span>
-        </span>
-      </span>
-      {alertColor ? (
-        <span className={styles.cornerBadge} style={{ backgroundColor: alertColor }} aria-hidden="true">
-          <AlertTriangle color="#FFFFFF" size={11} strokeWidth={2.5} />
-        </span>
-      ) : openOrders > 0 ? (
-        <span className={styles.cornerBadge} style={{ backgroundColor: Colors.primary }} aria-hidden="true">
-          {openOrders}
-        </span>
-      ) : null}
-    </button>
+      <rect className={styles.shadow} x={0} y={2} width={NODE_WIDTH} height={NODE_HEIGHT} rx={12} />
+      <rect className={styles.card} width={NODE_WIDTH} height={NODE_HEIGHT} rx={12} style={{ stroke: statusColor }} />
+      <rect className={styles.focusRing} x={-3} y={-3} width={NODE_WIDTH + 6} height={NODE_HEIGHT + 6} rx={15} />
+      <rect x={0} y={0} width={4} height={NODE_HEIGHT} rx={2} fill={statusColor} />
+
+      <text className={styles.name} x={PAD} y={22}>{texts.name}</text>
+      <text className={styles.model} x={PAD} y={37}>{texts.model}</text>
+      <circle cx={PAD + 3} cy={53} r={3} fill={statusColor} className={liveState === 'PRINTING' ? styles.pulse : undefined} />
+      <text className={styles.status} x={PAD + 10} y={57} style={{ fill: statusColor }}>{texts.status}</text>
+
+      {showProgress && (
+        <g aria-hidden="true">
+          <rect x={PAD} y={NODE_HEIGHT - 8} width={NODE_WIDTH - PAD * 2} height={3} rx={1.5} className={styles.track} />
+          <rect x={PAD} y={NODE_HEIGHT - 8} width={((NODE_WIDTH - PAD * 2) * progress) / 100} height={3} rx={1.5} fill={statusColor} />
+        </g>
+      )}
+
+      {badge && (
+        <g transform={`translate(${NODE_WIDTH - 4} 4)`} aria-hidden="true">
+          <circle r={10} fill={badge.color} className={styles.badgeRing} />
+          <text className={styles.badgeText} textAnchor="middle" dy="0.35em">{badge.text}</text>
+        </g>
+      )}
+    </g>
   );
 }
 

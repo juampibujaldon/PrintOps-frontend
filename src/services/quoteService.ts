@@ -8,6 +8,7 @@ import {
   QuoteStatus,
   WearResults,
 } from '../types/quote';
+import type { PageResponse } from '../api/types';
 
 interface CalculateResponse {
   filamentCost: number;
@@ -20,6 +21,7 @@ interface CalculateResponse {
   totalProfit: number;
   roi: number;
   componentWear: WearResults;
+  extraCostsTotal: number;
 }
 
 // Payload común a /calculate, POST y PUT.
@@ -40,6 +42,11 @@ function buildPayload(inputs: QuoteInputs) {
     printerId: inputs.printerId ?? null,
     clientName: inputs.clientName ?? null,
     jobDescription: inputs.jobDescription ?? null,
+    spoolId: inputs.spoolId ?? null,
+    extraCosts: (inputs.extraCosts ?? [])
+      .filter((e) => e.description.trim() !== '')
+      .map((e) => ({ description: e.description.trim(), amount: Number(e.amount) || 0 })),
+    draftWatermark: inputs.draftWatermark ?? null,
   };
 }
 
@@ -54,6 +61,7 @@ const toResults = (data: CalculateResponse): { results: QuoteResults; wear: Wear
     totalPrice: data.totalPrice,
     totalProfit: data.totalProfit,
     roi: data.roi,
+    extraCostsTotal: data.extraCostsTotal ?? 0,
   },
   wear: data.componentWear,
 });
@@ -90,6 +98,17 @@ const list = async (params?: ListParams): Promise<Quote[]> => {
   return data;
 };
 
+const page = async (page: number, params?: ListParams, size = 30): Promise<PageResponse<Quote>> => {
+  const { data } = await api.get<PageResponse<Quote>>(`${API_BASE_URL}/api/quotes`, {
+    params: { ...params, page, size },
+  });
+  return data;
+};
+
+// Link público para el cliente (ver y aceptar sin cuenta). Compartir un borrador lo marca enviado.
+const share = async (id: number): Promise<Quote> => (await api.post<Quote>(`${API_BASE_URL}/api/quotes/${id}/share`)).data;
+const unshare = async (id: number): Promise<Quote> => (await api.delete<Quote>(`${API_BASE_URL}/api/quotes/${id}/share`)).data;
+
 const get = async (id: number): Promise<Quote> => {
   const { data } = await api.get<Quote>(`${API_BASE_URL}/api/quotes/${id}`);
   return data;
@@ -121,6 +140,9 @@ const downloadPdf = async (id: number): Promise<Blob> => {
 };
 
 export const quoteService = {
+  page,
+  share,
+  unshare,
   calculate,
   create,
   update,

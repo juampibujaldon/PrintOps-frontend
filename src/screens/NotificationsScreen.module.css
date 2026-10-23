@@ -78,3 +78,9 @@
     opacity: 0;
   }
 }
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-lg) 0;
+}

@@ -1667,7 +1667,7 @@ export interface components {
             extraCostsTotal?: number;
             draftWatermark?: boolean;
         };
-        Line: {
+        LineInput: {
             /** Format: int64 */
             partId: number;
             /** Format: int32 */
@@ -1679,7 +1679,23 @@ export interface components {
             /** Format: int64 */
             supplierId?: number;
             notes?: string;
-            lines: components["schemas"]["Line"][];
+            lines: components["schemas"]["LineInput"][];
+        };
+        OrderLine: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            partId?: number;
+            partName?: string;
+            partNumber?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: double */
+            unitCost?: number;
+            /** Format: int32 */
+            currentStock?: number;
+            /** Format: int32 */
+            minStock?: number;
         };
         PurchaseOrderDTO: {
             /** Format: int64 */
@@ -1699,7 +1715,7 @@ export interface components {
             sentAt?: string;
             /** Format: date-time */
             receivedAt?: string;
-            lines?: components["schemas"]["Line"][];
+            lines?: components["schemas"]["OrderLine"][];
         };
         UpdateComponentRequest: {
             /** @enum {string} */
@@ -2229,20 +2245,10 @@ export interface components {
             /** Format: int32 */
             actualMinutes?: number;
             technicianName?: string;
-            partsUsed?: components["schemas"]["PartUsedDTO"][];
+            partsUsed?: components["schemas"]["UsedPart"][];
             photoUrls?: string[];
             /** Format: double */
             partsCost?: number;
-        };
-        PartUsedDTO: {
-            /** Format: int64 */
-            partId?: number;
-            partName?: string;
-            partNumber?: string;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: double */
-            cost?: number;
         };
         PrinterHistoryDTO: {
             printer?: components["schemas"]["PrinterSummaryDTO"];
@@ -2277,6 +2283,16 @@ export interface components {
             brand?: string;
             model?: string;
             serialNumber?: string;
+        };
+        UsedPart: {
+            /** Format: int64 */
+            partId?: number;
+            partName?: string;
+            partNumber?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: double */
+            cost?: number;
         };
         PartUsageSummaryDTO: {
             /** Format: int64 */

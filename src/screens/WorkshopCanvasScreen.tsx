@@ -16,6 +16,7 @@ import WorkshopSummary from '../components/canvas/WorkshopSummary';
 import type { WorkshopCounts, WorkshopFilter } from '../components/canvas/WorkshopSummary';
 import PrinterQuickSheet from '../components/canvas/PrinterQuickSheet';
 import { useAlert } from '../context/ConfirmContext';
+import { useLiveTelemetry } from '../hooks/useLiveTelemetry';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../hooks/useAuth';
 import { parseCanvasLayout } from '../utils/canvas';
@@ -114,6 +115,7 @@ export default function WorkshopCanvasScreen() {
     [printers, openOrdersByPrinter],
   );
 
+  const telemetry = useLiveTelemetry();
   const printersById = useMemo(() => new Map(printers.map((p) => [p.id, p])), [printers]);
 
   const matchesFilter = useCallback(
@@ -263,6 +265,7 @@ export default function WorkshopCanvasScreen() {
           edges={layout.edges}
           printersById={printersById}
           openOrdersByPrinter={openOrdersByPrinter}
+          telemetryByPrinter={telemetry}
           editMode={editMode}
           isDimmed={isDimmed}
           onNodeMoved={handleNodeMoved}

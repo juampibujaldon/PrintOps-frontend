@@ -17,11 +17,31 @@ export interface FormState {
   clientName: string;
   jobDescription: string;
   printerId: number | null;
+  spoolId: number | null;
+  extraCosts: ExtraCostRow[];
+  draftWatermark: boolean;
 }
+
+// Fila editable de gasto extra (el importe como lo escribe el usuario).
+export interface ExtraCostRow {
+  key: string;
+  description: string;
+  amount: string;
+}
+
+let rowSeq = 0;
+export const newExtraRow = (description = '', amount = ''): ExtraCostRow => ({
+  key: `x${++rowSeq}`,
+  description,
+  amount,
+});
 
 type Action =
   | { type: 'SET'; field: keyof FormState; value: string }
   | { type: 'SET_PRINTER'; printerId: number | null }
+  | { type: 'SET_SPOOL'; spoolId: number | null; pricePerGram?: number; filamentType?: FilamentType }
+  | { type: 'SET_EXTRAS'; extraCosts: ExtraCostRow[] }
+  | { type: 'SET_WATERMARK'; value: boolean }
   // Completa un campo solo si el usuario todavía no lo tocó (o tiene el valor inicial).
   | { type: 'PREFILL'; field: keyof FormState; value: string }
   | { type: 'LOAD'; quote: Quote };
@@ -42,6 +62,9 @@ export const initialState: FormState = {
   clientName: '',
   jobDescription: '',
   printerId: null,
+  spoolId: null,
+  extraCosts: [],
+  draftWatermark: true,
 };
 
 export function reducer(state: FormState, action: Action): FormState {
@@ -50,6 +73,18 @@ export function reducer(state: FormState, action: Action): FormState {
       return { ...state, [action.field]: action.value };
     case 'SET_PRINTER':
       return { ...state, printerId: action.printerId };
+    case 'SET_SPOOL':
+      // Elegir una bobina trae su precio por gramo y su material.
+      return {
+        ...state,
+        spoolId: action.spoolId,
+        filamentPricePerGram: action.pricePerGram != null ? String(action.pricePerGram) : state.filamentPricePerGram,
+        filamentType: action.filamentType ?? state.filamentType,
+      };
+    case 'SET_EXTRAS':
+      return { ...state, extraCosts: action.extraCosts };
+    case 'SET_WATERMARK':
+      return { ...state, draftWatermark: action.value };
     case 'PREFILL':
       return state[action.field] === initialState[action.field] ? { ...state, [action.field]: action.value } : state;
     case 'LOAD':
@@ -69,6 +104,9 @@ export function reducer(state: FormState, action: Action): FormState {
         clientName: action.quote.clientName ?? '',
         jobDescription: action.quote.jobDescription ?? '',
         printerId: action.quote.printerId,
+        spoolId: action.quote.spoolId ?? null,
+        extraCosts: (action.quote.extraCosts ?? []).map((e) => newExtraRow(e.description, String(e.amount))),
+        draftWatermark: action.quote.draftWatermark ?? true,
       };
   }
 }

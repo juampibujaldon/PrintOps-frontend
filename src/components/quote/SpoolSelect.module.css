@@ -1,0 +1,28 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-secondary);
+}
+
+.select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-fill);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--fs-callout);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}

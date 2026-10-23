@@ -1,37 +1,4 @@
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.skeleton {
-  border-radius: var(--radius-lg);
-}
-
-.tabBar {
-  display: flex;
-  gap: var(--space-sm);
-  max-width: 560px;
-}
-
-.tab {
-  flex: 1;
-  padding: 10px 4px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: var(--fs-subheadline);
-  font-weight: var(--fw-semibold);
-  text-align: center;
-}
-
-.tabActive {
-  background: var(--color-text-primary);
-  border-color: var(--color-text-primary);
-  color: var(--color-background);
-}
-
+/* Estado y acciones del presupuesto */
 .statusBar {
   display: flex;
   flex-wrap: wrap;
@@ -42,6 +9,7 @@
   padding: var(--space-md);
   background: var(--color-surface);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
 }
 
 .statusInfo {
@@ -66,164 +34,149 @@
 }
 
 .statusBtn {
+  min-height: 36px;
   padding: 8px var(--space-md);
+  border: 0;
   border-radius: var(--radius-full);
   color: #fff;
+  font: inherit;
   font-size: var(--fs-footnote);
   font-weight: var(--fw-semibold);
+  cursor: pointer;
 }
 
 .statusBtn:disabled {
   opacity: 0.5;
+  cursor: default;
 }
 
-/* Calculadora: mobile = precio arriba y formulario debajo; desktop = dos columnas */
-.calcLayout {
+/* Layout: mobile una columna (resumen arriba); desktop secciones + barra lateral fija. */
+.layout {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-lg);
+}
+
+.sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+  min-width: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 1100px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: start;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: var(--space-lg);
+    max-height: calc(100dvh - 2 * var(--space-lg));
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 1600px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 420px;
+  }
+}
+
+/* Secciones del formulario */
+.section {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-.priceCol,
-.formCol {
+.sectionHeader {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.sectionIcon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-primary-tint);
+  color: var(--color-primary);
+}
+
+.sectionTitle {
+  margin: 4px 0 0;
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-semibold);
+}
+
+.sectionHint {
+  margin: 2px 0 0;
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
+}
+
+.sectionBody {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  min-width: 0;
 }
 
-.priceCard {
-  text-align: center;
-}
-
-.priceLabel {
-  font-size: var(--fs-footnote);
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-.priceValue {
-  margin: var(--space-xs) 0;
-  font-size: var(--fs-display);
-  font-weight: var(--fw-bold);
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.priceHint {
-  font-size: var(--fs-footnote);
-  color: var(--color-text-secondary);
-}
-
-.criticalBanner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
-  font-size: var(--fs-footnote);
-  font-weight: var(--fw-semibold);
-  text-align: left;
-}
-
-.criticalBanner svg {
-  flex: none;
-}
-
-.section {
-  margin-top: var(--space-sm);
-  font-size: var(--fs-footnote);
-  font-weight: var(--fw-regular);
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-.sectionCard {
-  padding: var(--space-md);
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0 var(--space-md);
 }
 
 .chipsWrap {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  margin: var(--space-xs) 0 var(--space-sm);
 }
 
-.breakdownToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-start;
-  padding: var(--space-sm) 0;
-  color: var(--color-primary);
+.marginRange {
+  width: 100%;
+  accent-color: var(--color-primary);
+}
+
+.unitPrice {
+  margin: 0;
   font-size: var(--fs-subheadline);
-  font-weight: var(--fw-semibold);
-}
-
-.breakdown {
-  padding: var(--space-md);
-}
-
-.breakdownRow {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-md);
-  padding: 6px 0;
-  font-size: var(--fs-subheadline);
-}
-
-.breakdownLabel {
   color: var(--color-text-secondary);
-}
-
-.breakdownValue {
   font-variant-numeric: tabular-nums;
 }
 
-.breakdownBold {
-  font-weight: var(--fw-bold);
+.unitPrice strong {
   color: var(--color-text-primary);
 }
 
-.narrow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  max-width: 720px;
-  margin: 0 auto;
-  width: 100%;
-}
-
 .wearSummary {
-  margin-bottom: var(--space-md);
+  margin: 0;
   font-size: var(--fs-footnote);
   color: var(--color-text-secondary);
 }
 
-.hint {
-  font-size: var(--fs-footnote);
-  color: var(--color-text-tertiary);
-  text-align: center;
-}
-
-.pdfActions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.pdfReady {
-  font-size: var(--fs-footnote);
-  color: var(--color-text-secondary);
-  overflow-wrap: anywhere;
-}
-
-.pdfButtons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+.wearGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 var(--space-xl);
 }
 
 .leaveActions {
@@ -231,35 +184,4 @@
   flex-direction: column;
   gap: var(--space-sm);
   width: 100%;
-}
-
-@media (min-width: 600px) {
-  .pdfButtons {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .pdfButtons > * {
-    flex: 1 1 180px;
-  }
-}
-
-@media (min-width: 960px) {
-  .calcLayout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: var(--space-xl);
-    align-items: start;
-  }
-
-  /* El precio queda a la derecha y fijo mientras se completa el formulario */
-  .priceCol {
-    order: 2;
-    position: sticky;
-    top: var(--space-lg);
-  }
-
-  .formCol {
-    order: 1;
-  }
 }

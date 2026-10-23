@@ -37,6 +37,15 @@ export interface QuoteInputs {
   printerId?: number | null;
   clientName?: string;
   jobDescription?: string;
+  spoolId?: number | null;
+  extraCosts?: ExtraCost[];
+  draftWatermark?: boolean;
+}
+
+// Gasto extra del presupuesto (p. ej. "Rodamiento" → 4500): se cobra a costo.
+export interface ExtraCost {
+  description: string;
+  amount: number;
 }
 
 export interface QuoteResults {
@@ -49,6 +58,7 @@ export interface QuoteResults {
   totalPrice: number;
   totalProfit: number;
   roi: number;
+  extraCostsTotal: number;
 }
 
 // Presupuesto persistido (respuesta del backend).
@@ -84,6 +94,14 @@ export interface Quote {
   status: QuoteStatus;
   createdAt: string;
   pdfUrl: string | null;
+  spoolId: number | null;
+  publicUrl: string | null;
+  sharedAt: string | null;
+  clientDecisionAt: string | null;
+  clientDecisionNote: string | null;
+  extraCosts: ExtraCost[];
+  extraCostsTotal: number;
+  draftWatermark: boolean;
 }
 
 export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {

@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from 'react';
-import { Locate, Minus, Plus } from 'lucide-react';
-import type { CanvasEdge, CanvasNode } from '../../services/canvasService';
-import type { PrinterResponse } from '../../services/printerService';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
+import { Locate, Minus, Plus } from "lucide-react";
+import type { CanvasEdge, CanvasNode } from "../../services/canvasService";
+import type { PrinterResponse } from "../../services/printerService";
+import type { PrinterTelemetry } from "../../api/types";
 import {
   IDENTITY_VIEW,
   MAX_SCALE,
@@ -16,19 +24,20 @@ import {
   pinchView,
   wheelZoomFactor,
   zoomAround,
-} from '../../utils/canvas';
-import type { Point, ViewState } from '../../utils/canvas';
-import { cx } from '../../utils/cx';
-import CanvasEdgeItem from './CanvasEdgeItem';
-import CanvasNodeItem from './CanvasNodeItem';
-import DotGrid from './DotGrid';
-import styles from './WorkshopCanvas.module.css';
+} from "../../utils/canvas";
+import type { Point, ViewState } from "../../utils/canvas";
+import { cx } from "../../utils/cx";
+import CanvasEdgeItem from "./CanvasEdgeItem";
+import CanvasNodeItem from "./CanvasNodeItem";
+import DotGrid from "./DotGrid";
+import styles from "./WorkshopCanvas.module.css";
 
 interface Props {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   printersById: Map<number, PrinterResponse>;
   openOrdersByPrinter: Record<number, number>;
+  telemetryByPrinter?: Map<number, PrinterTelemetry>;
   editMode: boolean;
   isDimmed: (printer: PrinterResponse) => boolean;
   /** Nodo movido: coordenadas normalizadas (centro, 0..1). */
@@ -41,15 +50,17 @@ interface Props {
 const DRAG_THRESHOLD = 4;
 const KEY_PAN_STEP = 40;
 
-// Plano del taller. Una única capa con transform translate/scale (pan + zoom) dentro de un
-// viewport con pointer events. El estado de la vista vive en un ref y se aplica al DOM en
-// requestAnimationFrame: mover/zoomear NO re-renderiza React. Los nodos arrastrados también
-// se mueven por DOM directo y solo confirman su posición al soltar.
+// Plano del taller. Todo (aristas y nodos) se dibuja en un único <svg>; el pan/zoom es el
+// atributo transform de un <g>. Al ser un transform SVG (y no un transform CSS sobre HTML),
+// el navegador vuelve a trazar los vectores en cada nivel de zoom y nada se ve pixelado.
+// El estado de la vista vive en un ref y se aplica en requestAnimationFrame: mover/zoomear
+// NO re-renderiza React. Los nodos arrastrados se mueven por DOM y confirman al soltar.
 export default function WorkshopCanvas({
   nodes,
   edges,
   printersById,
   openOrdersByPrinter,
+  telemetryByPrinter,
   editMode,
   isDimmed,
   onNodeMoved,
@@ -57,7 +68,7 @@ export default function WorkshopCanvas({
   overlay,
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const layerRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<SVGGElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [zoomPercent, setZoomPercent] = useState(100);
 
@@ -68,13 +79,16 @@ export default function WorkshopCanvas({
   const flush = useCallback(() => {
     raf.current = 0;
     const { x, y, scale } = view.current;
-    if (layerRef.current) layerRef.current.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    layerRef.current?.setAttribute(
+      "transform",
+      `translate(${x} ${y}) scale(${scale})`
+    );
     const vp = viewportRef.current;
     if (vp) {
       const cell = SNAP_SIZE * scale;
-      vp.style.setProperty('--grid-size', `${cell}px`);
-      vp.style.setProperty('--grid-x', `${x - cell / 2}px`);
-      vp.style.setProperty('--grid-y', `${y - cell / 2}px`);
+      vp.style.setProperty("--grid-size", `${cell}px`);
+      vp.style.setProperty("--grid-x", `${x - cell / 2}px`);
+      vp.style.setProperty("--grid-y", `${y - cell / 2}px`);
     }
     setZoomPercent(Math.round(scale * 100));
   }, []);
@@ -84,7 +98,7 @@ export default function WorkshopCanvas({
       view.current = next;
       if (!raf.current) raf.current = requestAnimationFrame(flush);
     },
-    [flush],
+    [flush]
   );
 
   useLayoutEffect(() => {
@@ -100,7 +114,11 @@ export default function WorkshopCanvas({
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setSize((prev) => (prev.width === r.width && prev.height === r.height ? prev : { width: r.width, height: r.height }));
+      setSize((prev) =>
+        prev.width === r.width && prev.height === r.height
+          ? prev
+          : { width: r.width, height: r.height }
+      );
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -122,10 +140,17 @@ export default function WorkshopCanvas({
       const r = el.getBoundingClientRect();
       const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
       const v = view.current;
-      setView(zoomAround(v, v.scale * wheelZoomFactor(dy, e.ctrlKey), e.clientX - r.left, e.clientY - r.top));
+      setView(
+        zoomAround(
+          v,
+          v.scale * wheelZoomFactor(dy, e.ctrlKey),
+          e.clientX - r.left,
+          e.clientY - r.top
+        )
+      );
     };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, [setView]);
 
   // ── Punteros: pan con 1, pinch con 2 ──
@@ -138,17 +163,22 @@ export default function WorkshopCanvas({
     const [a, b] = Array.from(pointers.current.values());
     const pa = relative(a.x, a.y);
     const pb = relative(b.x, b.y);
-    return { distance: Math.hypot(pb.x - pa.x, pb.y - pa.y), mid: { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 } };
+    return {
+      distance: Math.hypot(pb.x - pa.x, pb.y - pa.y),
+      mid: { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 },
+    };
   }, []);
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     suppressClick.current = false;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 1) {
       pan.current = { active: false, startX: e.clientX, startY: e.clientY };
     } else if (pointers.current.size === 2) {
-      pointers.current.forEach((_, id) => viewportRef.current?.setPointerCapture(id));
+      pointers.current.forEach((_, id) =>
+        viewportRef.current?.setPointerCapture(id)
+      );
       pinch.current = measurePinch();
       suppressClick.current = true;
     }
@@ -169,13 +199,23 @@ export default function WorkshopCanvas({
 
     // Un puntero: recién se considera pan al superar el umbral (así un tap sigue siendo click).
     if (!pan.current.active) {
-      if (Math.hypot(e.clientX - pan.current.startX, e.clientY - pan.current.startY) < DRAG_THRESHOLD) return;
+      if (
+        Math.hypot(
+          e.clientX - pan.current.startX,
+          e.clientY - pan.current.startY
+        ) < DRAG_THRESHOLD
+      )
+        return;
       pan.current.active = true;
       suppressClick.current = true;
       viewportRef.current?.setPointerCapture(e.pointerId);
     }
     const v = view.current;
-    setView({ ...v, x: v.x + (e.clientX - prev.x), y: v.y + (e.clientY - prev.y) });
+    setView({
+      ...v,
+      x: v.x + (e.clientX - prev.x),
+      y: v.y + (e.clientY - prev.y),
+    });
   };
 
   const onPointerEnd = (e: PointerEvent<HTMLDivElement>) => {
@@ -208,7 +248,9 @@ export default function WorkshopCanvas({
   const basePositions = useMemo(() => {
     const map = new Map<number, Point>();
     if (size.width > 0 && size.height > 0) {
-      nodes.forEach((n) => map.set(n.printerId, denormalizeNode(n, size.width, size.height)));
+      nodes.forEach((n) =>
+        map.set(n.printerId, denormalizeNode(n, size.width, size.height))
+      );
     }
     return map;
   }, [nodes, size.width, size.height]);
@@ -223,7 +265,9 @@ export default function WorkshopCanvas({
   const edgeEls = useRef(new Map<string, SVGPathElement>());
 
   const fit = () => {
-    const pts = nodes.map((n) => livePositions.current.get(n.printerId)).filter((p): p is Point => !!p);
+    const pts = nodes
+      .map((n) => livePositions.current.get(n.printerId))
+      .filter((p): p is Point => !!p);
     setView(fitView(pts, size.width, size.height));
   };
 
@@ -241,7 +285,12 @@ export default function WorkshopCanvas({
     livePositions.current = live;
     edgesRef.current.forEach((edge) => {
       if (edge.fromId !== printerId && edge.toId !== printerId) return;
-      edgeEls.current.get(edge.id)?.setAttribute('d', buildEdgePath(live.get(edge.fromId), live.get(edge.toId)));
+      edgeEls.current
+        .get(edge.id)
+        ?.setAttribute(
+          "d",
+          buildEdgePath(live.get(edge.fromId), live.get(edge.toId))
+        );
     });
   }, []);
 
@@ -254,34 +303,34 @@ export default function WorkshopCanvas({
       onMove(printerId, x, y);
       onNodeMoved(printerId, n.x, n.y);
     },
-    [onMove, onNodeMoved],
+    [onMove, onNodeMoved]
   );
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     const v = view.current;
     switch (e.key) {
-      case '+':
-      case '=':
+      case "+":
+      case "=":
         zoomBy(ZOOM_STEP);
         break;
-      case '-':
-      case '_':
+      case "-":
+      case "_":
         zoomBy(1 / ZOOM_STEP);
         break;
-      case '0':
+      case "0":
         resetView();
         break;
-      case 'ArrowLeft':
+      case "ArrowLeft":
         setView({ ...v, x: v.x + KEY_PAN_STEP });
         break;
-      case 'ArrowRight':
+      case "ArrowRight":
         setView({ ...v, x: v.x - KEY_PAN_STEP });
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         setView({ ...v, y: v.y + KEY_PAN_STEP });
         break;
-      case 'ArrowDown':
+      case "ArrowDown":
         setView({ ...v, y: v.y - KEY_PAN_STEP });
         break;
       default:
@@ -290,7 +339,9 @@ export default function WorkshopCanvas({
     e.preventDefault();
   };
 
-  const placed = nodes.filter((n) => printersById.has(n.printerId) && basePositions.has(n.printerId));
+  const placed = nodes.filter(
+    (n) => printersById.has(n.printerId) && basePositions.has(n.printerId)
+  );
 
   return (
     <div className={cx(styles.frame, editMode && styles.editing)}>
@@ -308,54 +359,88 @@ export default function WorkshopCanvas({
         onKeyDown={onKeyDown}
       >
         <DotGrid />
-        <div ref={layerRef} className={styles.layer}>
-          <svg className={styles.edges} aria-hidden="true">
-            {edges.map((edge) => (
-              <CanvasEdgeItem
-                key={edge.id}
-                id={edge.id}
-                d={buildEdgePath(basePositions.get(edge.fromId), basePositions.get(edge.toId))}
-                register={registerEdge}
-              />
-            ))}
-          </svg>
-          {placed.map((node) => {
-            const p = printersById.get(node.printerId)!;
-            const pos = basePositions.get(node.printerId)!;
-            return (
-              <CanvasNodeItem
-                key={node.printerId}
-                printer={p}
-                x={pos.x}
-                y={pos.y}
-                canvasWidth={size.width}
-                canvasHeight={size.height}
-                editMode={editMode}
-                dimmed={isDimmed(p)}
-                openOrders={openOrdersByPrinter[p.id] ?? 0}
-                getScale={getScale}
-                onMove={onMove}
-                onDragEnd={onDragEnd}
-                onPress={onSelect}
-              />
-            );
-          })}
-        </div>
+        <svg className={styles.stage}>
+          <g ref={layerRef}>
+            <g aria-hidden="true">
+              {edges.map((edge) => (
+                <CanvasEdgeItem
+                  key={edge.id}
+                  id={edge.id}
+                  d={buildEdgePath(
+                    basePositions.get(edge.fromId),
+                    basePositions.get(edge.toId)
+                  )}
+                  register={registerEdge}
+                />
+              ))}
+            </g>
+            {placed.map((node) => {
+              const p = printersById.get(node.printerId)!;
+              const pos = basePositions.get(node.printerId)!;
+              return (
+                <CanvasNodeItem
+                  key={node.printerId}
+                  printer={p}
+                  x={pos.x}
+                  y={pos.y}
+                  canvasWidth={size.width}
+                  canvasHeight={size.height}
+                  editMode={editMode}
+                  dimmed={isDimmed(p)}
+                  openOrders={openOrdersByPrinter[p.id] ?? 0}
+                  telemetry={telemetryByPrinter?.get(p.id)}
+                  getScale={getScale}
+                  onMove={onMove}
+                  onDragEnd={onDragEnd}
+                  onPress={onSelect}
+                />
+              );
+            })}
+          </g>
+        </svg>
       </div>
 
       {overlay ? <div className={styles.overlay}>{overlay}</div> : null}
 
-      <div className={styles.controls} role="group" aria-label="Controles de zoom">
-        <button type="button" className={styles.ctrl} onClick={() => zoomBy(1 / ZOOM_STEP)} disabled={zoomPercent <= MIN_SCALE * 100} aria-label="Alejar">
+      <div
+        className={styles.controls}
+        role="group"
+        aria-label="Controles de zoom"
+      >
+        <button
+          type="button"
+          className={styles.ctrl}
+          onClick={() => zoomBy(1 / ZOOM_STEP)}
+          disabled={zoomPercent <= MIN_SCALE * 100}
+          aria-label="Alejar"
+        >
           <Minus size={18} strokeWidth={2} />
         </button>
-        <button type="button" className={cx(styles.ctrl, styles.percent)} onClick={resetView} aria-label={`Zoom ${zoomPercent}%. Restablecer al 100%`} title="Restablecer zoom">
+        <button
+          type="button"
+          className={cx(styles.ctrl, styles.percent)}
+          onClick={resetView}
+          aria-label={`Zoom ${zoomPercent}%. Restablecer al 100%`}
+          title="Restablecer zoom"
+        >
           {zoomPercent}%
         </button>
-        <button type="button" className={styles.ctrl} onClick={() => zoomBy(ZOOM_STEP)} disabled={zoomPercent >= MAX_SCALE * 100} aria-label="Acercar">
+        <button
+          type="button"
+          className={styles.ctrl}
+          onClick={() => zoomBy(ZOOM_STEP)}
+          disabled={zoomPercent >= MAX_SCALE * 100}
+          aria-label="Acercar"
+        >
           <Plus size={18} strokeWidth={2} />
         </button>
-        <button type="button" className={styles.ctrl} onClick={fit} aria-label="Centrar plano" title="Centrar plano">
+        <button
+          type="button"
+          className={styles.ctrl}
+          onClick={fit}
+          aria-label="Centrar plano"
+          title="Centrar plano"
+        >
           <Locate size={18} strokeWidth={1.75} />
         </button>
       </div>

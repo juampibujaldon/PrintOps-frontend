@@ -8,6 +8,10 @@ type Props = {
   results: QuoteResults;
   quoteNumber?: string;
   status?: QuoteStatus;
+  // Marca de agua "BORRADOR" (solo se ve mientras es borrador, como en el PDF real).
+  watermark?: boolean;
+  workshopName?: string | null;
+  logoUrl?: string | null;
 };
 
 // Misma paleta que QuotePdfService en el backend: la vista previa tiene que
@@ -25,16 +29,26 @@ const money = (v: number) =>
 const num = (v: number, decimals: number) => v.toLocaleString('es-AR', { maximumFractionDigits: decimals });
 
 // Vista previa del presupuesto renderizada con HTML/CSS (sin iframe).
-export default function QuotePdfPreview({ inputs, results, quoteNumber, status = 'DRAFT' }: Props) {
+export default function QuotePdfPreview({
+  inputs,
+  results,
+  quoteNumber,
+  status = 'DRAFT',
+  watermark = true,
+  workshopName,
+  logoUrl,
+}: Props) {
   const totalGrams = inputs.filamentGrams * inputs.units;
   const totalHours = inputs.printingHours * inputs.units;
-  const subtotal = results.unitPrice * inputs.units;
+  const extras = (inputs.extraCosts ?? []).filter((e) => e.description.trim() !== '');
+  const printSubtotal = results.unitPrice * inputs.units;
+  const subtotal = printSubtotal + results.extraCostsTotal;
   const discount = Math.max(0, subtotal - results.totalPrice);
 
   return (
     <article className={styles.paper} aria-label="Vista previa del presupuesto">
       <div className={styles.topBand} />
-      {status === 'DRAFT' && (
+      {status === 'DRAFT' && watermark && (
         <span className={styles.watermark} aria-hidden="true">
           BORRADOR
         </span>
@@ -43,7 +57,8 @@ export default function QuotePdfPreview({ inputs, results, quoteNumber, status =
       <div className={styles.body}>
         <header className={styles.header}>
           <div className={styles.brand}>
-            <p className={styles.brandName}>PrintOps</p>
+            {logoUrl && <img className={styles.logo} src={logoUrl} alt="" />}
+            <p className={styles.brandName}>{workshopName || 'PrintOps'}</p>
             <p className={styles.tagline}>Impresión 3D a medida</p>
           </div>
           <div className={styles.numberBox}>
@@ -88,8 +103,18 @@ export default function QuotePdfPreview({ inputs, results, quoteNumber, status =
                 <span className={styles.muted}>{money(results.unitPrice)} c/u</span>
               </td>
               <td className={styles.qty}>{inputs.units}</td>
-              <td className={styles.amount}>{money(subtotal)}</td>
+              <td className={styles.amount}>{money(printSubtotal)}</td>
             </tr>
+            {extras.map((e, i) => (
+              <tr key={`${e.description}-${i}`}>
+                <td>
+                  <span className={styles.concept}>{e.description}</span>
+                  <span className={styles.muted}>Gasto adicional</span>
+                </td>
+                <td className={styles.qty}>1</td>
+                <td className={styles.amount}>{money(e.amount || 0)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
 

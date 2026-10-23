@@ -230,3 +230,11 @@
   color: var(--pdf-muted);
   text-align: center;
 }
+
+.logo {
+  display: block;
+  max-width: 150px;
+  max-height: 56px;
+  margin-bottom: 6px;
+  object-fit: contain;
+}

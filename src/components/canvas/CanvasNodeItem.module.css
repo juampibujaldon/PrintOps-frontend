@@ -1,33 +1,15 @@
 .node {
-  position: absolute;
-  left: 0;
-  top: 0;
-  display: flex;
-  width: 120px;
-  height: 70px;
-  padding: 0;
-  text-align: left;
-  background: var(--color-surface);
-  border: 1px solid;
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  will-change: transform;
-  transition: opacity 200ms var(--ease-standard), box-shadow 160ms var(--ease-standard), scale 160ms var(--ease-standard);
+  outline: none;
+  transition: opacity 200ms var(--ease-standard);
 }
 
 .editable {
   cursor: grab;
-  touch-action: none;
 }
 
 .dragging {
-  z-index: 100;
   cursor: grabbing;
-  scale: 1.05;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
   transition: none;
 }
 
@@ -35,87 +17,79 @@
   opacity: 0.3;
 }
 
-.node:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+.card {
+  fill: var(--color-surface);
+  stroke-width: 1;
+  stroke-opacity: 0.55;
 }
 
-.statusBar {
-  flex: none;
-  width: 4px;
-  border-top-left-radius: var(--radius-md);
-  border-bottom-left-radius: var(--radius-md);
+.shadow {
+  fill: rgba(0, 0, 0, 0.08);
+  filter: blur(4px);
 }
 
-.body {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 var(--space-sm);
+.dragging .shadow {
+  fill: rgba(0, 0, 0, 0.22);
+}
+
+.focusRing {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2.5;
+  opacity: 0;
+}
+
+.node:focus-visible .focusRing {
+  opacity: 0.6;
 }
 
 .name {
-  overflow: hidden;
-  font-size: var(--fs-footnote);
+  fill: var(--color-text-primary);
+  font-size: 13px;
   font-weight: var(--fw-semibold);
-  color: var(--color-text-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .model {
-  margin-top: 1px;
-  overflow: hidden;
-  font-size: var(--fs-caption2);
-  color: var(--color-text-tertiary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  fill: var(--color-text-tertiary);
+  font-size: 11px;
 }
 
-.statusRow {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.dot {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.statusText {
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--fs-caption2);
+.status {
+  font-size: 11px;
   font-weight: var(--fw-semibold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.cornerBadge {
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 4px;
-  font-size: var(--fs-caption2);
+.track {
+  fill: var(--color-fill);
+}
+
+.badgeRing {
+  stroke: var(--color-surface);
+  stroke-width: 2;
+}
+
+.badgeText {
+  fill: #fff;
+  font-size: 11px;
   font-weight: var(--fw-bold);
-  color: #fff;
-  border: 2px solid var(--color-surface);
-  border-radius: 10px;
+}
+
+.pulse {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .node {
     transition: none;
+  }
+
+  .pulse {
+    animation: none;
   }
 }

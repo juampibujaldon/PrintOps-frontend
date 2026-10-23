@@ -8,33 +8,26 @@ import { orderService } from '../services/orderService';
 import type { OrderResponse } from '../services/orderService';
 import { formatTimestamp } from '../utils/formatDate';
 import { Badge, Button, EmptyState, ScreenHeader, Skeleton } from '../components/ui';
+import { usePagedList } from '../hooks/usePagedList';
 import styles from './OrdersListScreen.module.css';
 
 export default function OrdersListScreen() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [orders, setOrders] = useState<OrderResponse[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setOrders(await orderService.listOrders());
-    } catch (error) {
-      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(message || 'No se pudieron cargar las órdenes', { type: 'error', title: 'Error' });
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
+  const fetchPage = useCallback((page: number) => orderService.pageOrders(page), []);
+  const { items: orders, loading, loadingMore, hasMore, total, error, reload, loadMore } =
+    usePagedList<OrderResponse>(fetchPage);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!error) return;
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    showToast(message || 'No se pudieron cargar las órdenes', { type: 'error', title: 'Error' });
+  }, [error, showToast]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await reload();
     setRefreshing(false);
   };
 
@@ -42,6 +35,7 @@ export default function OrdersListScreen() {
     <>
       <ScreenHeader
         title="Órdenes"
+        subtitle={total ? `${total} en total` : undefined}
         backTo="/printers"
         rightContent={
           <Button
@@ -95,6 +89,11 @@ export default function OrdersListScreen() {
             );
           })}
         </ul>
+      )}
+      {!loading && hasMore && (
+        <div className={styles.more}>
+          <Button title="Cargar más" variant="secondary" fullWidth={false} loading={loadingMore} onPress={() => void loadMore()} />
+        </div>
       )}
     </>
   );

@@ -1,0 +1,141 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--fs-footnote);
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px auto;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.desc,
+.amount {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-fill);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--fs-callout);
+}
+
+.desc:focus,
+.amount:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.amount[aria-invalid='true'] {
+  border-color: var(--color-red);
+}
+
+.amountWrap {
+  position: relative;
+}
+
+.currency {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.amount {
+  padding-left: 24px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.add {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-tint);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestion {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px dashed var(--color-separator);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--fs-footnote);
+  cursor: pointer;
+}
+
+.suggestion:hover,
+.add:hover {
+  filter: brightness(0.96);
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding-top: var(--space-sm);
+  border-top: 0.5px solid var(--color-separator);
+  font-size: var(--fs-subheadline);
+  font-variant-numeric: tabular-nums;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) 110px auto;
+  }
+}

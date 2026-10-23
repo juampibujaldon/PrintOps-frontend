@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BellOff, RefreshCw } from 'lucide-react';
 import { Colors } from '../constants/theme';
-import { EmptyState, IconButton, ScreenHeader, Skeleton, Spinner } from '../components/ui';
+import { Button, EmptyState, IconButton, ScreenHeader, Skeleton, Spinner } from '../components/ui';
+import { usePagedList } from '../hooks/usePagedList';
 import { useToast } from '../context/ToastContext';
 import { notificationService } from '../services/notificationService';
 import type { AppNotification } from '../services/notificationService';
@@ -15,36 +16,30 @@ import styles from './NotificationsScreen.module.css';
 export default function NotificationsScreen() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(
-    async (quiet = false) => {
-      try {
-        setNotifications(await notificationService.listMine());
-      } catch (e) {
-        if (!quiet) {
-          const err = e as { response?: { data?: { message?: string } } };
-          showToast(err.response?.data?.message || 'No se pudieron cargar las notificaciones', { type: 'error', title: 'Error' });
-        }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [showToast],
-  );
+  const fetchPage = useCallback((page: number) => notificationService.page(page, 30), []);
+  const { items: notifications, setItems: setNotifications, loading, loadingMore, hasMore, error, reload, loadMore } =
+    usePagedList<AppNotification>(fetchPage);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!error) return;
+    const err = error as { response?: { data?: { message?: string } } };
+    showToast(err.response?.data?.message || 'No se pudieron cargar las notificaciones', { type: 'error', title: 'Error' });
+  }, [error, showToast]);
 
-  // Novedades en vivo: cada notificación entrante por WebSocket recarga la lista sin ruido.
-  useEffect(() => webSocketService.subscribe(() => void load(true)), [load]);
+  // Novedades en vivo: cada notificación entrante por WebSocket recarga la lista sin ruido
+  // (los mensajes de telemetría o de la cola de trabajos no).
+  useEffect(
+    () =>
+      webSocketService.subscribe((msg) => {
+        if (!msg.type || msg.type === 'notification') void reload(true);
+      }),
+    [reload],
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await reload();
     setRefreshing(false);
   };
 
@@ -109,6 +104,11 @@ export default function NotificationsScreen() {
               );
             })}
           </ul>
+        )}
+        {hasMore && (
+          <div className={styles.more}>
+            <Button title="Cargar más" variant="secondary" fullWidth={false} loading={loadingMore} onPress={() => void loadMore()} />
+          </div>
         )}
       </div>
     </>

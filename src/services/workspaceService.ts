@@ -30,6 +30,15 @@ const updateMine = async (data: Partial<Workspace>): Promise<Workspace> => {
   return response.data;
 };
 
+// Logo del taller (PNG/JPG hasta 2 MB): aparece en el encabezado de los PDF.
+const uploadLogo = async (file: File): Promise<Workspace> => {
+  const form = new FormData();
+  form.append('logo', file);
+  return (await api.post<Workspace>(`${API_BASE_URL}/api/workspaces/me/logo`, form)).data;
+};
+
+const deleteLogo = async (): Promise<Workspace> => (await api.delete<Workspace>(`${API_BASE_URL}/api/workspaces/me/logo`)).data;
+
 const getQuoteDefaults = async (): Promise<QuoteDefaults> => {
   const response = await api.get<QuoteDefaults>(`${API_BASE_URL}/api/workspaces/quote-defaults`);
   return response.data;
@@ -54,5 +63,4 @@ export const workspaceService = {
   updateMine,
   getQuoteDefaults,
   updateQuoteDefaults,
-  invite,
-};
+  invite, uploadLogo, deleteLogo };

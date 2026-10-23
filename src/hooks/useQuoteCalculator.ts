@@ -17,8 +17,11 @@ export function computeResults(inputs: QuoteInputs): QuoteResults {
   const discount = unitPrice * (inputs.discountPercent ?? 0) / 100;
   const finalUnitPrice = unitPrice - discount;
 
-  const totalPrice = finalUnitPrice * inputs.units;
-  const totalCost = totalCostUnit * inputs.units;
+  // Gastos extra: se cobran a costo (sin margen ni descuento), no cambian la ganancia.
+  const extras = extrasTotal(inputs);
+
+  const totalPrice = finalUnitPrice * inputs.units + extras;
+  const totalCost = totalCostUnit * inputs.units + extras;
   const totalProfit = totalPrice - totalCost;
   const roi = totalCost !== 0 ? (totalProfit / totalCost) * 100 : 0;
 
@@ -32,7 +35,14 @@ export function computeResults(inputs: QuoteInputs): QuoteResults {
     totalPrice: round2(totalPrice),
     totalProfit: round2(totalProfit),
     roi: round2(roi),
+    extraCostsTotal: round2(extras),
   };
+}
+
+export function extrasTotal(inputs: QuoteInputs): number {
+  return (inputs.extraCosts ?? [])
+    .filter((e) => e.description.trim() !== '')
+    .reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
 }
 
 // Problemas del formulario, con la etiqueta que ve el usuario. Replica las
@@ -48,6 +58,9 @@ export function missingFields(inputs: QuoteInputs): string[] {
   if (!(inputs.marginPercent >= 1 && inputs.marginPercent <= 1000)) problems.push('Margen (%) entre 1 y 1000');
   if ((inputs.discountPercent ?? 0) < 0 || (inputs.discountPercent ?? 0) > 50) problems.push('Descuento (%) entre 0 y 50');
   if (!(inputs.units >= 1)) problems.push('Unidades');
+  if ((inputs.extraCosts ?? []).some((e) => e.description.trim() !== '' && !(e.amount >= 0))) {
+    problems.push('Importe de los gastos extra');
+  }
   return problems;
 }
 

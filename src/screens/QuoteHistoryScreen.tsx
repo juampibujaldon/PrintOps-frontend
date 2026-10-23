@@ -67,6 +67,10 @@ export default function QuoteHistoryScreen() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const requestCounter = useRef(0);
   // Ref para saber si ya hay datos sin meter `quotes` en las deps de `load`.
@@ -79,6 +83,33 @@ export default function QuoteHistoryScreen() {
     return () => clearTimeout(timeout);
   }, [clientFilter]);
 
+  const filters = useCallback(
+    () => ({
+      status: statusFilter === 'ALL' ? undefined : statusFilter,
+      clientName: query.trim() || undefined,
+      from: fromDate || undefined,
+      to: toDate || undefined,
+    }),
+    [statusFilter, query, fromDate, toDate],
+  );
+
+  const loadMore = async () => {
+    const reqId = requestCounter.current;
+    setLoadingMore(true);
+    try {
+      const data = await quoteService.page(page + 1, filters());
+      if (reqId !== requestCounter.current) return;
+      setQuotes((prev) => [...prev, ...data.content]);
+      setPage(data.page);
+      setHasMore(!data.last);
+      setTotal(data.totalElements);
+    } catch (e) {
+      showToast(apiErrorMessage(e, 'No se pudieron cargar más presupuestos'), { type: 'error' });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const load = useCallback(
     async (isRefresh = false) => {
       const reqId = ++requestCounter.current;
@@ -87,13 +118,13 @@ export default function QuoteHistoryScreen() {
         else setLoading(true);
         setError(null);
 
-        const data = await quoteService.list({
-          status: statusFilter === 'ALL' ? undefined : statusFilter,
-          clientName: query.trim() || undefined,
-          from: fromDate || undefined,
-          to: toDate || undefined,
-        });
-        if (reqId === requestCounter.current) setQuotes(data);
+        const data = await quoteService.page(0, filters());
+        if (reqId === requestCounter.current) {
+          setQuotes(data.content);
+          setPage(0);
+          setHasMore(!data.last);
+          setTotal(data.totalElements);
+        }
       } catch (e) {
         if (reqId === requestCounter.current) {
           const msg = apiErrorMessage(e, 'No se pudieron cargar los presupuestos');
@@ -107,7 +138,7 @@ export default function QuoteHistoryScreen() {
         }
       }
     },
-    [statusFilter, query, fromDate, toDate, showToast],
+    [filters, showToast],
   );
 
   // Carga al entrar y cada vez que cambian los filtros.
@@ -280,13 +311,18 @@ export default function QuoteHistoryScreen() {
     body = (
       <>
         <p className={styles.resultCount} aria-live="polite">
-          {quotes.length} {quotes.length === 1 ? 'presupuesto' : 'presupuestos'}
+          {total} {total === 1 ? 'presupuesto' : 'presupuestos'}
         </p>
         <ul className={styles.list}>
           {quotes.map((q) => (
             <li key={q.id}>{renderCard(q)}</li>
           ))}
         </ul>
+        {hasMore && (
+          <div className={styles.more}>
+            <Button title="Cargar más" variant="secondary" fullWidth={false} loading={loadingMore} onPress={() => void loadMore()} />
+          </div>
+        )}
       </>
     );
   }

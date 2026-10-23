@@ -85,3 +85,9 @@
   flex: none;
   color: var(--color-text-tertiary);
 }
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 var(--space-xxl);
+}

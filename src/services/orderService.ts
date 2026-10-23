@@ -1,6 +1,7 @@
 // src/services/orderService.ts
 import { API_BASE_URL } from '../constants/api';
 import api from './axiosInstance';
+import type { PageResponse } from '../api/types';
 import { PhotoAsset } from './printerService';
 
 export type OrderType = 'PREVENTIVE' | 'CORRECTIVE' | 'CALIBRATION';
@@ -100,6 +101,17 @@ const listOrders = async (printerId?: number, status?: OrderStatus): Promise<Ord
   return response.data;
 };
 
+// Página de órdenes (en revisión primero, luego las más recientes).
+const pageOrders = async (
+  page: number,
+  opts: { printerId?: number; status?: OrderStatus; size?: number } = {},
+): Promise<PageResponse<OrderResponse>> => {
+  const response = await api.get<PageResponse<OrderResponse>>(`${API_BASE_URL}/api/orders`, {
+    params: { printerId: opts.printerId, status: opts.status, page, size: opts.size ?? 30 },
+  });
+  return response.data;
+};
+
 const getOrder = async (id: number): Promise<OrderResponse> => {
   const response = await api.get<OrderResponse>(`${API_BASE_URL}/api/orders/${id}`);
   return response.data;
@@ -139,4 +151,5 @@ const addPhotos = async (orderId: number, photos: PhotoAsset[]): Promise<OrderRe
   return response.data;
 };
 
-export const orderService = { createOrder, listOrders, getOrder, updateStatus, getHistory, addPart, addPhotos };
+export const orderService = {
+  pageOrders, createOrder, listOrders, getOrder, updateStatus, getHistory, addPart, addPhotos };
