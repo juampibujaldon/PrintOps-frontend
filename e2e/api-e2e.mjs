@@ -43,6 +43,15 @@ async function call(method, path, { token, body, form, headers = {}, raw = false
   try { data = text ? JSON.parse(text) : null; } catch { /* keep text */ }
   return { status: res.status, data, headers: res.headers };
 }
+// El refresh token viaja en la cookie httpOnly printops_rt (no en el JSON).
+function rtFrom(headers) {
+  const cookies = typeof headers?.getSetCookie === 'function' ? headers.getSetCookie() : [headers?.get?.('set-cookie') ?? ''];
+  for (const c of cookies) {
+    const m = /(?:^|,\s*)printops_rt=([^;]+)/.exec(c);
+    if (m) return m[1];
+  }
+  return null;
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ymd = (d) => d.toISOString().slice(0, 10);
 
@@ -93,11 +102,13 @@ async function main() {
   const m = await registerAndLogin(mEmail, { workspaceName: `Taller ${RUN}` });
   check('POST /api/auth/register (MANAGER, new workspace)', m.reg.status === 200, JSON.stringify(m.reg.data));
   check('POST /api/auth/register duplicate email -> 4xx', (await call('POST', '/api/auth/register', { body: { email: mEmail, password: PASSWORD } })).status >= 400);
-  check('POST /api/auth/login (deviceId, rememberMe) returns tokens + user', m.login.status === 200 && m.login.data?.accessToken && m.login.data?.refreshToken && m.login.data?.user?.role === 'MANAGER', JSON.stringify(m.login.data));
+  check('POST /api/auth/login (deviceId, rememberMe) returns access token + user', m.login.status === 200 && m.login.data?.accessToken && m.login.data?.user?.role === 'MANAGER', JSON.stringify(m.login.data));
+  check('login: refresh token only in httpOnly cookie, not in JSON', !m.login.data?.refreshToken && !!rtFrom(m.login.headers)
+    && /HttpOnly/i.test(m.login.headers.getSetCookie().join(';')) && /SameSite=Strict/i.test(m.login.headers.getSetCookie().join(';')));
   if (m.login.status !== 200) throw new Error('cannot continue without manager login');
   let mTok = m.login.data.accessToken;
   const mUser = m.login.data.user;
-  let mRefresh = m.login.data.refreshToken;
+  let mRefresh = rtFrom(m.login.headers);
   check('login user has id/email/role/workspaceId (no /me endpoint exists; app uses the login payload)', mUser.id && mUser.email === mEmail && mUser.workspaceId);
   check('no token -> 401', (await call('GET', '/api/printers')).status === 401);
   check('login wrong password -> 401', (await call('POST', '/api/auth/login', { body: { email: mEmail, password: 'wrongwrong', deviceId: 'x', rememberMe: false }, headers: { 'X-Forwarded-For': `10.9.${RUN.length}.1` } })).status === 401);
@@ -273,7 +284,7 @@ async function main() {
     check('POST /api/auth/register with inviteToken -> TECNICO', t.reg.status === 200, JSON.stringify(t.reg.data));
     check('login as TECNICO, same workspace', t.login.status === 200 && t.login.data.user.role === 'TECNICO' && t.login.data.user.workspaceId === mUser.workspaceId, JSON.stringify(t.login.data));
     check('invite is single use', (await call('POST', '/api/auth/register', { body: { email: `x-${tEmail}`, password: PASSWORD, inviteToken: inviteCode } })).status >= 400);
-    tTok = t.login.data.accessToken; tUser = t.login.data.user; tDevice = t.deviceId; tRefresh = t.login.data.refreshToken;
+    tTok = t.login.data.accessToken; tUser = t.login.data.user; tDevice = t.deviceId; tRefresh = rtFrom(t.login.headers);
   }
 
   if (tTok) {
@@ -467,10 +478,71 @@ async function main() {
     check('isolation: canvas of other tenant is not visible', cm.status === 200 && !JSON.stringify(cm.data).includes(`"printerId":${printer.id}`));
   }
 
+  // ---------- Funciones nuevas: bobinas, presupuesto con extras, link público, cola, telemetría ----------
+  r = await call('POST', '/api/spools', { token: mTok, body: { material: 'PETG', color: 'Negro', initialGrams: 1000, costPerKg: 25000 } });
+  check('POST /api/spools', r.status === 200 && r.data.pricePerGram === 25 && r.data.remainingGrams === 1000, JSON.stringify(r.data));
+  const spool = r.data;
+  r = await call('POST', '/api/quotes', { token: mTok, body: {
+    filamentGrams: 50, filamentPricePerGram: 25, filamentType: 'PETG', printerWatts: 150, energyPriceKwh: 100, printingHours: 2,
+    marginPercent: 50, units: 2, printerId: printer.id, clientName: 'Cliente E2E', jobDescription: 'Engranajes', spoolId: spool.id,
+    extraCosts: [{ description: 'Rodamiento 608', amount: 4500 }], draftWatermark: false } });
+  check('POST /api/quotes with extra costs, spool and watermark off', r.status === 200 && r.data.extraCostsTotal === 4500
+    && r.data.extraCosts?.[0]?.description === 'Rodamiento 608' && r.data.draftWatermark === false && r.data.spoolId === spool.id, JSON.stringify(r.data));
+  const eq = r.data;
+  r = await call('GET', `/api/quotes/${eq.id}/pdf`, { token: mTok, raw: true });
+  check('GET quote PDF (with extras) -> application/pdf', r.status === 200 && (r.headers.get('content-type') || '').includes('pdf'), `${r.status}`);
+  r = await call('POST', `/api/quotes/${eq.id}/share`, { token: mTok });
+  check('POST /api/quotes/{id}/share -> SENT + public URL', r.status === 200 && r.data.status === 'SENT' && /\/q\/[A-Za-z0-9_-]{16,}$/.test(r.data.publicUrl || ''), JSON.stringify(r.data));
+  const pubToken = (r.data.publicUrl || '').split('/q/')[1];
+  r = await call('GET', `/api/public/quotes/${pubToken}`);
+  check('GET public quote without login, no internal costs', r.status === 200 && r.data.totalPrice === eq.totalPrice && !('totalCost' in r.data) && !('marginPercent' in r.data), JSON.stringify(r.data));
+  r = await call('POST', `/api/public/quotes/${pubToken}/accept`, { body: { name: 'Ana', note: 'Ok' } });
+  check('client accepts from public link -> ACCEPTED', r.status === 200 && r.data.status === 'ACCEPTED', JSON.stringify(r.data));
+  r = await call('GET', '/api/jobs', { token: mTok });
+  const job = Array.isArray(r.data) ? r.data.find((j) => j.quoteId === eq.id) : null;
+  check('accepted quote entered the print queue', r.status === 200 && job && job.status === 'QUEUED' && job.estimatedHours === 4 && job.filamentGrams === 100, JSON.stringify(r.data));
+
+  // El agente arranca el trabajo en espera más antiguo de la impresora: se cancelan los demás.
+  for (const other of (await call('GET', `/api/jobs?printerId=${printer.id}`, { token: mTok })).data) {
+    if (other.id !== job?.id) await call('POST', `/api/jobs/${other.id}/cancel`, { token: mTok });
+  }
+  r = await call('POST', `/api/printers/${printer.id}/integration`, { token: mTok, body: { type: 'MOONRAKER' } });
+  check('POST printer integration -> device token', r.status === 200 && /^pod_/.test(r.data.token || ''), JSON.stringify(r.data));
+  const device = `Device ${r.data.token}`;
+  r = await call('POST', '/api/agent/telemetry', { headers: { Authorization: device }, body: { state: 'PRINTING', progress: 10, nozzleTemp: 240 } });
+  check('agent telemetry PRINTING -> starts the queued job', r.status === 200 && (await call('GET', '/api/jobs', { token: mTok })).data.some((j) => j.id === job?.id && j.status === 'PRINTING'));
+  r = await call('POST', '/api/agent/telemetry', { headers: { Authorization: device }, body: { state: 'FINISHED', progress: 100, usage: { printSeconds: 14400, filamentGrams: 96 } } });
+  const doneJob = (await call('GET', '/api/jobs?active=false', { token: mTok })).data.find((j) => j.id === job?.id);
+  check('agent telemetry FINISHED -> job DONE with real usage', r.status === 200 && doneJob?.status === 'DONE' && doneJob.actualHours === 4 && doneJob.actualGrams === 96, JSON.stringify(doneJob));
+  r = await call('GET', '/api/spools', { token: mTok });
+  check('spool consumed by the finished job', r.data.find((x) => x.id === spool.id)?.remainingGrams === 904, JSON.stringify(r.data));
+  r = await call('GET', '/api/printers/telemetry', { token: mTok });
+  check('GET /api/printers/telemetry', r.status === 200 && r.data.some((t) => t.printerId === printer.id && t.state === 'FINISHED'), JSON.stringify(r.data));
+  check('agent with wrong token -> 401', (await call('POST', '/api/agent/telemetry', { headers: { Authorization: 'Device pod_nope' }, body: { state: 'IDLE' } })).status === 401);
+
+  r = await call('POST', '/api/suppliers', { token: mTok, body: { name: 'Proveedor E2E', email: 'ventas@proveedor.test' } });
+  check('POST /api/suppliers', r.status === 200 && r.data.id, JSON.stringify(r.data));
+  r = await call('POST', '/api/purchase-orders/suggest', { token: mTok });
+  check('POST /api/purchase-orders/suggest', r.status === 200 && Array.isArray(r.data), JSON.stringify(r.data));
+  r = await call('GET', '/api/metrics/profitability', { token: mTok });
+  check('GET /api/metrics/profitability', r.status === 200 && r.data.totals && Array.isArray(r.data.printers), JSON.stringify(r.data).slice(0, 200));
+  r = await call('GET', '/api/metrics/predictions', { token: mTok });
+  check('GET /api/metrics/predictions', r.status === 200 && Array.isArray(r.data), `${r.status}`);
+  r = await call('GET', '/api/activity?page=0&size=10', { token: mTok });
+  check('GET /api/activity (paged)', r.status === 200 && Array.isArray(r.data.content) && r.data.content.length > 0, `${r.status}`);
+  r = await call('GET', '/api/exports/quotes.csv', { token: mTok, raw: true });
+  const csvBytes = r.status === 200 ? new Uint8Array(await r.arrayBuffer()) : new Uint8Array();
+  const csv = new TextDecoder('utf-8', { ignoreBOM: true }).decode(csvBytes);
+  // BOM UTF-8 (EF BB BF) para que Excel muestre bien los acentos; Response.text() lo descartaría.
+  check('GET /api/exports/quotes.csv (Excel friendly)', csvBytes[0] === 0xef && csvBytes[1] === 0xbb && csvBytes[2] === 0xbf
+    && csv.includes('Número;Fecha') && csv.includes('Cliente E2E'), `${r.status}`);
+  r = await call('GET', '/api/orders?page=0&size=2', { token: mTok });
+  check('GET /api/orders?page (paged response)', r.status === 200 && Array.isArray(r.data.content) && typeof r.data.totalElements === 'number', `${r.status}`);
+
   // ---------- Auth: refresh, sessions, logout ----------
   r = await call('POST', '/api/auth/refresh', { body: { refreshToken: mRefresh, deviceId: m.deviceId } });
   check('POST /api/auth/refresh', r.status === 200 && r.data.accessToken && r.data.user.id === mUser.id, `${r.status}`);
-  if (r.status === 200) { mTok = r.data.accessToken; mRefresh = r.data.refreshToken; }
+  if (r.status === 200) { mTok = r.data.accessToken; mRefresh = rtFrom(r.headers) ?? mRefresh; }
   check('refreshed access token works', (await call('GET', '/api/printers', { token: mTok })).status === 200);
   r = await call('POST', '/api/auth/refresh', { body: { refreshToken: mRefresh, deviceId: 'other-device' } });
   check('refresh with wrong deviceId -> 401', r.status === 401, `${r.status}`);
@@ -483,7 +555,7 @@ async function main() {
   check('GET /api/auth/sessions lists 2 devices', r.status === 200 && r.data.length === 2, JSON.stringify(r.data));
   r = await call('DELETE', `/api/auth/sessions/${dev2}`, { token: mTok });
   check('DELETE /api/auth/sessions/{deviceId}', r.status === 200, `${r.status}`);
-  r = await call('POST', '/api/auth/refresh', { body: { refreshToken: l2.data.refreshToken, deviceId: dev2 } });
+  r = await call('POST', '/api/auth/refresh', { body: { refreshToken: rtFrom(l2.headers), deviceId: dev2 } });
   check('revoked session cannot refresh -> 401', r.status === 401, `${r.status}`);
   r = await call('GET', '/api/auth/sessions', { token: mTok });
   check('sessions now 1', r.status === 200 && r.data.length === 1);
@@ -495,7 +567,7 @@ async function main() {
   check('blacklisted access token -> 401 after logout', (await call('GET', '/api/printers', { token: staleTok })).status === 401);
   r = await call('POST', '/api/auth/refresh', { body: { refreshToken: mRefresh, deviceId: m.deviceId } });
   check('soft logout: refresh token still valid (Face ID flow)', r.status === 200, `${r.status}`);
-  mTok = r.data?.accessToken; mRefresh = r.data?.refreshToken;
+  mTok = r.data?.accessToken; mRefresh = rtFrom(r.headers) ?? mRefresh;
   r = await call('POST', `/api/auth/logout?deviceId=${encodeURIComponent(m.deviceId)}&keepSession=false`, { token: mTok, body: {} });
   check('POST /api/auth/logout?keepSession=false', r.status === 200, `${r.status}`);
   check('hard logout: access token -> 401', (await call('GET', '/api/printers', { token: mTok })).status === 401);

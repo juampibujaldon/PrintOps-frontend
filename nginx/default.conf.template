@@ -14,6 +14,12 @@ server {
     index index.html;
 
     server_tokens off;
+
+    # El manifest de la PWA con su tipo MIME (mime.types de nginx no lo trae).
+    types {
+        application/manifest+json webmanifest;
+    }
+    include /etc/nginx/mime.types;
     client_max_body_size 12m;
 
     gzip on;
