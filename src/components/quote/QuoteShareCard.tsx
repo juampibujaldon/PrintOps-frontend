@@ -14,7 +14,10 @@ interface Props {
 // Link público: el cliente ve el presupuesto, descarga el PDF y lo acepta o rechaza sin cuenta.
 export default function QuoteShareCard({ quote, busy, onShare, onUnshare }: Props) {
   const [copied, setCopied] = useState(false);
-  const url = quote?.publicUrl ?? null;
+  // El link se arma con el origen de esta página (siempre el dominio real del front), sin
+  // depender de que FRONTEND_URL esté bien configurado en el backend.
+  const token = quote?.publicUrl?.split('/q/')[1] ?? null;
+  const url = token ? `${window.location.origin}/q/${token}` : null;
 
   const copy = async () => {
     if (!url) return;

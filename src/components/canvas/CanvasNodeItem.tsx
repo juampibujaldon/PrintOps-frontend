@@ -194,7 +194,11 @@ function CanvasNodeItem({
       <rect className={styles.shadow} x={0} y={2} width={NODE_WIDTH} height={NODE_HEIGHT} rx={12} />
       <rect className={styles.card} width={NODE_WIDTH} height={NODE_HEIGHT} rx={12} style={{ stroke: statusColor }} />
       <rect className={styles.focusRing} x={-3} y={-3} width={NODE_WIDTH + 6} height={NODE_HEIGHT + 6} rx={15} />
-      <rect x={0} y={0} width={4} height={NODE_HEIGHT} rx={2} fill={statusColor} />
+      <clipPath id={`node-clip-${printer.id}`}>
+        <rect width={NODE_WIDTH} height={NODE_HEIGHT} rx={12} />
+      </clipPath>
+      {/* Franja de estado recortada a la tarjeta (sin sobresalir de las esquinas redondeadas). */}
+      <rect x={0} y={0} width={5} height={NODE_HEIGHT} fill={statusColor} clipPath={`url(#node-clip-${printer.id})`} />
 
       <text className={styles.name} x={PAD} y={22}>{texts.name}</text>
       <text className={styles.model} x={PAD} y={37}>{texts.model}</text>

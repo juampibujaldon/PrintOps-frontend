@@ -99,8 +99,17 @@ export default function JobsScreen() {
       <Card key={job.id} className={styles.card}>
         <div className={styles.cardHeader}>
           <div>
-            <h3 className={styles.cardTitle}>{job.title}</h3>
-            {(job.quoteNumber || job.clientName) && (
+            <h3 className={styles.cardTitle}>
+              {job.quoteId && job.quoteNumber && job.title.startsWith(job.quoteNumber) ? (
+                <>
+                  <Link to={`/quotes/${job.quoteId}`}>{job.quoteNumber}</Link>
+                  {job.title.slice(job.quoteNumber.length)}
+                </>
+              ) : (
+                job.title
+              )}
+            </h3>
+            {(job.quoteNumber || job.clientName) && !(job.quoteNumber && job.title.startsWith(job.quoteNumber)) && (
               <p className={styles.cardSub}>
                 {job.quoteId ? <Link to={`/quotes/${job.quoteId}`}>{job.quoteNumber}</Link> : null}
                 {job.clientName ? ` · ${job.clientName}` : ''}

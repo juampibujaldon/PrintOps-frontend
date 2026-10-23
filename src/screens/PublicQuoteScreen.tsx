@@ -87,8 +87,11 @@ export default function PublicQuoteScreen() {
 
         <dl className={styles.lines}>
           <div><dt>Cantidad</dt><dd>{quote.units} unidad{quote.units !== 1 ? 'es' : ''}</dd></div>
-          <div><dt>Precio por unidad</dt><dd>{money(quote.unitPrice, quote.currency)}</dd></div>
-          {quote.discountPercent > 0 && <div><dt>Descuento</dt><dd>{quote.discountPercent}%</dd></div>}
+          <div><dt>Impresión por unidad</dt><dd>{money(quote.unitPrice, quote.currency)}</dd></div>
+          {quote.discountPercent > 0 && <div><dt>Descuento aplicado</dt><dd>{quote.discountPercent}%</dd></div>}
+          {(quote.extraCosts ?? []).map((e, i) => (
+            <div key={`${e.description}-${i}`}><dt>{e.description}</dt><dd>{money(e.amount ?? 0, quote.currency)}</dd></div>
+          ))}
           {quote.validUntil && (
             <div><dt>Válido hasta</dt><dd>{new Date(quote.validUntil + 'T00:00').toLocaleDateString('es-AR')}</dd></div>
           )}

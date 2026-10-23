@@ -30,15 +30,42 @@ npm run dev              # http://localhost:5173
 
 ## Configuración
 
-Variables de entorno (prefijo `VITE_`, ver `.env.example`):
-
-| Variable | Default | Uso |
+| Variable | Dónde | Uso |
 |---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8083` | URL base de la API REST y del WebSocket (`ws://…/ws`) |
-| `VITE_GOOGLE_CLIENT_ID` | client ID web actual | Inicio de sesión con Google. Vacío = el botón no se muestra |
+| `VITE_API_BASE_URL` | `.env` (desarrollo) | Backend al que el **proxy de Vite** manda `/api` y `/ws` (default `http://localhost:8083`) |
+| `VITE_GOOGLE_CLIENT_ID` | build | Client ID web de Google (vacío = sin botón de Google) |
+| `BACKEND_URL` | contenedor nginx (producción) | Backend al que nginx manda `/api` y `/ws`. En Railway, la URL privada: `http://<servicio-backend>.railway.internal:<puerto>` |
+| `PORT` | contenedor nginx | Lo asigna Railway |
 
-Para Google hay que agregar `http://localhost:5173` (y el dominio de producción) como *Authorized JavaScript origin*
-del client ID web en Google Cloud Console.
+La app y la API comparten origen (nginx en producción, Vite en desarrollo): es lo que permite que el
+refresh token viaje en una cookie httpOnly `SameSite=Strict` sin CORS.
+
+## Producción (Docker + nginx)
+
+`Dockerfile` compila la app y la sirve con nginx (`nginx/default.conf.template`):
+
+- SPA con fallback a `index.html`, assets con hash cacheados un año, `sw.js`/`index.html` sin cache.
+- Proxy de `/api` y `/ws` (WebSocket) a `BACKEND_URL`.
+- Cabeceras de seguridad (`nginx/security-headers.conf`): CSP estricta (solo scripts propios y los de
+  Google Identity Services), HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`.
+
+`railway.json` le indica a Railway que construya con ese Dockerfile.
+
+## PWA
+
+La app se puede instalar en el celular o la compu (manifest + service worker de `vite-plugin-pwa`).
+El shell queda en cache y abre sin conexión; los datos de la API nunca se cachean.
+
+## Tipos de la API
+
+`src/api/schema.d.ts` se genera desde el OpenAPI del backend:
+
+```bash
+npm run gen:api                      # backend en http://localhost:8083
+OPENAPI_URL=https://.../v3/api-docs npm run gen:api
+```
+
+`src/api/types.ts` expone alias legibles (`PrintJob`, `FilamentSpool`, `Profitability`, …).
 
 ## Estructura
 
@@ -58,10 +85,8 @@ e2e/            api-e2e.mjs (contrato de la API, independiente de la UI)
 
 ## Sesión
 
-- Los tokens viven en `localStorage` (si se marca "Recordar sesión") o `sessionStorage` (muere al cerrar el navegador).
-- El `deviceId` es un UUID persistido en `localStorage`.
-- Nota de seguridad: guardar el refresh token en el storage del navegador es vulnerable a XSS; la mejora futura es una
-  cookie `httpOnly` (requiere cambios en el backend).
+Refresh token en cookie httpOnly (la pone el backend), access token solo en memoria. Al recargar, la
+app pide un access token nuevo con la cookie. Ver `docs/WEB_MIGRATION.md`.
 
 ## Pruebas end-to-end de la API
 

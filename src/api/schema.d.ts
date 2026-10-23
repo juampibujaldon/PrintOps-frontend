@@ -1953,6 +1953,7 @@ export interface components {
             /** Format: date-time */
             clientDecisionAt?: string;
             workshop?: components["schemas"]["Workshop"];
+            extraCosts?: components["schemas"]["ExtraCostItem"][];
         };
         Workshop: {
             name?: string;

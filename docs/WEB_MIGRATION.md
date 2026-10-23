@@ -15,7 +15,7 @@ Rama: `feat/react-web`. El código RN original queda intacto como referencia en
 | Formularios | react-hook-form + yup | igual |
 | HTTP | axios | igual |
 | WebSocket | @stomp/stompjs + text-encoding | @stomp/stompjs (WebSocket nativo, sin polyfill, sin SockJS) |
-| Storage | AsyncStorage + Keychain | `src/services/storage.ts` sobre `localStorage`/`sessionStorage` |
+| Storage | AsyncStorage + Keychain | cookie httpOnly (refresh) + memoria (access); `localStorage` solo para deviceId, borradores y tema |
 | Biometría | react-native-biometrics | **se elimina** (sin soft-logout: `keepSession=false` siempre) |
 | Google | @react-native-google-signin | **@react-oauth/google** (`GoogleLogin` → `credential` = idToken) |
 | Toast | react-native-toast-message + ToastContext | solo `ToastContext` (propio) |
@@ -34,19 +34,21 @@ Rama: `feat/react-web`. El código RN original queda intacto como referencia en
 
 ## Config
 
-- `VITE_API_BASE_URL` (default `http://localhost:8083`) en `src/constants/api.ts`.
+- La API se consume en el mismo origen (`/api`, `/ws`). `VITE_API_BASE_URL` solo define el destino del proxy de Vite en desarrollo; en producción el destino es `BACKEND_URL` de nginx.
 - `VITE_GOOGLE_CLIENT_ID` (default el web client ID actual de `src/constants/google.ts`).
 - `.env.example` documenta ambas.
 - El backend ya acepta orígenes `*` por CORS y WS (`ws://…/ws`, STOMP nativo, header `Authorization` en CONNECT).
 - Para Google, en Google Cloud Console hay que agregar `http://localhost:5173` (y el dominio de prod) como *Authorized JavaScript origin* del web client.
 
-## Sesión / tokens
+## Sesión / tokens (actualizado)
 
-- `storage.ts` expone get/set/remove para: access token, refresh token, user, deviceId.
-- `rememberMe = true` → `localStorage`; `false` → `sessionStorage` (la sesión muere al cerrar el navegador).
-- `deviceId`: `crypto.randomUUID()` persistido en `localStorage`.
-- Se mantiene toda la lógica del interceptor: single-flight refresh, retry 401, normalización de errores de validación, `setOnSessionExpired`.
-- Nota de seguridad: el refresh token en storage del navegador es vulnerable a XSS; la mejora futura es cookie httpOnly (requiere cambio de backend). Documentado, fuera de alcance.
+- El **refresh token** vive en una cookie `printops_rt` httpOnly, `SameSite=Strict`, `Path=/api/auth`,
+  que pone el backend (persistente si «Recordarme», de sesión si no). JavaScript no la puede leer.
+- El **access token** (15 min) y el usuario quedan solo en memoria (`storage.ts`); al recargar se
+  piden de nuevo con `POST /api/auth/refresh` (el navegador manda la cookie solo).
+- Requisito: front y API en el **mismo origen** (proxy de nginx en producción, de Vite en dev).
+- Logout en una pestaña cierra las demás (`BroadcastChannel('printops-auth')`).
+- `deviceId`: `crypto.randomUUID()` persistido en `localStorage` (único dato de sesión en storage).
 
 ## Rutas
 

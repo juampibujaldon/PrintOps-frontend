@@ -151,8 +151,14 @@ export default function AnalyticsScreen() {
                   </thead>
                   <tbody>
                     {profit.printers.map((r) => (
-                      <tr key={r.printerId}>
-                        <td><button type="button" className="linkButton" onClick={() => navigate(`/printers/${r.printerId}`)}>{r.printerName}</button></td>
+                      <tr key={r.printerId ?? 'none'}>
+                        <td>
+                          {r.printerId != null ? (
+                            <button type="button" className="linkButton" onClick={() => navigate(`/printers/${r.printerId}`)}>{r.printerName}</button>
+                          ) : (
+                            <span className={styles.muted}>{r.printerName}</span>
+                          )}
+                        </td>
                         <td className={styles.num}>{r.quotes}</td>
                         <td className={styles.num}>{r.hoursSold.toFixed(1)}</td>
                         <td className={styles.num}>{money(r.revenue)}</td>

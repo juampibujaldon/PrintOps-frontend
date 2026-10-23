@@ -6,7 +6,8 @@
 }
 
 .option {
-  flex: 1;
+  flex: 1 0 auto;
+  white-space: nowrap;
   min-height: 32px;
   padding: 6px 12px;
   border: 0;
