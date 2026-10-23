@@ -1,0 +1,10 @@
+#!/bin/sh
+# Normaliza BACKEND_URL: agrega http:// si falta y saca la barra final
+# (con proxy_pass $variable una ruta en la URL reemplazaría la de cada request).
+case "$BACKEND_URL" in
+  http://*|https://*) ;;
+  *) BACKEND_URL="http://$BACKEND_URL" ;;
+esac
+BACKEND_URL="${BACKEND_URL%/}"
+export BACKEND_URL
+echo "printops: proxy de /api y /ws a $BACKEND_URL"
