@@ -8,6 +8,7 @@ import type { OrderResponse, OrderStatus, StatusHistory } from '../services/orde
 import { useAuth } from '../hooks/useAuth';
 import { parseId } from '../hooks/usePrinterById';
 import { usePhotoPicker } from '../hooks/usePhotoPicker';
+import { useUploadsEnabled } from '../hooks/useUploadsEnabled';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
 import StatusTimeline from '../components/StatusTimeline';
@@ -39,6 +40,7 @@ export default function OrderDetailScreen() {
 
   const [lightbox, setLightbox] = useState<number | null>(null);
   const picker = usePhotoPicker();
+  const uploadsEnabled = useUploadsEnabled();
   const [uploading, setUploading] = useState(false);
 
   const load = useCallback(
@@ -151,7 +153,8 @@ export default function OrderDetailScreen() {
 
   const status = ORDER_STATUS[order.status];
   const rejectReady = rejectComment.trim().length >= MIN_REJECT_CHARS;
-  const photos = order.photos;
+  // Sin storage las fotos viejas no tienen URL (sus archivos ya no existen).
+  const photos = order.photos.filter((ph) => !!ph.url);
 
   return (
     <>
@@ -331,82 +334,88 @@ export default function OrderDetailScreen() {
             </ul>
           </Card>
 
-          <h2 className={styles.sectionTitle}>Fotos</h2>
-          <Card className={styles.card}>
-            {photos.length === 0 && picker.photos.length === 0 ? (
-              <p className={styles.emptyText}>Sin fotos</p>
-            ) : null}
-            {photos.length > 0 ? (
-              <ul className={styles.photoGrid}>
-                {photos.map((photo, i) => (
-                  <li key={photo.id}>
-                    <button
-                      type="button"
-                      className={styles.photoBtn}
-                      onClick={() => setLightbox(i)}
-                      aria-label={`Ver foto ${i + 1} de ${photos.length}`}
-                    >
-                      <img src={photo.url} alt={photo.label ?? `Foto ${i + 1}`} className={styles.photo} loading="lazy" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+          {uploadsEnabled || photos.length > 0 ? (
+            <>
+              <h2 className={styles.sectionTitle}>Fotos</h2>
+              <Card className={styles.card}>
+                {photos.length === 0 && picker.photos.length === 0 ? (
+                  <p className={styles.emptyText}>Sin fotos</p>
+                ) : null}
+                {photos.length > 0 ? (
+                  <ul className={styles.photoGrid}>
+                    {photos.map((photo, i) => (
+                      <li key={photo.id}>
+                        <button
+                          type="button"
+                          className={styles.photoBtn}
+                          onClick={() => setLightbox(i)}
+                          aria-label={`Ver foto ${i + 1} de ${photos.length}`}
+                        >
+                          <img src={photo.url} alt={photo.label ?? `Foto ${i + 1}`} className={styles.photo} loading="lazy" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
 
-            {picker.photos.length > 0 ? (
-              <>
-                <p className={styles.pendingTitle}>Por subir</p>
-                <ul className={styles.photoGrid}>
-                  {picker.photos.map((p) => (
-                    <li key={p.id} className={styles.pendingItem}>
-                      <img src={p.previewUrl} alt="Foto por subir" className={styles.photo} />
-                      <button
-                        type="button"
-                        className={styles.removePhoto}
-                        onClick={() => picker.remove(p.id)}
-                        aria-label="Quitar foto"
-                        disabled={uploading}
-                      >
-                        <X size={14} strokeWidth={2.5} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  title={`Subir ${picker.photos.length} foto${picker.photos.length > 1 ? 's' : ''}`}
-                  loading={uploading}
-                  onPress={() => void uploadPhotos()}
-                  className={styles.uploadBtn}
-                />
-              </>
-            ) : null}
+                {picker.photos.length > 0 ? (
+                  <>
+                    <p className={styles.pendingTitle}>Por subir</p>
+                    <ul className={styles.photoGrid}>
+                      {picker.photos.map((p) => (
+                        <li key={p.id} className={styles.pendingItem}>
+                          <img src={p.previewUrl} alt="Foto por subir" className={styles.photo} />
+                          <button
+                            type="button"
+                            className={styles.removePhoto}
+                            onClick={() => picker.remove(p.id)}
+                            aria-label="Quitar foto"
+                            disabled={uploading}
+                          >
+                            <X size={14} strokeWidth={2.5} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      title={`Subir ${picker.photos.length} foto${picker.photos.length > 1 ? 's' : ''}`}
+                      loading={uploading}
+                      onPress={() => void uploadPhotos()}
+                      className={styles.uploadBtn}
+                    />
+                  </>
+                ) : null}
 
-            {picker.error ? (
-              <p className={styles.errorText} role="alert">
-                {picker.error}
-              </p>
-            ) : null}
-            <div className={styles.photoActions}>
-              <Button
-                title="Cámara"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                icon={<Camera size={16} />}
-                disabled={picker.busy || uploading}
-                onPress={picker.pickFromCamera}
-              />
-              <Button
-                title="Galería"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                icon={<ImagePlus size={16} />}
-                disabled={picker.busy || uploading}
-                onPress={picker.pickFromGallery}
-              />
-            </div>
-          </Card>
+                {picker.error ? (
+                  <p className={styles.errorText} role="alert">
+                    {picker.error}
+                  </p>
+                ) : null}
+                {uploadsEnabled ? (
+                  <div className={styles.photoActions}>
+                    <Button
+                      title="Cámara"
+                      variant="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      icon={<Camera size={16} />}
+                      disabled={picker.busy || uploading}
+                      onPress={picker.pickFromCamera}
+                    />
+                    <Button
+                      title="Galería"
+                      variant="secondary"
+                      size="sm"
+                      fullWidth={false}
+                      icon={<ImagePlus size={16} />}
+                      disabled={picker.busy || uploading}
+                      onPress={picker.pickFromGallery}
+                    />
+                  </div>
+                ) : null}
+              </Card>
+            </>
+          ) : null}
         </div>
       </div>
 

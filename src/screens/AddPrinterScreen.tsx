@@ -8,6 +8,7 @@ import { Camera, X } from 'lucide-react';
 import { printerService } from '../services/printerService';
 import type { PrinterData, PrinterStatus } from '../services/printerService';
 import { usePhotoPicker } from '../hooks/usePhotoPicker';
+import { useUploadsEnabled } from '../hooks/useUploadsEnabled';
 import { useToast } from '../context/ToastContext';
 import { Button, ScreenHeader, TextField } from '../components/ui';
 import { cx } from '../utils/cx';
@@ -47,6 +48,7 @@ export default function AddPrinterScreen() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const picker = usePhotoPicker({ max: 1 });
+  const uploadsEnabled = useUploadsEnabled();
   const photo = picker.photos[0];
 
   const {
@@ -85,53 +87,55 @@ export default function AddPrinterScreen() {
       <ScreenHeader title="Registrar Impresora" backTo="/printers" />
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-        <fieldset className={styles.photoSection}>
-          <legend className={styles.photoLabel}>Foto (opcional)</legend>
-          <div className={styles.photoContainer}>
-            {photo ? (
-              <div className={styles.photoPreviewWrapper}>
-                <img src={photo.previewUrl} alt="Vista previa de la impresora" className={styles.photoPreview} />
-                <button
-                  type="button"
-                  className={styles.removePhoto}
-                  onClick={() => picker.remove(photo.id)}
-                  aria-label="Quitar foto"
-                >
-                  <X size={14} strokeWidth={2.5} />
-                </button>
+        {uploadsEnabled ? (
+          <fieldset className={styles.photoSection}>
+            <legend className={styles.photoLabel}>Foto (opcional)</legend>
+            <div className={styles.photoContainer}>
+              {photo ? (
+                <div className={styles.photoPreviewWrapper}>
+                  <img src={photo.previewUrl} alt="Vista previa de la impresora" className={styles.photoPreview} />
+                  <button
+                    type="button"
+                    className={styles.removePhoto}
+                    onClick={() => picker.remove(photo.id)}
+                    aria-label="Quitar foto"
+                  >
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.photoPlaceholder}>
+                  <Camera size={28} strokeWidth={1.5} aria-hidden="true" />
+                  <span>Sin foto</span>
+                </div>
+              )}
+              <div className={styles.photoActions}>
+                <Button
+                  title="Cámara"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  disabled={picker.busy}
+                  onPress={picker.pickFromCamera}
+                />
+                <Button
+                  title="Galería"
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  disabled={picker.busy}
+                  onPress={picker.pickFromGallery}
+                />
               </div>
-            ) : (
-              <div className={styles.photoPlaceholder}>
-                <Camera size={28} strokeWidth={1.5} aria-hidden="true" />
-                <span>Sin foto</span>
-              </div>
-            )}
-            <div className={styles.photoActions}>
-              <Button
-                title="Cámara"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                disabled={picker.busy}
-                onPress={picker.pickFromCamera}
-              />
-              <Button
-                title="Galería"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                disabled={picker.busy}
-                onPress={picker.pickFromGallery}
-              />
+              {picker.error ? (
+                <p className={styles.errorText} role="alert">
+                  {picker.error}
+                </p>
+              ) : null}
+              <p className={styles.helpText}>Podés agregar una foto después desde la ficha de la impresora</p>
             </div>
-            {picker.error ? (
-              <p className={styles.errorText} role="alert">
-                {picker.error}
-              </p>
-            ) : null}
-            <p className={styles.helpText}>Podés agregar una foto después desde la ficha de la impresora</p>
-          </div>
-        </fieldset>
+          </fieldset>
+        ) : null}
 
         <TextField label="Nombre (opcional)" placeholder="Ej. PLA Rojo" error={errors.name?.message} {...register('name')} />
         <TextField label="Marca" placeholder="Ej. Prusa" error={errors.brand?.message} {...register('brand')} />

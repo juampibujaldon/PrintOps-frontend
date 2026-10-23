@@ -6,6 +6,7 @@ import { apiErrorMessage } from '../../services/authService';
 import { workspaceService } from '../../services/workspaceService';
 import type { Workspace } from '../../services/workspaceService';
 import styles from './QuoteSidebar.module.css';
+import { useUploadsEnabled } from '../../hooks/useUploadsEnabled';
 
 interface Props {
   workspace: Workspace | null;
@@ -19,6 +20,7 @@ export default function LogoUploader({ workspace, canEdit, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const logo = workspace?.logoUrl ?? null;
+  const uploadsEnabled = useUploadsEnabled();
 
   const upload = async (file: File | undefined) => {
     if (!file) return;
@@ -49,6 +51,8 @@ export default function LogoUploader({ workspace, canEdit, onChange }: Props) {
       showToast(apiErrorMessage(e, 'No se pudo quitar el logo.'), { type: 'error' });
     }
   };
+
+  if (!uploadsEnabled) return null;
 
   return (
     <div className={styles.logoRow}>

@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import LogoUploader from '../components/quote/LogoUploader';
 import { useToast } from '../context/ToastContext';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { useUploadsEnabled } from '../hooks/useUploadsEnabled';
 import { ErrorState, FormField, SaveBar, ScreenHeader, SelectField, SettingsSection, Skeleton } from '../components/ui';
 import styles from './SettingsPage.module.css';
 
@@ -18,6 +19,7 @@ const CURRENCIES = [
 const TITLE = 'Workspace / Taller';
 
 export default function SettingsWorkspaceScreen() {
+  const uploadsEnabled = useUploadsEnabled();
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -129,18 +131,20 @@ export default function SettingsWorkspaceScreen() {
           />
         </SettingsSection>
 
-        <SettingsSection title="Logo para los PDF">
-          <div className={styles.segmentRow}>
-            <LogoUploader
-              workspace={(original as Workspace | null) ?? null}
-              canEdit={isManager}
-              onChange={(w) => {
-                setOriginal(w);
-                setForm((f) => ({ ...f, logoUrl: w.logoUrl }));
-              }}
-            />
-          </div>
-        </SettingsSection>
+        {uploadsEnabled ? (
+          <SettingsSection title="Logo para los PDF">
+            <div className={styles.segmentRow}>
+              <LogoUploader
+                workspace={(original as Workspace | null) ?? null}
+                canEdit={isManager}
+                onChange={(w) => {
+                  setOriginal(w);
+                  setForm((f) => ({ ...f, logoUrl: w.logoUrl }));
+                }}
+              />
+            </div>
+          </SettingsSection>
+        ) : null}
 
         <SettingsSection title="Datos de Contacto (Para PDFs)">
           <FormField

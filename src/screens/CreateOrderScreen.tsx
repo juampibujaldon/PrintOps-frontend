@@ -10,6 +10,7 @@ import { PHOTO_MAX_COUNT } from '../constants/media';
 import { storage } from '../services/storage';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { usePhotoPicker } from '../hooks/usePhotoPicker';
+import { useUploadsEnabled } from '../hooks/useUploadsEnabled';
 import { usePrinterById } from '../hooks/usePrinterById';
 import { useToast } from '../context/ToastContext';
 import PartsSelectorModal from '../components/PartsSelectorModal';
@@ -131,6 +132,7 @@ function CreateOrderForm({ printer, backTo }: { printer: PrinterResponse; backTo
   const [partsModalVisible, setPartsModalVisible] = useState(false);
 
   const picker = usePhotoPicker({ max: MAX_PHOTOS });
+  const uploadsEnabled = useUploadsEnabled();
 
   useDraftAutosave(draftKey, { type, description, checklist, parts, estimatedTime }, DRAFT_AUTOSAVE_MS);
 
@@ -193,7 +195,7 @@ function CreateOrderForm({ printer, backTo }: { printer: PrinterResponse; backTo
     }
   };
 
-  const STEPS = ['Tipo', 'Checklist', 'Piezas/Fotos'];
+  const STEPS = ['Tipo', 'Checklist', uploadsEnabled ? 'Piezas/Fotos' : 'Piezas'];
 
   return (
     <>
@@ -335,49 +337,53 @@ function CreateOrderForm({ printer, backTo }: { printer: PrinterResponse; backTo
               Agregar pieza
             </button>
 
-            <h2 className={styles.stepTitle}>
-              Fotos ({picker.photos.length}/{MAX_PHOTOS})
-            </h2>
-            <ul className={styles.photoGrid}>
-              {picker.photos.map((p) => (
-                <li key={p.id} className={styles.photoTile}>
-                  <img src={p.previewUrl} alt="Foto de la orden" className={styles.photo} />
-                  <button
-                    type="button"
-                    className={styles.photoRemove}
-                    onClick={() => picker.remove(p.id)}
-                    aria-label="Quitar foto"
-                  >
-                    <X size={14} strokeWidth={2.5} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {picker.error ? (
-              <p className={styles.errorText} role="alert">
-                {picker.error}
-              </p>
+            {uploadsEnabled ? (
+              <>
+                <h2 className={styles.stepTitle}>
+                  Fotos ({picker.photos.length}/{MAX_PHOTOS})
+                </h2>
+                <ul className={styles.photoGrid}>
+                  {picker.photos.map((p) => (
+                    <li key={p.id} className={styles.photoTile}>
+                      <img src={p.previewUrl} alt="Foto de la orden" className={styles.photo} />
+                      <button
+                        type="button"
+                        className={styles.photoRemove}
+                        onClick={() => picker.remove(p.id)}
+                        aria-label="Quitar foto"
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {picker.error ? (
+                  <p className={styles.errorText} role="alert">
+                    {picker.error}
+                  </p>
+                ) : null}
+                <div className={styles.photoActions}>
+                  <Button
+                    title="Cámara"
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    icon={<Camera size={16} />}
+                    disabled={picker.busy || picker.photos.length >= MAX_PHOTOS}
+                    onPress={picker.pickFromCamera}
+                  />
+                  <Button
+                    title="Galería"
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    icon={<ImagePlus size={16} />}
+                    disabled={picker.busy || picker.photos.length >= MAX_PHOTOS}
+                    onPress={picker.pickFromGallery}
+                  />
+                </div>
+              </>
             ) : null}
-            <div className={styles.photoActions}>
-              <Button
-                title="Cámara"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                icon={<Camera size={16} />}
-                disabled={picker.busy || picker.photos.length >= MAX_PHOTOS}
-                onPress={picker.pickFromCamera}
-              />
-              <Button
-                title="Galería"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                icon={<ImagePlus size={16} />}
-                disabled={picker.busy || picker.photos.length >= MAX_PHOTOS}
-                onPress={picker.pickFromGallery}
-              />
-            </div>
 
             <TextField
               label="Tiempo estimado (minutos)"
@@ -427,7 +433,7 @@ function CreateOrderForm({ printer, backTo }: { printer: PrinterResponse; backTo
           <p className={styles.summaryLine}>Tipo: {type ? TYPE_LABELS[type] : '-'}</p>
           <p className={styles.summaryLine}>Ítems de checklist: {checklist.filter((it) => it.text.trim()).length}</p>
           <p className={styles.summaryLine}>Piezas: {parts.length}</p>
-          <p className={styles.summaryLine}>Fotos: {picker.photos.length}</p>
+          {uploadsEnabled ? <p className={styles.summaryLine}>Fotos: {picker.photos.length}</p> : null}
           <p className={styles.summaryLine}>Tiempo estimado: {estimatedTime ? `${estimatedTime} min` : '-'}</p>
         </Card>
       </Modal>
