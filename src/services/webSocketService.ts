@@ -1,5 +1,5 @@
 import { Client } from '@stomp/stompjs';
-import { API_BASE_URL } from '../constants/api';
+import { wsUrl } from '../constants/api';
 import { refreshAccessToken } from './axiosInstance';
 import { getAccessToken } from './storage';
 
@@ -13,8 +13,7 @@ export interface WsNotification {
 
 type Listener = (msg: WsNotification) => void;
 
-// Mismo host que la API.
-const WS_URL = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
+// Mismo host que la página (nginx/Vite hacen proxy de /ws al backend).
 
 // Segundos que le quedan al JWT (null si no se puede leer). Margen para no
 // conectar con un token que vence en el medio del handshake.
@@ -44,7 +43,7 @@ class WebSocketService {
     this.authFailures = 0;
 
     const client = new Client({
-      brokerURL: WS_URL,
+      brokerURL: wsUrl(),
       reconnectDelay: 5000,
       // El backend autentica el frame CONNECT con el JWT. Antes se reconectaba cada
       // 5 s con el access token guardado aunque hubiera vencido (dura 15 min y solo

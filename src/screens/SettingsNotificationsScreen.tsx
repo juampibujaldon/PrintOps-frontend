@@ -81,7 +81,7 @@ export default function SettingsNotificationsScreen() {
     return (
       <>
         <ScreenHeader title="Notificaciones" showBack backTo="/settings" />
-        <div className={styles.page}>
+        <div className={`${styles.page} ${styles.sections}`}>
           <Skeleton height={200} />
         </div>
       </>
@@ -100,7 +100,7 @@ export default function SettingsNotificationsScreen() {
   return (
     <>
       <ScreenHeader title="Notificaciones" showBack backTo="/settings" />
-      <div className={styles.page}>
+      <div className={`${styles.page} ${styles.sections}`}>
         <SettingsSection title="Operación del Taller">
           <SwitchRow
             label="Órdenes asignadas"

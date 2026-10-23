@@ -1,0 +1,31 @@
+.root {
+  display: flex;
+  padding: 2px;
+  background: var(--color-fill);
+  border-radius: 9px;
+}
+
+.option {
+  flex: 1;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--fs-subheadline);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.option:hover:not(.selected) {
+  background: var(--color-fill-pressed);
+}
+
+.selected {
+  background: var(--color-surface-elevated);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-weight: var(--fw-semibold);
+}

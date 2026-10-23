@@ -11,7 +11,7 @@ export default function SettingsAboutScreen() {
   return (
     <>
       <ScreenHeader title="Acerca de PrintOps" showBack backTo="/settings" />
-      <div className={styles.page}>
+      <div className={`${styles.page} ${styles.sections}`}>
         <SettingsSection title="Información de la aplicación">
           <SettingsRow
             label="Versión"

@@ -1,4 +1,5 @@
-/* Tokens de diseño: reflejan src/constants/theme.ts (paleta tipo iOS, light). */
+/* Tokens de diseño: reflejan src/constants/theme.ts (paleta tipo iOS, claro y oscuro).
+   El tema lo elige el usuario (Sistema/Claro/Oscuro, ver ThemeContext): data-theme en <html>. */
 :root {
   /* Colores */
   --color-background: #f2f2f7;
@@ -43,6 +44,11 @@
   --color-order-in-review: #ff9500;
   --color-order-completed: #34c759;
   --color-order-cancelled: #ff3b30;
+
+  --color-accent: #007aff;
+  --color-on-accent: #ffffff;
+  --color-error: #ff3b30;
+  color-scheme: light;
 
   /* Tipografía */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
@@ -103,11 +109,113 @@
 
   /* Layout */
   --sidebar-width: 280px;
-  --content-max-width: 1200px;
+  /* Sin tope: cada sección usa todo el ancho disponible. */
+  --content-max-width: none;
   --focus-ring: 0 0 0 3px rgba(0, 122, 255, 0.45);
 
   /* Capas */
   --z-sidebar: 40;
   --z-modal: 100;
   --z-toast: 200;
+}
+
+/* Oscuro: por preferencia del sistema (salvo que el usuario eligió "claro") o elegido. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-background: #000000;
+    --color-surface: #1c1c1e;
+    --color-surface-elevated: #2c2c2e;
+    --color-fill: rgba(118, 118, 128, 0.24);
+    --color-fill-pressed: rgba(118, 118, 128, 0.36);
+    --color-primary: #0a84ff;
+    --color-on-primary: #ffffff;
+    --color-primary-pressed: #0070e0;
+    --color-primary-disabled: rgba(10, 132, 255, 0.35);
+    --color-primary-tint: rgba(10, 132, 255, 0.18);
+    --color-secondary: #8e8e93;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #aeaeb2;
+    --color-text-tertiary: #636366;
+    --color-text-disabled: #48484a;
+    --color-border: #38383a;
+    --color-separator: #38383a;
+    --color-overlay: rgba(0, 0, 0, 0.48);
+    --color-success-bg: rgba(48, 209, 88, 0.18);
+    --color-success-text: #30d158;
+    --color-warning-bg: rgba(255, 159, 10, 0.18);
+    --color-warning-text: #ff9f0a;
+    --color-error-bg: rgba(255, 69, 58, 0.18);
+    --color-error-text: #ff453a;
+    --color-info-bg: rgba(10, 132, 255, 0.18);
+    --color-info-text: #409cff;
+    --color-green: #30d158;
+    --color-orange: #ff9f0a;
+    --color-red: #ff453a;
+    --color-gray: #8e8e93;
+    --color-status-operativa: #30d158;
+    --color-status-mantenim: #ff9f0a;
+    --color-status-fuera: #ff453a;
+    --color-status-unknown: #636366;
+    --color-order-pending: #8e8e93;
+    --color-order-in-progress: #0a84ff;
+    --color-order-in-review: #ff9f0a;
+    --color-order-completed: #30d158;
+    --color-order-cancelled: #ff453a;
+    --color-accent: #0a84ff;
+    --color-on-accent: #ffffff;
+    --color-error: #ff453a;
+    --shadow-card: 0 1px 6px rgba(0, 0, 0, 0.5);
+    --shadow-floating: 0 8px 24px rgba(0, 0, 0, 0.6);
+    --focus-ring: 0 0 0 3px rgba(10, 132, 255, 0.55);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-background: #000000;
+  --color-surface: #1c1c1e;
+  --color-surface-elevated: #2c2c2e;
+  --color-fill: rgba(118, 118, 128, 0.24);
+  --color-fill-pressed: rgba(118, 118, 128, 0.36);
+  --color-primary: #0a84ff;
+  --color-on-primary: #ffffff;
+  --color-primary-pressed: #0070e0;
+  --color-primary-disabled: rgba(10, 132, 255, 0.35);
+  --color-primary-tint: rgba(10, 132, 255, 0.18);
+  --color-secondary: #8e8e93;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #aeaeb2;
+  --color-text-tertiary: #636366;
+  --color-text-disabled: #48484a;
+  --color-border: #38383a;
+  --color-separator: #38383a;
+  --color-overlay: rgba(0, 0, 0, 0.48);
+  --color-success-bg: rgba(48, 209, 88, 0.18);
+  --color-success-text: #30d158;
+  --color-warning-bg: rgba(255, 159, 10, 0.18);
+  --color-warning-text: #ff9f0a;
+  --color-error-bg: rgba(255, 69, 58, 0.18);
+  --color-error-text: #ff453a;
+  --color-info-bg: rgba(10, 132, 255, 0.18);
+  --color-info-text: #409cff;
+  --color-green: #30d158;
+  --color-orange: #ff9f0a;
+  --color-red: #ff453a;
+  --color-gray: #8e8e93;
+  --color-status-operativa: #30d158;
+  --color-status-mantenim: #ff9f0a;
+  --color-status-fuera: #ff453a;
+  --color-status-unknown: #636366;
+  --color-order-pending: #8e8e93;
+  --color-order-in-progress: #0a84ff;
+  --color-order-in-review: #ff9f0a;
+  --color-order-completed: #30d158;
+  --color-order-cancelled: #ff453a;
+  --color-accent: #0a84ff;
+  --color-on-accent: #ffffff;
+  --color-error: #ff453a;
+  --shadow-card: 0 1px 6px rgba(0, 0, 0, 0.5);
+  --shadow-floating: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --focus-ring: 0 0 0 3px rgba(10, 132, 255, 0.55);
+  color-scheme: dark;
 }

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_BASE_URL, STORAGE_KEYS } from '../src/constants/api';
+import { API_BASE_URL } from '../src/constants/api';
+import { clearSession, getAccessToken, getUser, setAccessToken } from '../src/services/storage';
 
 vi.mock('@react-oauth/google', () => ({ googleLogout: vi.fn() }));
 
@@ -20,12 +21,13 @@ const authResponse = {
 let mock: MockAdapter;
 beforeEach(() => {
   vi.clearAllMocks();
+  clearSession();
   mock = new MockAdapter(axios);
 });
 afterEach(() => mock.restore());
 
 describe('loginWithGoogle', () => {
-  it('200 -> authenticated, persisting tokens like the password login (rememberMe -> localStorage)', async () => {
+  it('200 -> authenticated, keeping the access token in memory (refresh token is a cookie)', async () => {
     mock.onPost(GOOGLE_URL).reply(200, authResponse);
     const result = await authService.loginWithGoogle('google-id-token', 'dev-1', true);
     expect(result).toEqual({ type: 'authenticated', auth: authResponse });
@@ -34,23 +36,18 @@ describe('loginWithGoogle', () => {
       deviceId: 'dev-1',
       rememberMe: true,
     });
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
-    expect(localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)).toBe('ref');
-  });
-
-  it('without rememberMe the session lives in sessionStorage only', async () => {
-    mock.onPost(GOOGLE_URL).reply(200, authResponse);
-    await authService.loginWithGoogle('tok', 'dev-1', false);
-    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
+    expect(getAccessToken()).toBe('acc');
+    expect(getUser()).toEqual(authResponse.user);
+    // Nada de tokens en el storage del navegador.
+    expect(Object.keys({ ...localStorage }).some((k) => k.includes('token'))).toBe(false);
+    expect(Object.keys({ ...sessionStorage }).some((k) => k.includes('token'))).toBe(false);
   });
 
   it('202 -> onboarding, without persisting a session', async () => {
     mock.onPost(GOOGLE_URL).reply(202, { onboardingToken: 'ob', email: 'a@b.com', name: null });
     const result = await authService.loginWithGoogle('tok', 'dev-1', false);
     expect(result).toEqual({ type: 'onboarding', onboardingToken: 'ob', email: 'a@b.com', name: null });
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
-    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
+    expect(getAccessToken()).toBeNull();
   });
 
   it.each([401, 403, 503])('%s -> rejects with the HTTP error', async (status) => {
@@ -71,7 +68,7 @@ describe('completeGoogleOnboarding', () => {
       inviteToken: null,
       workspaceName: 'Mi taller',
     });
-    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('acc');
+    expect(getAccessToken()).toBe('acc');
   });
 
   it('sends the invite token with null workspaceName', async () => {
@@ -102,11 +99,11 @@ describe('googleErrorMessage', () => {
 
 describe('logout', () => {
   it('signs out of Google and clears the session (also when the remote call fails)', async () => {
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'acc');
+    setAccessToken('acc');
     mock.onPost(/\/api\/auth\/logout/).reply(500);
     await expect(authService.logout('dev-1', 'tok')).rejects.toBeDefined();
     expect(googleLogout).toHaveBeenCalled();
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
+    expect(getAccessToken()).toBeNull();
   });
 
   it('always sends keepSession=false (no soft logout on the web)', async () => {

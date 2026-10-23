@@ -11,7 +11,8 @@ export interface UserInfo {
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
+  /** Ya no viene en el JSON: el backend lo deja en una cookie httpOnly. */
+  refreshToken?: string | null;
   expiresIn: number;
   user: UserInfo;
 }
@@ -32,9 +33,9 @@ export interface RegisterFormData {
 
 export type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'LOGIN_SUCCESS'; payload: { user: UserInfo; token: string; refreshToken: string } }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: UserInfo; token: string; refreshToken?: string | null } }
   | { type: 'LOGOUT' }
-  | { type: 'RESTORE_TOKEN'; payload: { user: UserInfo; token: string; refreshToken: string } | null };
+  | { type: 'RESTORE_TOKEN'; payload: { user: UserInfo; token: string; refreshToken?: string | null } | null };
 
 export interface AuthState {
   user: UserInfo | null;

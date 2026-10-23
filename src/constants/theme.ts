@@ -106,11 +106,19 @@ export const DarkColors: typeof LightColors = {
   error: '#FF453A',
 };
 
-// La app es light-only por ahora; las pantallas leen Colors directamente.
-export const Colors = LightColors;
+// Colores para estilos inline: referencias a las variables CSS de tokens.css, así siguen
+// el tema (claro/oscuro) sin volver a renderizar. Para un valor concreto (p. ej. dibujar en
+// un canvas) usar LightColors/DarkColors.
+const cssVar = (key: string) => `var(--color-${key.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())})`;
+export const Colors = Object.fromEntries(
+  Object.keys(LightColors).map((k) => [k, cssVar(k)]),
+) as { [K in keyof typeof LightColors]: string };
 
-// Fondo suave a partir de un color sólido (#RRGGBB), para badges y chips.
+// Fondo suave a partir de un color sólido (#RRGGBB o var(--color-*)), para badges y chips.
 export const tint = (hex: string, alpha = 0.14): string => {
+  if (hex.startsWith('var(')) {
+    return `color-mix(in srgb, ${hex} ${Math.round(alpha * 100)}%, transparent)`;
+  }
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
   if (!m) return hex;
   const n = parseInt(m[1], 16);

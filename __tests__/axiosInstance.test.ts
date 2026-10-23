@@ -3,6 +3,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../src/services/axiosInstance';
 import { API_BASE_URL, STORAGE_KEYS } from '../src/constants/api';
+import { clearSession, getAccessToken, setAccessToken } from '../src/services/storage';
 
 const REFRESH_URL = `${API_BASE_URL}/api/auth/refresh`;
 const DATA_URL = `${API_BASE_URL}/api/data`;
@@ -14,8 +15,8 @@ let refreshCalls: number;
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {});
-  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'old');
-  localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-1');
+  clearSession();
+  setAccessToken('old');
   localStorage.setItem(STORAGE_KEYS.DEVICE_ID, 'device-1');
 
   refreshCalls = 0;
@@ -23,7 +24,7 @@ beforeEach(() => {
   authMock.onPost(REFRESH_URL).reply(async () => {
     refreshCalls += 1;
     await delay(20);
-    return [200, { accessToken: 'new', refreshToken: 'refresh-2' }];
+    return [200, { accessToken: 'new', expiresIn: 900, user: { id: 1, email: 'a@b.c', role: 'MANAGER', workspaceId: 1 } }];
   });
 
   apiMock = new MockAdapter(api, { delayResponse: 0 });
@@ -67,11 +68,13 @@ describe('401 handling', () => {
     expect(refreshCalls).toBe(1);
   });
 
-  it('stores the rotated tokens after a refresh', async () => {
+  it('keeps the new access token in memory and never sends a refresh token from JS', async () => {
     serverAcceptingNewToken([0]);
     await api.get(DATA_URL);
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('new');
-    expect(localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)).toBe('refresh-2');
+    expect(getAccessToken()).toBe('new');
+    // El refresh token viaja en la cookie httpOnly: el body solo lleva el deviceId.
+    expect(JSON.parse(authMock.history.post[0].data)).toEqual({ deviceId: 'device-1' });
+    expect(Object.values({ ...localStorage })).not.toContain('new');
   });
 
   it('does not try to refresh on 403', async () => {
@@ -115,27 +118,5 @@ describe('multipart uploads', () => {
     const form = new FormData();
     form.append('photo', 'x');
     expect(await captureTimeout(form, 120000)).toBe(120000);
-  });
-});
-
-describe('cross-tab refresh lock', () => {
-  it('reuses the access token when another tab rotated the refresh token while waiting for the lock', async () => {
-    // Simula una pestaña que refrescó mientras esta esperaba el lock.
-    const request = vi.fn(async (_name: string, cb: () => Promise<string>) => {
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, 'refresh-from-other-tab');
-      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'new');
-      return cb();
-    });
-    Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true });
-    try {
-      serverAcceptingNewToken([0, 0]);
-      apiMock.onGet(DATA_URL).replyOnce(401);
-      const res = await api.get(DATA_URL);
-      expect(res.data).toBe('ok');
-      expect(request).toHaveBeenCalledWith('printops-token-refresh', expect.any(Function));
-      expect(refreshCalls).toBe(0);
-    } finally {
-      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
-    }
   });
 });

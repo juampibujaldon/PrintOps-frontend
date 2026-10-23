@@ -16,11 +16,22 @@ export function normalizeApiBaseUrl(raw: string | undefined): string {
   return url.replace(/\/+$/, '');
 }
 
-export const API_BASE_URL: string = normalizeApiBaseUrl(envUrl);
+// La API se sirve en el MISMO origen que el front: en producción nginx hace proxy de /api y
+// /ws al backend, y en desarrollo lo hace Vite (vite.config.ts). Es requisito para la cookie
+// httpOnly del refresh token (SameSite=Strict). Por eso las URLs son relativas.
+export const API_BASE_URL = '';
+
+// Destino del proxy de Vite en desarrollo (VITE_API_BASE_URL, default localhost:8083).
+export const DEV_API_TARGET: string = normalizeApiBaseUrl(envUrl);
+
+// URL del WebSocket en el mismo host que la página (ws:// o wss:// según el protocolo).
+export function wsUrl(): string {
+  if (typeof window === 'undefined') return 'ws://localhost/ws';
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${window.location.host}/ws`;
+}
 
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: '@printops/access_token',
-  REFRESH_TOKEN: '@printops/refresh_token',
   DEVICE_ID: '@printops/device_id',
-  USER: '@printops/user',
+  THEME: '@printops/theme',
 } as const;

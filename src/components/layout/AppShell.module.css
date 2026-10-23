@@ -56,6 +56,13 @@
   padding-top: env(safe-area-inset-top);
 }
 
+@media (min-width: 1200px) {
+  .content {
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+}
+
 /* Desktop: sidebar fija */
 @media (min-width: 900px) {
   .aside {

@@ -1,52 +1,46 @@
 import { describe, expect, it } from 'vitest';
-import { STORAGE_KEYS } from '../src/constants/api';
 import {
   clearSession,
   getAccessToken,
   getOrCreateDeviceId,
-  getRefreshToken,
   getUser,
-  saveSession,
+  purgeLegacyTokens,
   setAccessToken,
+  setSession,
   storage,
-  updateSession,
 } from '../src/services/storage';
 
 const auth = {
   accessToken: 'a1',
-  refreshToken: 'r1',
   expiresIn: 900,
   user: { id: 5, email: 'x@y.com', role: 'TECNICO' as const, workspaceId: 2 },
 };
 
-describe('session storage', () => {
-  it('rememberMe=true persists in localStorage', () => {
-    saveSession(auth, true);
-    expect(localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)).toBe('r1');
-    expect(sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)).toBeNull();
+describe('session (en memoria)', () => {
+  it('keeps the access token and user in memory, never in browser storage', () => {
+    setSession(auth);
     expect(getAccessToken()).toBe('a1');
     expect(getUser()).toEqual(auth.user);
+    expect(JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage })).not.toContain('a1');
+    setAccessToken('a2');
+    expect(getAccessToken()).toBe('a2');
   });
 
-  it('rememberMe=false uses sessionStorage and token rotation stays there', () => {
-    saveSession(auth, false);
-    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('a1');
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
-    updateSession({ ...auth, accessToken: 'a2', refreshToken: 'r2' });
-    expect(sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe('a2');
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
-    setAccessToken('a3');
-    expect(getAccessToken()).toBe('a3');
-    expect(getRefreshToken()).toBe('r2');
-  });
-
-  it('clearSession removes tokens and user but keeps the deviceId', () => {
+  it('clearSession removes token and user but keeps the deviceId', () => {
     const id = getOrCreateDeviceId();
-    saveSession(auth, true);
+    setSession(auth);
     clearSession();
     expect(getAccessToken()).toBeNull();
     expect(getUser()).toBeNull();
     expect(getOrCreateDeviceId()).toBe(id);
+  });
+
+  it('purges tokens left by older versions', () => {
+    localStorage.setItem('@printops/refresh_token', 'viejo');
+    sessionStorage.setItem('@printops/access_token', 'viejo');
+    purgeLegacyTokens();
+    expect(localStorage.getItem('@printops/refresh_token')).toBeNull();
+    expect(sessionStorage.getItem('@printops/access_token')).toBeNull();
   });
 });
 

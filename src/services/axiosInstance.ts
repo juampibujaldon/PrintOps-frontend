@@ -1,14 +1,7 @@
 // src/services/axiosInstance.ts
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../constants/api';
-import {
-  getAccessToken,
-  getOrCreateDeviceId,
-  getRefreshToken,
-  removeAccessToken,
-  setAccessToken,
-  setRefreshToken,
-} from './storage';
+import { getAccessToken, getOrCreateDeviceId, removeAccessToken, setSession } from './storage';
 
 const isDev = import.meta.env.DEV && import.meta.env.MODE !== 'test';
 
@@ -108,43 +101,13 @@ export function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
-// Varias pestañas comparten localStorage y el refresh token rota en cada uso: si dos pestañas
-// refrescan a la vez, la segunda mandaría un token ya rotado y cerraría la sesión. El lock
-// serializa el refresh entre pestañas; si al obtenerlo el refresh token ya cambió, otra pestaña
-// refrescó y se reutiliza su access token.
-function doRefresh(): Promise<string> {
-  const tokenBefore = getRefreshToken();
-  if (typeof navigator === 'undefined' || !navigator.locks) {
-    return refreshWithServer();
-  }
-  return navigator.locks.request('printops-token-refresh', async () => {
-    const current = getRefreshToken();
-    const accessToken = getAccessToken();
-    if (current && current !== tokenBefore && accessToken) {
-      return accessToken;
-    }
-    return refreshWithServer();
-  });
-}
-
-async function refreshWithServer(): Promise<string> {
+// Pide un access token nuevo con la cookie httpOnly del refresh token (no se lee desde JS:
+// el navegador la manda sola porque la API está en el mismo origen).
+async function doRefresh(): Promise<string> {
   try {
-    const refreshToken = getRefreshToken();
     const deviceId = getOrCreateDeviceId();
-
-    if (!refreshToken || !deviceId) {
-      throw new Error('No hay refresh token');
-    }
-
-    const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-      refreshToken,
-      deviceId,
-    });
-
-    setAccessToken(data.accessToken);
-    if (data.refreshToken) {
-      setRefreshToken(data.refreshToken);
-    }
+    const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, { deviceId });
+    setSession(data);
     return data.accessToken;
   } catch (refreshError) {
     // Solo limpiamos el access token local; el resto de la sesión se limpia en

@@ -4,19 +4,12 @@ import axios from 'axios';
 import { googleLogout } from '@react-oauth/google';
 import { API_BASE_URL } from '../constants/api';
 import { AuthResponse } from '../types/auth';
-import {
-  clearSession,
-  getAccessToken,
-  getOrCreateDeviceId,
-  getRefreshToken,
-  getUser,
-  saveSession,
-  updateSession,
-} from './storage';
+import { clearSession, getAccessToken, getOrCreateDeviceId, setSession } from './storage';
 
-// Persistencia común a todos los logins (contraseña y Google).
-function persistSession(data: AuthResponse, rememberMe: boolean): void {
-  saveSession(data, rememberMe);
+// El backend deja el refresh token en una cookie httpOnly (persistente si rememberMe);
+// acá solo queda el access token en memoria.
+function persistSession(data: AuthResponse, _rememberMe: boolean): void {
+  setSession(data);
 }
 
 async function login(email: string, password: string, rememberMe: boolean): Promise<AuthResponse> {
@@ -57,34 +50,18 @@ async function logout(deviceId: string, fallbackToken: string): Promise<void> {
 }
 
 /**
- * Restaura la sesión al arrancar la app.
- * Siempre intenta refrescar para traer token y usuario frescos (rol/workspaceId
- * actualizados). Devuelve null si no hay sesión o el refresh token es inválido.
+ * Restaura la sesión al arrancar la app con la cookie del refresh token (si existe, el
+ * navegador la manda sola). Devuelve null si no hay sesión o venció. Un error de red se
+ * propaga: la app muestra el estado sin conexión en vez de mandar al login.
  */
 async function restoreSession(): Promise<AuthResponse | null> {
-  const refreshToken = getRefreshToken();
-  const token = getAccessToken();
-  const user = getUser();
-
-  if (!refreshToken || !user) return null;
-
   try {
     const deviceId = getOrCreateDeviceId();
-    const { data } = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/refresh`, {
-      refreshToken,
-      deviceId,
-    });
-    updateSession(data);
+    const { data } = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/refresh`, { deviceId });
+    setSession(data);
     return data;
   } catch (error) {
-    const networkError = axios.isAxiosError(error) && !error.response;
-
-    // Error de red (backend caído): usamos el token guardado para no sacar al usuario.
-    if (networkError && token) {
-      return { accessToken: token, refreshToken, expiresIn: 900, user };
-    }
-
-    // Refresh token inválido/expirado: sesión terminada definitivamente.
+    if (axios.isAxiosError(error) && !error.response) throw error;
     clearSession();
     return null;
   }

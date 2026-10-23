@@ -5,8 +5,17 @@ import { authService } from '../services/authService';
 import type { GoogleLoginResult } from '../services/authService';
 import { webSocketService } from '../services/webSocketService';
 import { setOnSessionExpired } from '../services/axiosInstance';
-import { clearSession, getRefreshToken } from '../services/storage';
-import { STORAGE_KEYS } from '../constants/api';
+import { clearSession, purgeLegacyTokens } from '../services/storage';
+
+// Avisa a las otras pestañas que se cerró la sesión (la cookie es compartida).
+const AUTH_CHANNEL = 'printops-auth';
+function authChannel(): BroadcastChannel | null {
+  try {
+    return typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(AUTH_CHANNEL) : null;
+  } catch {
+    return null;
+  }
+}
 import type { AuthAction, AuthResponse, AuthState } from '../types/auth';
 
 const initialState: AuthState = {
@@ -31,7 +40,7 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         user: action.payload.user,
         token: action.payload.token,
-        refreshToken: action.payload.refreshToken,
+        refreshToken: action.payload.refreshToken ?? null,
         isAuthenticated: true,
         isLoading: false,
       };
@@ -41,7 +50,7 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         user: action.payload.user,
         token: action.payload.token,
-        refreshToken: action.payload.refreshToken,
+        refreshToken: action.payload.refreshToken ?? null,
         isAuthenticated: true,
         isLoading: false,
       };
@@ -75,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Restaurar sesión al iniciar.
   useEffect(() => {
     let cancelled = false;
+    purgeLegacyTokens();
     authService
       .restoreSession()
       .then((session) => {
@@ -105,18 +115,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setOnSessionExpired(null);
   }, []);
 
-  // Logout en otra pestaña: el evento `storage` avisa que se borró el refresh token compartido.
+  // Logout en otra pestaña: llega por BroadcastChannel.
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.storageArea !== window.localStorage) return;
-      if ((e.key === STORAGE_KEYS.REFRESH_TOKEN && e.newValue == null) || e.key == null) {
-        if (getRefreshToken()) return;
+    const channel = authChannel();
+    if (!channel) return;
+    channel.onmessage = (e: MessageEvent) => {
+      if (e.data === 'logout') {
         webSocketService.disconnect();
+        clearSession();
         dispatch({ type: 'LOGOUT' });
       }
     };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    return () => channel.close();
   }, []);
 
   const applyAuth = useCallback((data: AuthResponse) => {
@@ -178,6 +188,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       webSocketService.disconnect();
       clearSession();
       dispatch({ type: 'LOGOUT' });
+      const channel = authChannel();
+      channel?.postMessage('logout');
+      channel?.close();
     }
   }, [token]);
 

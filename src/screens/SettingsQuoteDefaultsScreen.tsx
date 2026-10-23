@@ -108,7 +108,7 @@ export default function SettingsQuoteDefaultsScreen() {
   return (
     <>
       <ScreenHeader title={TITLE} showBack backTo="/settings" />
-      <div className={styles.page}>
+      <div className={`${styles.page} ${styles.sections}`}>
         <SettingsSection title="Costos base (Por defecto)">
           <FormField
             label="Precio Energía (kWh)"

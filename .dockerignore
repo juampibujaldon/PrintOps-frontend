@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.worktrees
+graphify-out
+coverage
+.env
+.env.*
+e2e

@@ -2,7 +2,9 @@
 import { Bell, Briefcase, Calculator, Info, Settings2, User } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Colors } from '../constants/theme';
-import { ScreenHeader, SettingsRow, SettingsSection } from '../components/ui';
+import { ScreenHeader, SegmentedControl, SettingsRow, SettingsSection } from '../components/ui';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemePreference } from '../context/ThemeContext';
 import styles from './SettingsPage.module.css';
 
 type MenuItem = {
@@ -43,11 +45,18 @@ function RowIcon({ Icon, tint }: { Icon: LucideIcon; tint: string }) {
   );
 }
 
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'Sistema' },
+  { value: 'light', label: 'Claro' },
+  { value: 'dark', label: 'Oscuro' },
+];
+
 export default function ConfiguracionScreen() {
+  const { preference, setPreference } = useTheme();
   return (
     <>
       <ScreenHeader title="Configuración" />
-      <div className={styles.page}>
+      <div className={`${styles.page} ${styles.sections}`}>
         {SECTIONS.map((section, sIdx) => (
           <SettingsSection key={section.title ?? sIdx} title={section.title}>
             {section.items.map((item, index) => (
@@ -61,6 +70,11 @@ export default function ConfiguracionScreen() {
             ))}
           </SettingsSection>
         ))}
+        <SettingsSection title="Apariencia" footer="«Sistema» sigue el modo claro u oscuro del dispositivo.">
+          <div className={styles.segmentRow}>
+            <SegmentedControl ariaLabel="Tema" value={preference} options={THEME_OPTIONS} onChange={setPreference} />
+          </div>
+        </SettingsSection>
       </div>
     </>
   );

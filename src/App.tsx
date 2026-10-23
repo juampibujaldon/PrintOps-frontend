@@ -5,20 +5,23 @@ import type { createBrowserRouter } from 'react-router-dom';
 import { GOOGLE_WEB_CLIENT_ID, isGoogleSignInConfigured } from './constants/google';
 import { AuthProvider } from './context/AuthContext';
 import { ConfirmProvider } from './context/ConfirmContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import WebSocketToasts from './context/WebSocketToasts';
 
 // Proveedores globales: Google OAuth > Toast > Confirm > Auth. El router se inyecta (en tests es un memory router).
 export function AppProviders({ children }: { children: ReactNode }) {
   const tree = (
-    <ToastProvider>
-      <ConfirmProvider>
-        <AuthProvider>
-          <WebSocketToasts />
-          {children}
-        </AuthProvider>
-      </ConfirmProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <WebSocketToasts />
+            {children}
+          </AuthProvider>
+        </ConfirmProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
   // Sin client id no se carga el script de Google (el botón tampoco se renderiza).
   return isGoogleSignInConfigured() ? (

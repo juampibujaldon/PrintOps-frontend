@@ -1,9 +1,7 @@
 // src/services/storage.ts
 // Capa fina sobre localStorage/sessionStorage. Todo está envuelto en try/catch:
 // el storage puede lanzar (modo privado, cuota, datos de sitio bloqueados).
-//
-// Sesión: rememberMe=true -> localStorage; false -> sessionStorage (muere al cerrar
-// la pestaña/navegador). deviceId siempre en localStorage.
+// Los tokens NO se guardan acá (ver "Sesión"); solo deviceId, borradores y preferencias.
 import { STORAGE_KEYS } from '../constants/api';
 import type { AuthResponse, UserInfo } from '../types/auth';
 
@@ -67,57 +65,36 @@ export const storage = {
 };
 
 // ── Sesión ──
-// El storage "activo" es el que ya contiene datos de sesión (sessionStorage tiene prioridad);
-// si no hay ninguno, localStorage.
-function activeStore(): Store | null {
-  const s = session();
-  const l = local();
-  for (const key of [STORAGE_KEYS.REFRESH_TOKEN, STORAGE_KEYS.ACCESS_TOKEN, STORAGE_KEYS.USER]) {
-    if (read(s, key) != null) return s;
-  }
-  for (const key of [STORAGE_KEYS.REFRESH_TOKEN, STORAGE_KEYS.ACCESS_TOKEN, STORAGE_KEYS.USER]) {
-    if (read(l, key) != null) return l;
-  }
-  return l;
-}
-
-function readSession(key: string): string | null {
-  return read(session(), key) ?? read(local(), key);
-}
+// El refresh token vive en una cookie httpOnly que pone el backend (JavaScript no la puede
+// leer: un XSS no se lleva la sesión). El access token (15 min) y el usuario quedan solo en
+// memoria: al recargar la página se piden de nuevo con /api/auth/refresh.
+let accessToken: string | null = null;
+let currentUser: UserInfo | null = null;
 
 export function getAccessToken(): string | null {
-  return readSession(STORAGE_KEYS.ACCESS_TOKEN);
+  return accessToken;
 }
 
 export function setAccessToken(token: string): void {
-  write(activeStore(), STORAGE_KEYS.ACCESS_TOKEN, token);
+  accessToken = token;
 }
 
 export function removeAccessToken(): void {
-  erase(session(), STORAGE_KEYS.ACCESS_TOKEN);
-  erase(local(), STORAGE_KEYS.ACCESS_TOKEN);
-}
-
-export function getRefreshToken(): string | null {
-  return readSession(STORAGE_KEYS.REFRESH_TOKEN);
-}
-
-export function setRefreshToken(token: string): void {
-  write(activeStore(), STORAGE_KEYS.REFRESH_TOKEN, token);
+  accessToken = null;
 }
 
 export function getUser(): UserInfo | null {
-  const raw = readSession(STORAGE_KEYS.USER);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as UserInfo;
-  } catch {
-    return null;
-  }
+  return currentUser;
 }
 
-export function setUser(user: UserInfo): void {
-  write(activeStore(), STORAGE_KEYS.USER, JSON.stringify(user));
+export function setSession(auth: AuthResponse): void {
+  accessToken = auth.accessToken;
+  if (auth.user) currentUser = auth.user;
+}
+
+export function clearSession(): void {
+  accessToken = null;
+  currentUser = null;
 }
 
 function generateUuid(): string {
@@ -143,27 +120,10 @@ export function getOrCreateDeviceId(): string {
   return id;
 }
 
-/** Guarda una sesión nueva (login). rememberMe decide localStorage vs sessionStorage. */
-export function saveSession(auth: AuthResponse, rememberMe: boolean): void {
-  clearSession();
-  const store = rememberMe ? local() : session();
-  write(store, STORAGE_KEYS.ACCESS_TOKEN, auth.accessToken);
-  write(store, STORAGE_KEYS.REFRESH_TOKEN, auth.refreshToken);
-  write(store, STORAGE_KEYS.USER, JSON.stringify(auth.user));
-}
-
-/** Actualiza tokens/usuario (refresh) en el mismo storage donde ya vive la sesión. */
-export function updateSession(auth: AuthResponse): void {
-  const store = activeStore();
-  write(store, STORAGE_KEYS.ACCESS_TOKEN, auth.accessToken);
-  if (auth.refreshToken) write(store, STORAGE_KEYS.REFRESH_TOKEN, auth.refreshToken);
-  if (auth.user) write(store, STORAGE_KEYS.USER, JSON.stringify(auth.user));
-}
-
-/** Borra tokens y usuario (no el deviceId). */
-export function clearSession(): void {
-  for (const key of [STORAGE_KEYS.ACCESS_TOKEN, STORAGE_KEYS.REFRESH_TOKEN, STORAGE_KEYS.USER]) {
-    erase(session(), key);
+// Limpia restos de versiones anteriores que guardaban los tokens en el navegador.
+export function purgeLegacyTokens(): void {
+  for (const key of ['@printops/access_token', '@printops/refresh_token', '@printops/user']) {
     erase(local(), key);
+    erase(session(), key);
   }
 }

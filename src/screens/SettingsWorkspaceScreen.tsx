@@ -111,7 +111,7 @@ export default function SettingsWorkspaceScreen() {
   return (
     <>
       <ScreenHeader title={TITLE} showBack backTo="/settings" />
-      <div className={styles.page}>
+      <div className={`${styles.page} ${styles.sections}`}>
         <SettingsSection title="Información Principal">
           <FormField
             label="Nombre del Taller"

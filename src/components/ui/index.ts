@@ -22,3 +22,4 @@ export { default as Skeleton } from './Skeleton';
 export { default as Spinner } from './Spinner';
 export { default as SwitchRow } from './SwitchRow';
 export { default as TextField } from './TextField';
+export { default as SegmentedControl } from './SegmentedControl';

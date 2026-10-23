@@ -1,8 +1,6 @@
-/* Páginas de ajustes: columna centrada de ~720px en desktop. */
+/* Páginas de ajustes: todo el ancho; las secciones se acomodan en columnas (ver .sections). */
 .page {
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
   padding-bottom: var(--space-xxl);
 }
 
@@ -23,4 +21,16 @@
   height: 29px;
   color: #fff;
   border-radius: 7px;
+}
+
+/* Secciones en columnas cuando hay ancho (en mobile, una debajo de otra). */
+.sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+  gap: 0 var(--space-xl);
+  align-items: start;
+}
+
+.segmentRow {
+  padding: var(--space-md) var(--space-lg);
 }

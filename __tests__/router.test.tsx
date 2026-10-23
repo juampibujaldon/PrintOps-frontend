@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_BASE_URL, STORAGE_KEYS } from '../src/constants/api';
+import { API_BASE_URL } from '../src/constants/api';
 import { AppProviders } from '../src/App';
 import { routes } from '../src/router';
 import { useConfirm } from '../src/context/ConfirmContext';
@@ -43,9 +43,7 @@ describe('router smoke', () => {
 
   it('authenticated users see the app shell and the printers stub', async () => {
     const user = { id: 1, email: 'm@taller.com', role: 'MANAGER', workspaceId: 1 };
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'tok');
-    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, 'ref');
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    // La cookie del refresh token la manda el navegador; acá alcanza con que /refresh responda.
     mock.onPost(`${API_BASE_URL}/api/auth/refresh`).reply(200, {
       accessToken: 'tok2',
       refreshToken: 'ref2',
